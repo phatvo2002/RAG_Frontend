@@ -1,0 +1,6 @@
+{
+  "name": "NEXORA AI - Trợ lý AI nội bộ",
+  "description": "Nền tảng Trợ lý AI nội bộ cho doanh nghiệp bao gồm Chat AI, Quản trị, Kho dữ liệu, Phòng họp, Dự án, Công việc Kanban, Lịch và Báo cáo.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,448 @@
+import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
+import { useNavigate, useLocation } from '@tanstack/react-router';
+import {
+  NavModule,
+  User,
+  Department,
+  Project,
+  TaskItem,
+  Meeting,
+  DocumentItem,
+  ChatMessage,
+  ChatSession,
+  CalendarEvent,
+  LoginCredentials
+} from '../types';
+import {
+  mockCurrentUser,
+  mockUsers,
+  mockDepartments,
+  mockProjects,
+  mockTasks,
+  mockMeetings,
+  mockDocuments,
+  mockChatSessions,
+  mockChatMessages,
+  mockCalendarEvents
+} from '../data/mockData';
+import { authApi } from '@/api/auth.api';
+
+interface Toast {
+  id: string;
+  type: 'success' | 'info' | 'warning' | 'error';
+  message: string;
+}
+
+export type ThemeMode = 'light' | 'dark' | 'system';
+
+interface AppContextType {
+  // Theme state & actions
+  theme: ThemeMode;
+  isDark: boolean;
+  setTheme: (mode: ThemeMode) => void;
+  toggleTheme: () => void;
+
+  activeModule: NavModule;
+  setActiveModule: (module: NavModule) => void;
+  activeAdminTab: string;
+  setActiveAdminTab: (tab: string) => void;
+  isAuthenticated: boolean;
+  setIsAuthenticated: (val: boolean) => void;
+  isAuthLoading: boolean;
+  currentUser: User;
+  setCurrentUser: (user: User) => void;
+  login: (credentials: LoginCredentials) => Promise<void>;
+  logout: () => Promise<void>;
+  
+  // Data lists & CRUD state
+  users: User[];
+  addUser: (user: Omit<User, 'id'>) => void;
+  updateUserStatus: (id: string, status: User['status']) => void;
+  deleteUser: (id: string) => void;
+
+  departments: Department[];
+  addDepartment: (dept: Omit<Department, 'id'>) => void;
+
+  projects: Project[];
+  activeProject: Project | null;
+  setActiveProject: (p: Project | null) => void;
+  addProject: (p: Omit<Project, 'id'>) => void;
+
+  tasks: TaskItem[];
+  addTask: (task: Omit<TaskItem, 'id'>) => void;
+  updateTaskStatus: (id: string, status: TaskItem['status']) => void;
+
+  documents: DocumentItem[];
+  addDocument: (doc: Omit<DocumentItem, 'id'>) => void;
+
+  meetings: Meeting[];
+  addMeeting: (meet: Omit<Meeting, 'id'>) => void;
+
+  calendarEvents: CalendarEvent[];
+  addCalendarEvent: (evt: Omit<CalendarEvent, 'id'>) => void;
+
+  // Chat state
+  chatSessions: ChatSession[];
+  activeChatSessionId: string;
+  setActiveChatSessionId: (id: string) => void;
+  chatMessages: ChatMessage[];
+  addChatMessage: (msg: Omit<ChatMessage, 'id' | 'timestamp'>) => void;
+  startNewChat: () => void;
+
+  // Toast notifications
+  toasts: Toast[];
+  showToast: (message: string, type?: Toast['type']) => void;
+  removeToast: (id: string) => void;
+}
+
+const AppContext = createContext<AppContextType | undefined>(undefined);
+
+export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Theme Management
+  const [theme, setThemeState] = useState<ThemeMode>(() => {
+    const saved = localStorage.getItem('nexora_theme') as ThemeMode;
+    if (saved && ['light', 'dark', 'system'].includes(saved)) {
+      return saved;
+    }
+    return 'light';
+  });
+
+  const [isDark, setIsDark] = useState<boolean>(() => {
+    if (typeof window === 'undefined') return false;
+    const saved = localStorage.getItem('nexora_theme');
+    if (saved === 'dark') return true;
+    if (saved === 'light') return false;
+    return window.matchMedia('(prefers-color-scheme: dark)').matches;
+  });
+
+  // Apply .dark class to <html> element
+  useEffect(() => {
+    const root = document.documentElement;
+    const computeIsDark = () => {
+      if (theme === 'dark') return true;
+      if (theme === 'light') return false;
+      return window.matchMedia('(prefers-color-scheme: dark)').matches;
+    };
+
+    const activeDark = computeIsDark();
+    setIsDark(activeDark);
+
+    if (activeDark) {
+      root.classList.add('dark');
+    } else {
+      root.classList.remove('dark');
+    }
+
+    localStorage.setItem('nexora_theme', theme);
+  }, [theme]);
+
+  // Listen to OS color scheme changes if theme === 'system'
+  useEffect(() => {
+    if (theme !== 'system') return;
+    const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+    const handleChange = () => {
+      const activeDark = mediaQuery.matches;
+      setIsDark(activeDark);
+      if (activeDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+    mediaQuery.addEventListener('change', handleChange);
+    return () => mediaQuery.removeEventListener('change', handleChange);
+  }, [theme]);
+
+  const setTheme = (mode: ThemeMode) => {
+    setThemeState(mode);
+  };
+
+  const toggleTheme = () => {
+    setThemeState((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
+  // Nhận diện module active từ đường dẫn URL
+  const activeModule: NavModule = useMemo(() => {
+    const path = location.pathname;
+    if (path.startsWith('/dashboard')) return 'dashboard';
+    if (path.startsWith('/data-repo')) return 'data-repo';
+    if (path.startsWith('/projects')) return 'projects';
+    if (path.startsWith('/tasks')) return 'tasks';
+    if (path.startsWith('/meetings')) return 'meetings';
+    if (path.startsWith('/calendar')) return 'calendar';
+    if (path.startsWith('/reports')) return 'reports';
+    if (path.startsWith('/admin')) return 'admin';
+    return 'chat';
+  }, [location.pathname]);
+
+  // Nhận diện tab admin từ search params
+  const [activeAdminTabState, setActiveAdminTabState] = useState<string>('overview');
+
+  const setActiveModule = (module: NavModule) => {
+    const route = (module === 'chat' ? '/chat' : `/${module}`) as any;
+    navigate({ to: route });
+  };
+
+  const setActiveAdminTab = (tab: string) => {
+    setActiveAdminTabState(tab);
+    navigate({ to: '/admin', search: { tab } as any });
+  };
+
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [isAuthLoading, setIsAuthLoading] = useState<boolean>(true);
+  const [currentUser, setCurrentUser] = useState<User>(mockCurrentUser);
+
+  const [users, setUsers] = useState<User[]>(mockUsers);
+  const [departments, setDepartments] = useState<Department[]>(mockDepartments);
+  const [projects, setProjects] = useState<Project[]>(mockProjects);
+  const [activeProject, setActiveProject] = useState<Project | null>(mockProjects[0]);
+  const [tasks, setTasks] = useState<TaskItem[]>(mockTasks);
+  const [documents, setDocuments] = useState<DocumentItem[]>(mockDocuments);
+  const [meetings, setMeetings] = useState<Meeting[]>(mockMeetings);
+  const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(mockCalendarEvents);
+
+  const [chatSessions, setChatSessions] = useState<ChatSession[]>(mockChatSessions);
+  const [activeChatSessionId, setActiveChatSessionId] = useState<string>('sess_001');
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>(mockChatMessages);
+
+  const [toasts, setToasts] = useState<Toast[]>([]);
+
+  // Tự động kiểm tra và phục hồi phiên đăng nhập từ API backend
+  useEffect(() => {
+    const restoreSession = async () => {
+      if (authApi.isAuthenticated()) {
+        try {
+          const user = await authApi.getMe();
+          setCurrentUser(user);
+          setIsAuthenticated(true);
+        } catch {
+          // Token không hợp lệ hoặc hết hạn
+          authApi.logout();
+          setIsAuthenticated(false);
+        }
+      } else {
+        setIsAuthenticated(false);
+      }
+      setIsAuthLoading(false);
+    };
+
+    restoreSession();
+  }, []);
+
+  const login = async (credentials: LoginCredentials) => {
+    setIsAuthLoading(true);
+    try {
+      const response = await authApi.login(credentials);
+      if (response && response.user) {
+        setCurrentUser(response.user);
+        setIsAuthenticated(true);
+        showToast(`Đăng nhập thành công! Chào mừng ${response.user.name}`, 'success');
+        navigate({ to: '/chat' });
+      }
+    } catch (error: any) {
+      showToast(error.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.', 'error');
+      throw error;
+    } finally {
+      setIsAuthLoading(false);
+    }
+  };
+
+  const logout = async () => {
+    try {
+      await authApi.logout();
+    } catch {
+      // Ignored
+    } finally {
+      setIsAuthenticated(false);
+      showToast('Đã đăng xuất khỏi hệ thống', 'info');
+      navigate({ to: '/login' });
+    }
+  };
+
+  // Toast Helpers
+  const showToast = (message: string, type: Toast['type'] = 'info') => {
+    const id = Date.now().toString();
+    setToasts((prev) => [...prev, { id, message, type }]);
+    setTimeout(() => {
+      removeToast(id);
+    }, 4000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts((prev) => prev.filter((t) => t.id !== id));
+  };
+
+  // Data helpers
+  const addUser = (userData: Omit<User, 'id'>) => {
+    const newUser: User = {
+      ...userData,
+      id: `usr_${Date.now().toString().slice(-4)}`
+    };
+    setUsers((prev) => [newUser, ...prev]);
+    showToast(`Đã thêm người dùng ${newUser.name} thành công`, 'success');
+  };
+
+  const updateUserStatus = (id: string, status: User['status']) => {
+    setUsers((prev) =>
+      prev.map((u) => (u.id === id ? { ...u, status } : u))
+    );
+    showToast('Đã cập nhật trạng thái người dùng', 'success');
+  };
+
+  const deleteUser = (id: string) => {
+    setUsers((prev) => prev.filter((u) => u.id !== id));
+    showToast('Đã xóa người dùng thành công', 'warning');
+  };
+
+  const addDepartment = (deptData: Omit<Department, 'id'>) => {
+    const newDept: Department = {
+      ...deptData,
+      id: `dept_${Date.now().toString().slice(-4)}`
+    };
+    setDepartments((prev) => [newDept, ...prev]);
+    showToast(`Đã thêm phòng ban ${newDept.name}`, 'success');
+  };
+
+  const addProject = (projectData: Omit<Project, 'id'>) => {
+    const newProject: Project = {
+      ...projectData,
+      id: `prj_${Date.now().toString().slice(-4)}`
+    };
+    setProjects((prev) => [newProject, ...prev]);
+    showToast(`Đã tạo dự án mới: ${newProject.name}`, 'success');
+  };
+
+  const addTask = (taskData: Omit<TaskItem, 'id'>) => {
+    const newTask: TaskItem = {
+      ...taskData,
+      id: `tsk_${Date.now().toString().slice(-4)}`
+    };
+    setTasks((prev) => [newTask, ...prev]);
+    showToast(`Đã thêm công việc: ${newTask.title}`, 'success');
+  };
+
+  const updateTaskStatus = (id: string, status: TaskItem['status']) => {
+    setTasks((prev) =>
+      prev.map((t) => (t.id === id ? { ...t, status } : t))
+    );
+  };
+
+  const addDocument = (docData: Omit<DocumentItem, 'id'>) => {
+    const newDoc: DocumentItem = {
+      ...docData,
+      id: `doc_${Date.now().toString().slice(-4)}`
+    };
+    setDocuments((prev) => [newDoc, ...prev]);
+    showToast(`Đã tải lên tài liệu: ${newDoc.name}`, 'success');
+  };
+
+  const addMeeting = (meetData: Omit<Meeting, 'id'>) => {
+    const newMeet: Meeting = {
+      ...meetData,
+      id: `mtg_${Date.now().toString().slice(-4)}`
+    };
+    setMeetings((prev) => [newMeet, ...prev]);
+    showToast(`Đã lên lịch cuộc họp: ${newMeet.title}`, 'success');
+  };
+
+  const addCalendarEvent = (evtData: Omit<CalendarEvent, 'id'>) => {
+    const newEvt: CalendarEvent = {
+      ...evtData,
+      id: `evt_${Date.now().toString().slice(-4)}`
+    };
+    setCalendarEvents((prev) => [newEvt, ...prev]);
+    showToast(`Đã thêm sự kiện lịch: ${newEvt.title}`, 'success');
+  };
+
+  const addChatMessage = (msgData: Omit<ChatMessage, 'id' | 'timestamp'>) => {
+    const newMsg: ChatMessage = {
+      ...msgData,
+      id: `msg_${Date.now()}`,
+      timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+    };
+    setChatMessages((prev) => [...prev, newMsg]);
+  };
+
+  const startNewChat = () => {
+    const newId = `sess_${Date.now()}`;
+    const newSession: ChatSession = {
+      id: newId,
+      title: 'Đoạn chat mới',
+      date: 'Hôm nay',
+      group: 'today'
+    };
+    setChatSessions((prev) => [newSession, ...prev]);
+    setActiveChatSessionId(newId);
+    setChatMessages([
+      {
+        id: 'msg_welcome',
+        sender: 'ai',
+        text: 'Xin chào! Tôi có thể giúp gì cho công việc của bạn hôm nay?',
+        timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+      }
+    ]);
+  };
+
+  return (
+    <AppContext.Provider
+      value={{
+        theme,
+        isDark,
+        setTheme,
+        toggleTheme,
+        activeModule,
+        setActiveModule,
+        activeAdminTab: activeAdminTabState,
+        setActiveAdminTab,
+        isAuthenticated,
+        setIsAuthenticated,
+        isAuthLoading,
+        currentUser,
+        setCurrentUser,
+        login,
+        logout,
+        users,
+        addUser,
+        updateUserStatus,
+        deleteUser,
+        departments,
+        addDepartment,
+        projects,
+        activeProject,
+        setActiveProject,
+        addProject,
+        tasks,
+        addTask,
+        updateTaskStatus,
+        documents,
+        addDocument,
+        meetings,
+        addMeeting,
+        calendarEvents,
+        addCalendarEvent,
+        chatSessions,
+        activeChatSessionId,
+        setActiveChatSessionId,
+        chatMessages,
+        addChatMessage,
+        startNewChat,
+        toasts,
+        showToast,
+        removeToast
+      }}
+    >
+      {children}
+    </AppContext.Provider>
+  );
+};
+
+export const useApp = () => {
+  const context = useContext(AppContext);
+  if (!context) {
+    throw new Error('useApp must be used within an AppProvider');
+  }
+  return context;
+};
