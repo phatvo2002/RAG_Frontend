@@ -1,0 +1,45 @@
+{
+  "modules": {
+    "chat": {
+      "title": "NEXORA AI Assistant",
+      "sub": "Smart Enterprise Productivity Copilot"
+    },
+    "dashboard": {
+      "title": "Executive Dashboard",
+      "sub": "Real-time Operations & Business Analytics Center"
+    },
+    "data-repo": {
+      "title": "Data Repository",
+      "sub": "Enterprise Document Management & RAG Knowledge Store"
+    },
+    "meetings": {
+      "title": "Meeting Rooms",
+      "sub": "Meeting Schedules & Automated AI Transcripts"
+    },
+    "projects": {
+      "title": "Projects",
+      "sub": "Milestone Tracking, Workloads & Team Progress"
+    },
+    "tasks": {
+      "title": "Tasks",
+      "sub": "Kanban Task Board & Sprint Execution"
+    },
+    "calendar": {
+      "title": "Calendar",
+      "sub": "Work Schedule, Deadlines & Events"
+    },
+    "reports": {
+      "title": "Reports & Analytics",
+      "sub": "Comprehensive Performance Metrics & AI Forecasts"
+    },
+    "admin": {
+      "title": "System Administration",
+      "sub": "Access Control, Security Policies & AI Infrastructure"
+    }
+  },
+  "buttons": {
+    "goToDashboard": "Dashboard",
+    "openAiChat": "Open AI Chat Assistant"
+  }
+}
+

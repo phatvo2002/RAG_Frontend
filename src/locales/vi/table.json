@@ -1,0 +1,20 @@
+{
+  "stt": "STT",
+  "actions": "Hành động",
+  "searchPlaceholder": "Tìm kiếm dữ liệu...",
+  "foundItems": "Tìm thấy <1>{{count}}</1> / {{total}} mục",
+  "totalItems": "Tổng: <1>{{total}}</1> mục",
+  "selectedCount": "Đã chọn {{count}} mục",
+  "deselect": "Bỏ chọn",
+  "goToPage": "Đi đến trang",
+  "jump": "Chuyển",
+  "display": "Hiển thị",
+  "rows": "hàng",
+  "empty": {
+    "title": "Chưa có dữ liệu",
+    "searchTitle": "Không tìm thấy kết quả phù hợp",
+    "description": "Chưa có mục nào trong danh sách này.",
+    "searchDescription": "Hãy thử điều chỉnh từ khóa tìm kiếm hoặc bỏ chọn các bộ lọc."
+  }
+}
+

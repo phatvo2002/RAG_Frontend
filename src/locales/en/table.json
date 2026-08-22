@@ -1,0 +1,20 @@
+{
+  "stt": "No.",
+  "actions": "Actions",
+  "searchPlaceholder": "Search data...",
+  "foundItems": "Found <1>{{count}}</1> / {{total}} items",
+  "totalItems": "Total: <1>{{total}}</1> items",
+  "selectedCount": "Selected {{count}} items",
+  "deselect": "Deselect",
+  "goToPage": "Go to page",
+  "jump": "Go",
+  "display": "Display",
+  "rows": "rows",
+  "empty": {
+    "title": "No data found",
+    "searchTitle": "No matching results found",
+    "description": "No data available in this list.",
+    "searchDescription": "Try adjusting your search query or clear active filters."
+  }
+}
+

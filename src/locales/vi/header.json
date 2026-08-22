@@ -1,0 +1,45 @@
+{
+  "modules": {
+    "chat": {
+      "title": "Trợ lý AI NEXORA",
+      "sub": "Trợ lý thông minh hỗ trợ công việc"
+    },
+    "dashboard": {
+      "title": "Dashboard Quản Lý",
+      "sub": "Trung tâm điều hành tổng quan và phân hệ quản lý"
+    },
+    "data-repo": {
+      "title": "Kho dữ liệu",
+      "sub": "Quản lý tài liệu và thư mục doanh nghiệp"
+    },
+    "meetings": {
+      "title": "Phòng họp",
+      "sub": "Lịch họp và biên bản tự động"
+    },
+    "projects": {
+      "title": "Dự án",
+      "sub": "Quản lý tiến độ và thành viên dự án"
+    },
+    "tasks": {
+      "title": "Công việc",
+      "sub": "Bảng theo dõi công việc Kanban"
+    },
+    "calendar": {
+      "title": "Lịch",
+      "sub": "Lịch biểu làm việc và sự kiện"
+    },
+    "reports": {
+      "title": "Báo cáo & Phân tích",
+      "sub": "Thống kê hiệu suất toàn diện và dự báo tiến độ thông minh"
+    },
+    "admin": {
+      "title": "Quản trị",
+      "sub": "Cấu hình hệ thống và phân quyền"
+    }
+  },
+  "buttons": {
+    "goToDashboard": "Vào Dashboard Quản lý",
+    "openAiChat": "Mở Trợ lý Chat AI"
+  }
+}
+
