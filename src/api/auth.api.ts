@@ -14,15 +14,63 @@ export function normalizeUser(data: any): User {
   const email = userObj.email || '';
   const fallbackName = email ? email.split('@')[0] : 'Người dùng';
 
+  // Extract department
+  let deptName = '';
+  let deptId = userObj.departmentId || userObj.department_id || undefined;
+  if (typeof userObj.department === 'string') {
+    deptName = userObj.department;
+  } else if (userObj.department && typeof userObj.department === 'object') {
+    deptName = userObj.department.name || userObj.department.departmentName || '';
+    deptId = deptId || userObj.department.id || userObj.department.departmentId;
+  } else if (userObj.departmentName || userObj.department_name) {
+    deptName = userObj.departmentName || userObj.department_name;
+  }
+
+  // Extract role
+  let roleName = '';
+  let roleId = userObj.roleId || userObj.role_id || undefined;
+  if (typeof userObj.role === 'string') {
+    roleName = userObj.role;
+  } else if (userObj.role && typeof userObj.role === 'object') {
+    roleName = userObj.role.name || userObj.role.role || '';
+    roleId = roleId || userObj.role.id;
+  } else if (userObj.roleName || userObj.role_name || userObj.userRole || userObj.user_role) {
+    roleName = userObj.roleName || userObj.role_name || userObj.userRole || userObj.user_role;
+  } else if (Array.isArray(userObj.roles) && userObj.roles.length > 0) {
+    const firstRole = userObj.roles[0];
+    if (typeof firstRole === 'string') {
+      roleName = firstRole;
+    } else if (typeof firstRole === 'object') {
+      roleName = firstRole.name || firstRole.role || '';
+      roleId = roleId || firstRole.id;
+    }
+  }
+
+  const userId = userObj.userId || userObj.id?.toString() || userObj._id?.toString() || `usr_${Date.now()}`;
+  const displayName = userObj.displayName || userObj.display_name || userObj.fullName || userObj.name || fallbackName;
+  const userName = userObj.userName || userObj.username || email.split('@')[0];
+  const phoneNumber = userObj.phoneNumber || userObj.phone || userObj.phone_number || '';
+  const isActive = userObj.isActive !== undefined ? Boolean(userObj.isActive) : userObj.is_active !== undefined ? Boolean(userObj.is_active) : true;
+
   return {
-    id: userObj.userId || userObj.id?.toString() || userObj._id?.toString() || `usr_${Date.now()}`,
-    name: userObj.name || userObj.fullName || userObj.full_name || userObj.username || fallbackName,
+    id: userId,
+    userId: userId,
+    name: displayName,
+    displayName: displayName,
+    fullName: userObj.fullName || userObj.full_name || displayName,
+    userName: userName,
     email: email,
-    role: userObj.role || userObj.userRole || userObj.user_role || 'Quản trị viên',
-    status: userObj.status || (userObj.isActive === false || userObj.is_active === false ? 'Bị khóa' : 'Đang hoạt động'),
-    department: userObj.department || userObj.departmentName || userObj.department_name || 'Công nghệ thông tin',
+    phoneNumber: phoneNumber,
+    phone: phoneNumber,
+    isActive: isActive,
+    role: roleName || 'Nhân viên',
+    roleId: roleId,
+    status: userObj.status || (isActive ? 'Đang hoạt động' : 'Bị khóa'),
+    department: deptName || 'Công nghệ thông tin',
+    departmentId: deptId,
+    preferredLanguage: userObj.preferredLanguage || userObj.preferred_language || 'vi',
+    timeZone: userObj.timeZone || userObj.timezone || null,
     avatar: userObj.avatar || userObj.avatarUrl || userObj.avatar_url,
-    phone: userObj.phone || userObj.phoneNumber || userObj.phone_number,
   };
 }
 

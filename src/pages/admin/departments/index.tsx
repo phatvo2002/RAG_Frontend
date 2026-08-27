@@ -5,15 +5,30 @@ import { useTranslation } from 'react-i18next';
 import { CustomTable, Column, TableToolbar } from '@/components/customTable';
 import { DepartmentModal } from './DepartmentModal';
 import { Department } from '@/types';
-import { Plus, Edit2, X } from 'lucide-react';
+import { useDepartmentsQuery, useArchiveDepartmentMutation } from '@/api/departments.api';
+import { Plus, Edit2, Archive, RefreshCw, AlertCircle } from 'lucide-react';
 
 export const DepartmentsPage: React.FC = () => {
-  const { departments, showToast } = useApp();
+  const { showToast } = useApp();
   const { t } = useTranslation(['admin', 'common', 'table']);
+
+  // TanStack Query for Departments
+  const {
+    data: departments = [],
+    isLoading,
+    isError,
+    error,
+    refetch,
+    isFetching,
+  } = useDepartmentsQuery();
+
+  const archiveMutation = useArchiveDepartmentMutation();
+
   const [search, setSearch] = useState('');
   const [deptPage, setDeptPage] = useState(1);
   const [deptPageSize, setDeptPageSize] = useState(20);
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
+  const [departmentToEdit, setDepartmentToEdit] = useState<Department | null>(null);
 
   const filteredDepts = useMemo(() => {
     return departments.filter(
@@ -30,6 +45,29 @@ export const DepartmentsPage: React.FC = () => {
   }, [filteredDepts, deptPage, deptPageSize]);
 
   const totalDeptPages = Math.ceil(filteredDepts.length / deptPageSize) || 1;
+
+  const handleOpenAdd = () => {
+    setDepartmentToEdit(null);
+    setIsDeptModalOpen(true);
+  };
+
+  const handleOpenEdit = (dept: Department) => {
+    setDepartmentToEdit(dept);
+    setIsDeptModalOpen(true);
+  };
+
+  const handleArchive = (dept: Department) => {
+    if (window.confirm(`Bạn có chắc chắn muốn lưu trữ phòng ban "${dept.name}" không?`)) {
+      archiveMutation.mutate(dept.id, {
+        onSuccess: () => {
+          showToast(`Đã lưu trữ phòng ban "${dept.name}" thành công!`, 'success');
+        },
+        onError: (err: any) => {
+          showToast(err.message || 'Không thể lưu trữ phòng ban', 'error');
+        },
+      });
+    }
+  };
 
   const departmentColumns: Column<Department>[] = [
     {
@@ -73,23 +111,29 @@ export const DepartmentsPage: React.FC = () => {
       ),
     },
     {
+      header: t('departments.head', { defaultValue: 'Trưởng phòng' }),
+      render: (d) => (
+        <span className="text-slate-700 dark:text-slate-300 text-xs font-medium">{d.head || d.manager || 'Chưa phân công'}</span>
+      ),
+    },
+    {
       header: t('table:actions', { defaultValue: 'Actions' }),
       align: 'right',
       render: (d) => (
         <div className="flex items-center justify-end gap-2" onClick={(e) => e.stopPropagation()}>
           <button
-            onClick={() => showToast(`Edit department: ${d.name}`, 'info')}
+            onClick={() => handleOpenEdit(d)}
             className="p-1 text-blue-500 hover:text-blue-700 dark:hover:text-blue-400 transition-colors cursor-pointer"
-            title={t('common:actions.edit', { defaultValue: 'Edit' })}
+            title={t('common:actions.edit', { defaultValue: 'Chỉnh sửa' })}
           >
             <Edit2 className="w-3.5 h-3.5 stroke-[2.5]" />
           </button>
           <button
-            onClick={() => showToast(`Delete department: ${d.name}`, 'warning')}
-            className="p-1 text-rose-500 hover:text-rose-700 dark:hover:text-rose-400 transition-colors cursor-pointer"
-            title={t('common:actions.delete', { defaultValue: 'Delete' })}
+            onClick={() => handleArchive(d)}
+            className="p-1 text-amber-500 hover:text-amber-700 dark:hover:text-amber-400 transition-colors cursor-pointer"
+            title="Lưu trữ phòng ban"
           >
-            <X className="w-4 h-4 stroke-[2.5]" />
+            <Archive className="w-3.5 h-3.5 stroke-[2.5]" />
           </button>
         </div>
       ),
@@ -99,35 +143,54 @@ export const DepartmentsPage: React.FC = () => {
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-black overflow-hidden transition-colors">
       <Header
-        title={t('departments.title', { defaultValue: 'Department Management' })}
-        subTitle={t('departments.subtitle', { defaultValue: 'Organizational hierarchy, departments, and managerial assignments' })}
+        title={t('departments.title', { defaultValue: 'Quản lý phòng ban' })}
+        subTitle={t('departments.subtitle', { defaultValue: 'Cấu trúc phòng ban, sơ đồ tổ chức và phân công quản lý' })}
       />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 w-full">
+        {/* Error Alert if query fails */}
+        {isError && (
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
+              <span>Không thể đồng bộ với máy chủ: {(error as any)?.message || 'Đang sử dụng dữ liệu dự phòng'}.</span>
+            </div>
+            <button
+              onClick={() => refetch()}
+              className="px-2.5 py-1 bg-amber-200 dark:bg-amber-800 hover:bg-amber-300 dark:hover:bg-amber-700 rounded font-medium transition-colors flex items-center gap-1 cursor-pointer"
+            >
+              <RefreshCw className="w-3 h-3" />
+              <span>Thử lại</span>
+            </button>
+          </div>
+        )}
+
         {/* Table Toolbar */}
         <TableToolbar
           searchValue={search}
           onSearchChange={setSearch}
-          searchPlaceholder={t('departments.searchPlaceholder', { defaultValue: 'Search by department code, name, phone...' })}
+          searchPlaceholder={t('departments.searchPlaceholder', { defaultValue: 'Tìm theo mã phòng ban, tên, số điện thoại...' })}
           totalCount={departments.length}
           filteredCount={filteredDepts.length}
           primaryAction={{
-            label: t('departments.addDept', { defaultValue: 'Add Department' }),
+            label: t('departments.addDept', { defaultValue: 'Thêm phòng ban' }),
             icon: <Plus className="w-3.5 h-3.5" />,
-            onClick: () => setIsDeptModalOpen(true),
+            onClick: handleOpenAdd,
           }}
         />
 
         {/* CustomTable */}
         <CustomTable<Department>
-          title={t('departments.listTitle', { defaultValue: 'Department List' })}
+          title={t('departments.listTitle', { defaultValue: 'Danh sách phòng ban' })}
           columns={departmentColumns}
           data={paginatedDepts}
+          isLoading={isLoading || isFetching}
+          skeletonRowCount={5}
           keyExtractor={(d) => d.id}
           emptyState={{
             isSearch: Boolean(search),
-            actionText: search ? undefined : t('departments.addDept', { defaultValue: 'Add Department' }),
-            onAction: search ? undefined : () => setIsDeptModalOpen(true),
+            actionText: search ? undefined : t('departments.addDept', { defaultValue: 'Thêm phòng ban' }),
+            onAction: search ? undefined : handleOpenAdd,
           }}
           pagination={{
             currentPage: deptPage,
@@ -147,6 +210,8 @@ export const DepartmentsPage: React.FC = () => {
       <DepartmentModal
         isOpen={isDeptModalOpen}
         onClose={() => setIsDeptModalOpen(false)}
+        departmentToEdit={departmentToEdit}
+        onSuccessToast={showToast}
       />
     </div>
   );

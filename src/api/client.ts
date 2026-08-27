@@ -151,14 +151,22 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
     if (responseData) {
       if (typeof responseData === 'string') {
         errorMessage = responseData;
+      } else if (responseData.error) {
+        if (typeof responseData.error === 'string') {
+          errorMessage = responseData.error;
+        } else if (responseData.error.details && Array.isArray(responseData.error.details)) {
+          errorMessage = responseData.error.details.map((d: any) => d.message).join(', ');
+        } else if (responseData.error.message) {
+          errorMessage = responseData.error.message;
+        } else {
+          errorMessage = JSON.stringify(responseData.error);
+        }
       } else if (responseData.message) {
         errorMessage = responseData.message;
       } else if (responseData.detail) {
         errorMessage = typeof responseData.detail === 'string'
           ? responseData.detail
           : JSON.stringify(responseData.detail);
-      } else if (responseData.error) {
-        errorMessage = responseData.error;
       } else if (responseData.errors) {
         errorMessage = Array.isArray(responseData.errors)
           ? responseData.errors.join(', ')

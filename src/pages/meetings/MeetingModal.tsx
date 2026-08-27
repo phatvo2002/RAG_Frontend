@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
+import { useForm } from 'react-hook-form';
+import { yupResolver } from '@hookform/resolvers/yup';
 import { Modal } from '@/components/disclosure';
 import { useApp } from '@/context/AppContext';
+import { meetingYupSchema, MeetingFormData } from '@/types';
+import { AlertCircle } from 'lucide-react';
 
 interface MeetingModalProps {
   isOpen: boolean;
@@ -8,73 +12,128 @@ interface MeetingModalProps {
 }
 
 export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose }) => {
-  const { addMeeting, projects } = useApp();
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState('2024-05-20');
-  const [time, setTime] = useState('09:00 - 10:00');
-  const [location, setLocation] = useState('Phòng họp A3');
-  const [organizer, setOrganizer] = useState('Anh Khoa');
-  const [project, setProject] = useState(projects[0]?.name || 'NEXORA Platform');
-  const [participantsCount, setParticipantsCount] = useState(5);
+  const { addMeeting, projects, showToast } = useApp();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title) return;
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors },
+  } = useForm<MeetingFormData>({
+    resolver: yupResolver(meetingYupSchema) as any,
+    defaultValues: {
+      title: '',
+      date: '2024-05-20',
+      time: '09:00 - 10:00',
+      location: 'Phòng họp A3',
+      organizer: 'Anh Khoa',
+      project: projects[0]?.name || 'NEXORA Platform',
+      participantsCount: 5,
+    },
+  });
 
+  useEffect(() => {
+    if (isOpen) {
+      reset({
+        title: '',
+        date: '2024-05-20',
+        time: '09:00 - 10:00',
+        location: 'Phòng họp A3',
+        organizer: 'Anh Khoa',
+        project: projects[0]?.name || 'NEXORA Platform',
+        participantsCount: 5,
+      });
+    }
+  }, [isOpen, reset]);
+
+  if (!isOpen) return null;
+
+  const onSubmit = (data: MeetingFormData) => {
     addMeeting({
-      title,
-      date,
-      time,
-      location,
-      organizer,
-      project,
+      title: data.title,
+      date: data.date,
+      time: data.time,
+      location: data.location || '',
+      organizer: data.organizer,
+      project: data.project,
       status: 'Sắp diễn ra',
-      participantsCount,
+      participantsCount: Number(data.participantsCount) || 1,
       hasTranscript: false,
-      hasSummary: false
+      hasSummary: false,
     });
 
-    setTitle('');
+    showToast(`Đã lên lịch cuộc họp "${data.title}" thành công!`, 'success');
+    reset();
     onClose();
   };
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Tạo cuộc họp mới">
-      <form onSubmit={handleSubmit} className="space-y-4 text-xs">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-xs">
         <div>
           <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
             Tên cuộc họp <span className="text-rose-500">*</span>
           </label>
           <input
             type="text"
-            required
+            {...register('title')}
             placeholder="Ví dụ: Họp Sprint Review tuần 20"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500"
+            className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+              errors.title
+                ? 'border-rose-400 focus:border-rose-600 focus:bg-rose-50/10'
+                : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+            }`}
           />
+          {errors.title && (
+            <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+              <span>{errors.title.message}</span>
+            </p>
+          )}
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Ngày họp</label>
+            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+              Ngày họp <span className="text-rose-500">*</span>
+            </label>
             <input
               type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 cursor-pointer"
+              {...register('date')}
+              className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 cursor-pointer ${
+                errors.date
+                  ? 'border-rose-400 focus:border-rose-600'
+                  : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+              }`}
             />
+            {errors.date && (
+              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{errors.date.message}</span>
+              </p>
+            )}
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Khung giờ</label>
+            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+              Khung giờ <span className="text-rose-500">*</span>
+            </label>
             <input
               type="text"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
+              {...register('time')}
               placeholder="09:00 - 10:00"
-              className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+              className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 ${
+                errors.time
+                  ? 'border-rose-400 focus:border-rose-600'
+                  : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+              }`}
             />
+            {errors.time && (
+              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{errors.time.message}</span>
+              </p>
+            )}
           </div>
         </div>
 
@@ -83,19 +142,23 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose }) =
             <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Địa điểm / Link họp</label>
             <input
               type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
+              {...register('location')}
               placeholder="Phòng họp A3 hoặc Link Teams"
               className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
             />
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Dự án liên quan</label>
+            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+              Dự án liên quan <span className="text-rose-500">*</span>
+            </label>
             <select
-              value={project}
-              onChange={(e) => setProject(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 cursor-pointer"
+              {...register('project')}
+              className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 cursor-pointer ${
+                errors.project
+                  ? 'border-rose-400 focus:border-rose-600'
+                  : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+              }`}
             >
               {projects.map((p) => (
                 <option key={p.id} value={p.name}>
@@ -103,29 +166,58 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose }) =
                 </option>
               ))}
             </select>
+            {errors.project && (
+              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{errors.project.message}</span>
+              </p>
+            )}
           </div>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
           <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Người chủ trì</label>
+            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+              Người chủ trì <span className="text-rose-500">*</span>
+            </label>
             <input
               type="text"
-              value={organizer}
-              onChange={(e) => setOrganizer(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+              {...register('organizer')}
+              placeholder="VD: Anh Khoa"
+              className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 ${
+                errors.organizer
+                  ? 'border-rose-400 focus:border-rose-600 focus:bg-rose-50/10'
+                  : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+              }`}
             />
+            {errors.organizer && (
+              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{errors.organizer.message}</span>
+              </p>
+            )}
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Số người tham dự</label>
+            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+              Số người tham dự <span className="text-rose-500">*</span>
+            </label>
             <input
               type="number"
               min={1}
-              value={participantsCount}
-              onChange={(e) => setParticipantsCount(parseInt(e.target.value) || 1)}
-              className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+              {...register('participantsCount')}
+              className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 ${
+                errors.participantsCount
+                  ? 'border-rose-400 focus:border-rose-600'
+                  : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+              }`}
             />
+            {errors.participantsCount && (
+              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                <span>{errors.participantsCount.message}</span>
+              </p>
+            )}
           </div>
         </div>
 

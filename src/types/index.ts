@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 export type NavModule =
   | 'chat'
   | 'dashboard'
@@ -16,13 +14,23 @@ export type UserStatus = 'Đang hoạt động' | 'Tạm khóa' | 'Bị khóa';
 
 export interface User {
   id: string;
+  userId?: string;
   name: string;
+  displayName?: string;
+  fullName?: string;
+  userName?: string;
   email: string;
+  phoneNumber?: string;
+  phone?: string;
+  isActive?: boolean;
   role: UserRole | string;
+  roleId?: string;
   status: UserStatus | string;
   department: string;
+  departmentId?: string;
+  preferredLanguage?: string;
+  timeZone?: string | null;
   avatar?: string;
-  phone?: string;
 }
 
 export interface Department {
@@ -249,10 +257,7 @@ export interface ChatMessage {
   isThinking?: boolean;
 }
 
-export const loginSchema = z.object({
-  email: z.string().min(1, 'Vui lòng nhập email hoặc tên đăng nhập'),
-  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
-});
+export * from './yupSchemas';
+export * from '@/constants/validationMessages';
 
-export type LoginFormData = z.infer<typeof loginSchema>;
-export type LoginCredentials = LoginFormData & { username?: string };
+

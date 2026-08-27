@@ -9,23 +9,28 @@ import { normalizeUser } from './auth.api';
 export interface CreateUserData {
   email: string;
   userName?: string;
+  displayName?: string;
   fullName?: string;
   name?: string;
   password?: string;
   role?: string;
   roleId?: string;
   department?: string;
+  departmentId?: string;
   phone?: string;
   phoneNumber?: string;
 }
 
 export interface UpdateUserData {
   email?: string;
+  userName?: string;
+  displayName?: string;
   fullName?: string;
   name?: string;
   role?: string;
   roleId?: string;
   department?: string;
+  departmentId?: string;
   phone?: string;
   phoneNumber?: string;
   status?: string;
@@ -81,15 +86,18 @@ export const usersApi = {
    * Tạo mới người dùng
    */
   async createUser(data: CreateUserData): Promise<User> {
+    const displayName = data.displayName || data.fullName || data.name || '';
     const payload = {
       email: data.email,
-      username: data.userName || data.email,
-      fullName: data.fullName || data.name,
-      name: data.fullName || data.name,
+      username: data.userName || data.email.split('@')[0],
+      displayName: displayName,
+      fullName: data.fullName || displayName,
+      name: data.name || displayName,
       password: data.password || 'Nexora@2026',
       role: data.role || 'Nhân viên',
       roleId: data.roleId,
       department: data.department || 'Công nghệ thông tin',
+      departmentId: data.departmentId,
       phoneNumber: data.phone || data.phoneNumber,
     };
 
@@ -120,13 +128,16 @@ export const usersApi = {
    * Cập nhật thông tin người dùng
    */
   async updateUser(userId: string, data: UpdateUserData): Promise<User> {
+    const displayName = data.displayName || data.fullName || data.name || '';
     const payload = {
       email: data.email,
-      fullName: data.fullName || data.name,
-      name: data.fullName || data.name,
+      displayName: displayName,
+      fullName: data.fullName || displayName,
+      name: data.name || displayName,
       role: data.role,
       roleId: data.roleId,
       department: data.department,
+      departmentId: data.departmentId,
       phoneNumber: data.phone || data.phoneNumber,
       status: data.status,
     };

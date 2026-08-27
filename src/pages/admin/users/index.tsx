@@ -11,6 +11,8 @@ import {
   useDeactivateUserMutation,
   useReactivateUserMutation,
 } from '@/api/users.api';
+import { useDepartmentsQuery } from '@/api/departments.api';
+import { useRolesQuery } from '@/api/roles.api';
 import { User } from '@/types';
 import {
   Plus,
@@ -24,10 +26,10 @@ import {
 } from 'lucide-react';
 
 export const UsersPage: React.FC = () => {
-  const { departments, showToast } = useApp();
+  const { showToast } = useApp();
   const { t } = useTranslation(['admin', 'common', 'table']);
 
-  // TanStack Query for Users
+  // TanStack Query for Users, Departments, and Roles
   const {
     data: users = [],
     isLoading: isUsersLoading,
@@ -36,6 +38,9 @@ export const UsersPage: React.FC = () => {
     refetch: refetchUsers,
     isFetching: isUsersFetching
   } = useUsersQuery();
+
+  const { data: departments = [] } = useDepartmentsQuery();
+  const { data: roles = [] } = useRolesQuery();
 
   const deactivateMutation = useDeactivateUserMutation();
   const reactivateMutation = useReactivateUserMutation();
@@ -197,7 +202,7 @@ export const UsersPage: React.FC = () => {
       align: 'center',
       width: '60px',
       render: (_, index) => (
-        <span className="font-semibold text-slate-500 dark:text-slate-400 text-xs">
+        <span className="font-semibold text-slate-600 dark:text-zinc-300 text-xs">
           {(currentPage - 1) * pageSize + index + 1}
         </span>
       ),
@@ -206,30 +211,38 @@ export const UsersPage: React.FC = () => {
       header: t('users.name', { defaultValue: 'Full Name' }),
       sortable: true,
       sortKey: 'name',
-      render: (u) => (
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-2xs shrink-0">
-            {u.name
-              .split(' ')
-              .map((n) => n[0])
-              .join('')
-              .slice(0, 2)}
+      render: (u) => {
+        const titleName = u.displayName || u.name || u.userName || 'User';
+        const initials = titleName
+          .split(' ')
+          .map((n) => n[0])
+          .join('')
+          .slice(0, 2)
+          .toUpperCase() || 'U';
+
+        return (
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 rounded bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-bold text-xs flex items-center justify-center shadow-2xs shrink-0">
+              {initials}
+            </div>
+            <div className="min-w-0">
+              <span className="font-semibold text-slate-900 dark:text-zinc-100 text-xs leading-tight block hover:text-blue-500 dark:hover:text-blue-400 cursor-pointer">
+                {titleName}
+              </span>
+              <p className="text-[11px] text-slate-500 dark:text-zinc-400 font-normal leading-tight mt-0.5 truncate">
+                {u.userName && u.userName !== u.email ? `@${u.userName} • ` : ''}{u.email}
+              </p>
+            </div>
           </div>
-          <div className="min-w-0">
-            <span className="font-semibold text-slate-900 dark:text-slate-100 text-xs leading-tight block hover:text-blue-600 cursor-pointer">
-              {u.name}
-            </span>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500 font-normal leading-tight mt-0.5 truncate">{u.email}</p>
-          </div>
-        </div>
-      ),
+        );
+      },
     },
     {
       header: t('users.department', { defaultValue: 'Department' }),
       sortable: true,
       sortKey: 'department',
       render: (u) => (
-        <span className="font-medium text-slate-700 dark:text-slate-300">{u.department || '—'}</span>
+        <span className="font-medium text-slate-700 dark:text-zinc-200">{u.department || '—'}</span>
       ),
     },
     {
@@ -245,7 +258,7 @@ export const UsersPage: React.FC = () => {
       header: t('users.phone', { defaultValue: 'Phone Number' }),
       align: 'left',
       render: (u) => (
-        <span className="text-slate-600 dark:text-slate-400 font-mono text-[11px]">{u.phone || '—'}</span>
+        <span className="text-slate-700 dark:text-zinc-300 font-mono text-[11px]">{u.phoneNumber || u.phone || '—'}</span>
       ),
     },
     {
@@ -357,11 +370,15 @@ export const UsersPage: React.FC = () => {
                 onChange={(e) => setRoleFilter(e.target.value)}
                 className="px-2.5 py-1.5 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded text-xs font-medium text-slate-700 dark:text-zinc-200 focus:outline-none focus:border-blue-600 shadow-2xs cursor-pointer"
               >
-                <option value="all">{t('users.allRoles', { defaultValue: 'All Roles' })}</option>
-                <option value="Quản trị viên">{t('common:roles.admin', { defaultValue: 'Administrator' })}</option>
-                <option value="Trưởng phòng">{t('common:roles.departmentHead', { defaultValue: 'Department Head' })}</option>
-                <option value="Trưởng dự án">{t('common:roles.projectLead', { defaultValue: 'Project Lead' })}</option>
-                <option value="Nhân viên">{t('common:roles.employee', { defaultValue: 'Employee' })}</option>
+                <option value="all">{t('users.allRoles', { defaultValue: 'Tất cả vai trò' })}</option>
+                {roles.map((r) => {
+                  const roleName = r.name || r.role;
+                  return (
+                    <option key={r.id} value={roleName}>
+                      {roleName}
+                    </option>
+                  );
+                })}
               </select>
 
               <select

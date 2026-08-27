@@ -133,10 +133,10 @@ export function CustomTable<T>({
   const paddingClass = compact ? 'px-3 py-2.5' : 'px-4 py-3.5';
 
   return (
-    <div className={`w-full bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs overflow-hidden transition-colors ${className}`}>
+    <div className={`w-full bg-white dark:bg-zinc-900 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-2xs overflow-hidden transition-colors ${className}`}>
       {/* Table Title if provided */}
       {title && (
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-zinc-800">
+        <div className="px-5 py-4 border-b border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900 transition-colors">
           <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100 tracking-tight">{title}</h3>
         </div>
       )}
@@ -146,7 +146,7 @@ export function CustomTable<T>({
         <table className="w-full text-left text-xs text-slate-700 dark:text-zinc-200 border-collapse">
           {/* Header */}
           <thead
-            className={`bg-slate-50/80 dark:bg-zinc-800/80 border-b border-slate-200 dark:border-zinc-800 text-slate-800 dark:text-zinc-200 font-bold text-xs select-none ${
+            className={`bg-slate-50 dark:bg-zinc-800/90 border-b border-slate-200 dark:border-zinc-700/80 text-slate-700 dark:text-zinc-300 font-semibold text-xs select-none ${
               stickyHeader ? 'sticky top-0 z-10' : ''
             }`}
           >
@@ -161,7 +161,7 @@ export function CustomTable<T>({
                       if (el) el.indeterminate = isSomeSelected;
                     }}
                     onChange={handleSelectAll}
-                    className="w-3.5 h-3.5 rounded-sm border-slate-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                    className="w-4 h-4 rounded border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
                   />
                 </th>
               )}
@@ -239,9 +239,9 @@ export function CustomTable<T>({
 
                 const isEvenRow = rowIdx % 2 === 1;
                 const rowBg = isSelected
-                  ? 'bg-blue-50/80 dark:bg-blue-950/40'
+                  ? 'bg-blue-50/90 dark:bg-zinc-800 border-l-2 border-blue-600 text-slate-900 dark:text-zinc-100'
                   : striped && isEvenRow
-                  ? 'bg-slate-50/60 dark:bg-zinc-850/40'
+                  ? 'bg-slate-50/60 dark:bg-zinc-900/60'
                   : 'bg-white dark:bg-zinc-900';
 
                 return (
@@ -249,7 +249,11 @@ export function CustomTable<T>({
                     key={key}
                     onClick={() => onRowClick?.(item, rowIdx)}
                     className={`${rowBg} transition-colors ${
-                      isClickable ? 'hover:bg-blue-50/50 dark:hover:bg-zinc-800 cursor-pointer' : 'hover:bg-slate-100/50 dark:hover:bg-zinc-800/60'
+                      isClickable
+                        ? 'hover:bg-blue-50/60 dark:hover:bg-zinc-800/80 cursor-pointer'
+                        : isSelected
+                        ? 'hover:bg-blue-100/70 dark:hover:bg-zinc-750'
+                        : 'hover:bg-slate-50 dark:hover:bg-zinc-800/50'
                     }`}
                   >
                     {/* Row Checkbox */}
@@ -262,7 +266,7 @@ export function CustomTable<T>({
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => {}}
-                          className="w-3.5 h-3.5 rounded-sm border-slate-300 dark:border-zinc-600 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                          className="w-4 h-4 rounded border-slate-300 dark:border-zinc-600 bg-white dark:bg-zinc-800 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
                         />
                       </td>
                     )}
@@ -274,7 +278,7 @@ export function CustomTable<T>({
                       return (
                         <td
                           key={col.id || colIdx}
-                          className={`${paddingClass} ${alignClass} ${col.className || ''}`}
+                          className={`${paddingClass} ${alignClass} text-slate-700 dark:text-zinc-200 ${col.className || ''}`}
                         >
                           {col.render
                             ? col.render(item, rowIdx)
@@ -302,7 +306,7 @@ export function CustomTable<T>({
               type="button"
               disabled={pagination.currentPage <= 1}
               onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
-              className="w-8 h-8 rounded bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              className="w-8 h-8 rounded bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors border border-transparent dark:border-zinc-700/50"
             >
               <ChevronLeft className="w-4 h-4" />
             </button>
@@ -330,7 +334,7 @@ export function CustomTable<T>({
                       className={`w-8 h-8 rounded font-semibold text-xs flex items-center justify-center transition-all cursor-pointer ${
                         isActive
                           ? 'bg-blue-600 text-white shadow-2xs shadow-blue-500/30'
-                          : 'bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300'
+                          : 'bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-300 border border-transparent dark:border-zinc-700/50'
                       }`}
                     >
                       {p}
@@ -344,7 +348,7 @@ export function CustomTable<T>({
               type="button"
               disabled={pagination.currentPage >= pagination.totalPages}
               onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
-              className="w-8 h-8 rounded bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
+              className="w-8 h-8 rounded bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-600 dark:text-zinc-300 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors border border-transparent dark:border-zinc-700/50"
             >
               <ChevronRight className="w-4 h-4" />
             </button>
@@ -352,7 +356,7 @@ export function CustomTable<T>({
             {/* Jump to Page Form */}
             <form onSubmit={handleJumpPage} className="flex items-center gap-1.5 ml-2">
               <span className="text-slate-500 dark:text-zinc-400 text-xs">
-                {t('table:goToPage', { defaultValue: 'Go to page' })}
+                {t('table:goToPage', { defaultValue: 'Đi đến trang' })}
               </span>
               <input
                 type="number"
@@ -365,7 +369,7 @@ export function CustomTable<T>({
               <button
                 type="submit"
                 className="w-8 h-8 rounded bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-2xs shadow-blue-500/20 cursor-pointer transition-colors"
-                title={t('table:jump', { defaultValue: 'Go' })}
+                title={t('table:jump', { defaultValue: 'Đi' })}
               >
                 <ArrowRight className="w-3.5 h-3.5" />
               </button>
@@ -375,7 +379,7 @@ export function CustomTable<T>({
           {/* Right Controls */}
           {pagination.onPageSizeChange && (
             <div className="flex items-center gap-1.5 text-slate-600 dark:text-zinc-400 text-xs">
-              <span>{t('table:display', { defaultValue: 'Display' })}</span>
+              <span>{t('table:display', { defaultValue: 'Hiển thị' })}</span>
               <select
                 value={pagination.pageSize || 20}
                 onChange={(e) => pagination.onPageSizeChange?.(Number(e.target.value))}
@@ -387,7 +391,7 @@ export function CustomTable<T>({
                   </option>
                 ))}
               </select>
-              <span>{t('table:rows', { defaultValue: 'rows' })}</span>
+              <span>{t('table:rows', { defaultValue: 'hàng' })}</span>
             </div>
           )}
         </div>

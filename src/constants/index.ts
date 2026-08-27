@@ -24,3 +24,6 @@ export const NAV_ITEMS: { id: NavModule; label: string; path: string }[] = [
   { id: 'reports', label: 'Báo cáo & Phân tích', path: '/reports' },
   { id: 'admin', label: 'Quản trị hệ thống', path: '/admin' },
 ];
+
+export * from './validationMessages';
+

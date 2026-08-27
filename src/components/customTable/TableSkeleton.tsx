@@ -30,7 +30,7 @@ export const TableSkeleton: React.FC<TableSkeletonProps> = ({
               <td key={`skeleton-cell-${colIdx}`} className="px-4 py-3.5">
                 <div className="space-y-1.5">
                   <div className={`h-3.5 bg-slate-200 dark:bg-zinc-800 rounded ${chosenWidth}`} />
-                  {colIdx === 0 && <div className="h-2.5 bg-slate-100 dark:bg-zinc-850 rounded w-1/2" />}
+                  {colIdx === 0 && <div className="h-2.5 bg-slate-100 dark:bg-zinc-800 rounded w-1/2" />}
                 </div>
               </td>
             );

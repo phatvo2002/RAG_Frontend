@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { loginSchema, LoginFormData } from '@/types';
+import { yupResolver } from '@hookform/resolvers/yup';
+import { loginYupSchema, LoginFormData } from '@/types';
 import { useApp } from '@/context/AppContext';
 import { useLoginMutation } from '@/api/auth.api';
 import { useNavigate } from '@tanstack/react-router';
@@ -20,7 +20,7 @@ export const LoginPage: React.FC = () => {
     handleSubmit,
     formState: { errors },
   } = useForm<LoginFormData>({
-    resolver: zodResolver(loginSchema),
+    resolver: yupResolver(loginYupSchema) as any,
     defaultValues: {
       email: '',
       password: '',
