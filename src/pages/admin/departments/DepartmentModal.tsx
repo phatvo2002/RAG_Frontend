@@ -4,8 +4,9 @@ import { yupResolver } from '@hookform/resolvers/yup';
 import { Modal } from '@/components/disclosure';
 import { useApp } from '@/context/AppContext';
 import { departmentYupSchema, DepartmentFormData, Department } from '@/types';
-import { useCreateDepartmentMutation, useUpdateDepartmentMutation } from '@/api/departments.api';
-import { Building, Phone, MapPin, User, AlertCircle } from 'lucide-react';
+import { useCreateDepartmentMutation, useUpdateDepartmentMutation, useDepartmentsQuery } from '@/api/departments.api';
+import { useUsersQuery } from '@/api/users.api';
+import { Building, Phone, MapPin, User, AlertCircle, ShieldCheck, UserCheck } from 'lucide-react';
 
 interface DepartmentModalProps {
   isOpen: boolean;
@@ -23,6 +24,9 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
   const { showToast } = useApp();
   const isEditMode = Boolean(departmentToEdit);
 
+  const { data: departments = [] } = useDepartmentsQuery();
+  const { data: users = [] } = useUsersQuery();
+
   const createMutation = useCreateDepartmentMutation();
   const updateMutation = useUpdateDepartmentMutation();
 
@@ -31,15 +35,18 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
     handleSubmit,
     reset,
     setError,
+    setValue,
     formState: { errors },
   } = useForm<DepartmentFormData>({
     resolver: yupResolver(departmentYupSchema) as any,
     defaultValues: {
       name: '',
       code: '',
+      parentDepartmentId: '',
+      managerUserId: '',
+      status: 'Active',
       phone: '',
       address: '',
-      head: '',
       description: '',
     },
   });
@@ -50,78 +57,89 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
         reset({
           name: departmentToEdit.name || '',
           code: departmentToEdit.code || '',
+          parentDepartmentId: departmentToEdit.parentDepartmentId || '',
+          managerUserId: departmentToEdit.managerUserId || '',
+          status: departmentToEdit.status === 'Inactive' || departmentToEdit.status === 'Tạm dừng' ? 'Inactive' : 'Active',
           phone: departmentToEdit.phone || '',
           address: departmentToEdit.address || '',
-          head: departmentToEdit.head || departmentToEdit.manager || '',
           description: departmentToEdit.description || '',
         });
       } else {
         reset({
           name: '',
           code: '',
+          parentDepartmentId: '',
+          managerUserId: '',
+          status: 'Active',
           phone: '',
           address: '',
-          head: '',
           description: '',
         });
       }
     }
-  }, [isOpen, departmentToEdit]);
+  }, [isOpen, departmentToEdit, reset]);
 
   if (!isOpen) return null;
 
   const onSubmit = (data: DepartmentFormData) => {
     const toastCallback = onSuccessToast || showToast;
 
+    const payloadData = {
+      name: data.name.trim(),
+      code: data.code.trim().toUpperCase(),
+      parentDepartmentId: data.parentDepartmentId && data.parentDepartmentId !== '' ? data.parentDepartmentId : null,
+      managerUserId: data.managerUserId && data.managerUserId !== '' ? data.managerUserId : null,
+      status: data.status || 'Active',
+      phone: data.phone?.trim() || '',
+      address: data.address?.trim() || '',
+      description: data.description?.trim() || '',
+    };
+
     if (isEditMode && departmentToEdit) {
+      const deptId = departmentToEdit.departmentId || departmentToEdit.id || '';
       updateMutation.mutate(
         {
-          departmentId: departmentToEdit.id,
-          data: {
-            name: data.name,
-            code: data.code || data.name.slice(0, 4).toUpperCase(),
-            phone: data.phone || '',
-            address: data.address || '',
-            head: data.head || '',
-            manager: data.head || '',
-            description: data.description || '',
-          },
+          departmentId: deptId,
+          data: payloadData,
         },
         {
           onSuccess: (updatedDept) => {
-            toastCallback(`Cập nhật phòng ban "${updatedDept.name}" thành công!`, 'success');
+            toastCallback(`Cập nhật phòng ban "${updatedDept.name || data.name}" thành công!`, 'success');
             reset();
             onClose();
           },
           onError: (err: any) => {
-            setError('root', { message: err.message || 'Không thể cập nhật phòng ban' });
+            const errorMsg = err.data?.message || err.message || 'Không thể cập nhật phòng ban';
+            setError('root', { message: errorMsg });
+            showToast(errorMsg, 'error');
           },
         }
       );
     } else {
       createMutation.mutate(
-        {
-          name: data.name,
-          code: data.code || data.name.slice(0, 4).toUpperCase(),
-          phone: data.phone || '',
-          address: data.address || '',
-          head: data.head || 'Chưa phân công',
-          manager: data.head || 'Chưa phân công',
-          description: data.description || '',
-        },
+        payloadData,
         {
           onSuccess: (createdDept) => {
-            toastCallback(`Đã thêm phòng ban "${createdDept.name}" thành công!`, 'success');
+            toastCallback(`Đã thêm phòng ban "${createdDept.name || data.name}" thành công!`, 'success');
             reset();
             onClose();
           },
           onError: (err: any) => {
-            setError('root', { message: err.message || 'Không thể tạo mới phòng ban' });
+            const errorMsg = err.data?.message || err.message || 'Không thể tạo mới phòng ban';
+            setError('root', { message: errorMsg });
+            showToast(errorMsg, 'error');
           },
         }
       );
     }
   };
+
+  // Lọc danh sách phòng ban cấp trên: Loại bỏ chính phòng ban đang sửa để tránh vòng lặp cha-con
+  const eligibleParentDepartments = departments.filter((d) => {
+    if (!departmentToEdit) return true;
+    const currentId = departmentToEdit.id || departmentToEdit.departmentId;
+    return (d.id || d.departmentId) !== currentId;
+  });
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
@@ -130,33 +148,46 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
       isOpen={isOpen}
       onClose={onClose}
       title={isEditMode ? 'Chỉnh sửa phòng ban' : 'Thêm phòng ban mới'}
-      maxWidth="md"
+      maxWidth="lg"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-3.5 text-xs">
+      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-xs">
         {errors.root && (
-          <div className="p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded text-rose-700 dark:text-rose-300 text-[11px] leading-relaxed flex items-center gap-1.5">
-            <AlertCircle className="w-4 h-4 shrink-0" />
+          <div className="p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded text-rose-700 dark:text-rose-300 text-xs leading-relaxed flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
             <span>{errors.root.message}</span>
           </div>
         )}
 
-        <div className="grid grid-cols-3 gap-3">
-          <div className="col-span-2">
-            <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">
+        {/* Row 1: Tên phòng ban & Mã code */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="sm:col-span-2">
+            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
               Tên phòng ban <span className="text-rose-500">*</span>
             </label>
             <div className="relative flex items-center">
-              <Building className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-500" />
               <input
                 type="text"
                 {...register('name')}
                 placeholder="VD: Phòng Công nghệ Thông tin"
-                className={`w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-zinc-800 border rounded text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none text-xs ${
-                  errors.name
-                    ? 'border-rose-400 focus:border-rose-600 focus:bg-rose-50/10'
-                    : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600 focus:bg-white dark:focus:bg-zinc-800'
+                onChange={(e) => {
+                  register('name').onChange(e);
+                  if (!isEditMode) {
+                    const words = e.target.value
+                      .normalize('NFD')
+                      .replace(/[\u0300-\u036f]/g, '')
+                      .split(' ')
+                      .filter(Boolean);
+                    if (words.length > 0) {
+                      const codeSuggest = words.map((w) => w[0]).join('').toUpperCase();
+                      setValue('code', codeSuggest);
+                    }
+                  }
+                }}
+                className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                  errors.name ? 'input-error' : ''
                 }`}
               />
+              <Building className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
             </div>
             {errors.name && (
               <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
@@ -167,31 +198,101 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
           </div>
 
           <div>
-            <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">Mã phòng ban</label>
+            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+              Mã code <span className="text-rose-500">*</span>
+            </label>
             <input
               type="text"
               {...register('code')}
               placeholder="VD: CNTT"
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-blue-600 focus:bg-white dark:focus:bg-zinc-800 text-xs uppercase"
+              className={`input input-bordered input-sm w-full px-3 text-xs uppercase font-mono bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                errors.code ? 'input-error' : ''
+              }`}
             />
+            {errors.code && (
+              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium">
+                {errors.code.message}
+              </p>
+            )}
           </div>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
+        {/* Row 2: Phòng ban cấp trên & Trưởng phòng */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           <div>
-            <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">Số điện thoại</label>
+            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+              Phòng ban cấp trên (Parent Department)
+            </label>
             <div className="relative flex items-center">
-              <Phone className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-500" />
+              <select
+                {...register('parentDepartmentId')}
+                className="select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+              >
+                <option value="">-- Không có (Phòng ban gốc) --</option>
+                {eligibleParentDepartments.map((dept) => {
+                  const deptId = dept.id || dept.departmentId || '';
+                  return (
+                    <option key={deptId} value={deptId}>
+                      {dept.name} ({dept.code || 'PB'})
+                    </option>
+                  );
+                })}
+              </select>
+              <Building className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+              Trưởng phòng / Quản lý (Manager)
+            </label>
+            <div className="relative flex items-center">
+              <select
+                {...register('managerUserId')}
+                className="select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+              >
+                <option value="">-- Chưa phân công --</option>
+                {users.map((user) => {
+                  const uId = user.id || (user as any).userId || '';
+                  return (
+                    <option key={uId} value={uId}>
+                      {user.name || (user as any).displayName} ({user.email || 'No email'})
+                    </option>
+                  );
+                })}
+              </select>
+              <UserCheck className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+            </div>
+          </div>
+        </div>
+
+        {/* Row 3: Trạng thái & Số điện thoại */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+              Trạng thái (Status)
+            </label>
+            <select
+              {...register('status')}
+              className="select select-bordered select-sm w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+            >
+              <option value="Active">Active (Đang hoạt động)</option>
+              <option value="Inactive">Inactive (Tạm dừng)</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Số điện thoại liên hệ</label>
+            <div className="relative flex items-center">
               <input
                 type="text"
                 {...register('phone')}
                 placeholder="VD: 0274 374 0530"
-                className={`w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-zinc-800 border rounded text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none text-xs ${
-                  errors.phone
-                    ? 'border-rose-400 focus:border-rose-600 focus:bg-rose-50/10'
-                    : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600 focus:bg-white dark:focus:bg-zinc-800'
+                className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                  errors.phone ? 'input-error' : ''
                 }`}
               />
+              <Phone className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
             </div>
             {errors.phone && (
               <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
@@ -200,60 +301,48 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
               </p>
             )}
           </div>
-
-          <div>
-            <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">Địa chỉ / Vị trí</label>
-            <div className="relative flex items-center">
-              <MapPin className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-500" />
-              <input
-                type="text"
-                {...register('address')}
-                placeholder="VD: Tầng 4, Tòa A"
-                className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-blue-600 focus:bg-white dark:focus:bg-zinc-800 text-xs"
-              />
-            </div>
-          </div>
         </div>
 
+        {/* Row 4: Vị trí / Địa chỉ */}
         <div>
-          <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">Trưởng phòng / Quản lý</label>
+          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Địa chỉ / Vị trí văn phòng</label>
           <div className="relative flex items-center">
-            <User className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-500" />
             <input
               type="text"
-              {...register('head')}
-              placeholder="VD: Nguyễn Văn B"
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-blue-600 focus:bg-white dark:focus:bg-zinc-800 text-xs"
+              {...register('address')}
+              placeholder="VD: Tầng 4, Tòa nhà Trụ sở chính"
+              className="input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500"
             />
+            <MapPin className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
           </div>
         </div>
 
+        {/* Row 5: Mô tả chức năng */}
         <div>
-          <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">Mô tả chức năng</label>
-          <div className="relative flex items-start">
-            <textarea
-              rows={2}
-              {...register('description')}
-              placeholder="Mô tả ngắn về nhiệm vụ của phòng ban..."
-              className="w-full p-2.5 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none focus:border-blue-600 focus:bg-white dark:focus:bg-zinc-800 text-xs"
-            />
-          </div>
+          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Mô tả chức năng</label>
+          <textarea
+            rows={2}
+            {...register('description')}
+            placeholder="Mô tả ngắn về nhiệm vụ và phạm vi của phòng ban..."
+            className="textarea textarea-bordered w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 resize-none"
+          />
         </div>
 
+        {/* Form Actions */}
         <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-2 border border-slate-200 dark:border-zinc-700 text-slate-600 dark:text-zinc-300 rounded font-medium hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
+            className="btn btn-sm btn-ghost text-slate-700 dark:text-zinc-300 font-medium"
           >
             Hủy
           </button>
           <button
             type="submit"
             disabled={isPending}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded font-medium shadow-2xs shadow-blue-500/20 cursor-pointer disabled:opacity-50 flex items-center gap-1.5 transition-colors"
+            className="btn btn-sm btn-primary text-white font-medium shadow-xs"
           >
-            {isPending && <span className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+            {isPending && <span className="loading loading-spinner loading-xs" />}
             <span>{isEditMode ? 'Lưu thay đổi' : 'Tạo phòng ban'}</span>
           </button>
         </div>

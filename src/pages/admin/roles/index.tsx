@@ -1,13 +1,36 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
 import { useTranslation } from 'react-i18next';
 import { useRolesQuery, useDeactivateRoleMutation, useReactivateRoleMutation, RoleItem } from '@/api/roles.api';
-import { Shield, Plus, CheckCircle, Users, AlertCircle, RefreshCw, Lock, Unlock } from 'lucide-react';
+import { RoleDetailModal } from './RoleDetailModal';
+import { ConfirmModal } from '@/components/disclosure';
+import { CustomTable, Column, TableToolbar, TableRowActions, StatusBadge, SortConfig } from '@/components/customTable';
+import {
+  Plus,
+  AlertCircle,
+  RefreshCw,
+  Lock,
+  Unlock,
+  Settings
+} from 'lucide-react';
 
 export const RolesPage: React.FC = () => {
   const { showToast } = useApp();
-  const { t } = useTranslation(['admin', 'common']);
+  const { t } = useTranslation(['admin', 'common', 'table']);
+
+  // Modal State
+  const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
+  const [selectedRoleForDetail, setSelectedRoleForDetail] = useState<RoleItem | null>(null);
+  const [roleToToggle, setRoleToToggle] = useState<RoleItem | null>(null);
+
+  // Search, Filter & Pagination State
+  const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
+  const [selectedRoleIds, setSelectedRoleIds] = useState<(string | number)[]>([]);
+  const [sortConfig, setSortConfig] = useState<SortConfig | undefined>(undefined);
 
   // TanStack Query for Roles
   const {
@@ -22,8 +45,18 @@ export const RolesPage: React.FC = () => {
   const deactivateMutation = useDeactivateRoleMutation();
   const reactivateMutation = useReactivateRoleMutation();
 
+  const handleOpenAddRole = () => {
+    setSelectedRoleForDetail(null);
+    setIsDetailModalOpen(true);
+  };
+
+  const handleOpenConfigureRole = (role: RoleItem) => {
+    setSelectedRoleForDetail(role);
+    setIsDetailModalOpen(true);
+  };
+
   const handleToggleStatus = (role: RoleItem) => {
-    const isInactive = role.status === 'Vô hiệu hóa';
+    const isInactive = role.status === 'Vô hiệu hóa' || role.status === 'Inactive';
     if (isInactive) {
       reactivateMutation.mutate(role.id, {
         onSuccess: () => {
@@ -34,37 +67,196 @@ export const RolesPage: React.FC = () => {
         },
       });
     } else {
-      if (window.confirm(`Bạn có chắc chắn muốn vô hiệu hóa vai trò "${role.name || role.role}" không?`)) {
-        deactivateMutation.mutate(role.id, {
-          onSuccess: () => {
-            showToast(`Đã vô hiệu hóa vai trò "${role.name || role.role}" thành công!`, 'info');
-          },
-          onError: (err: any) => {
-            showToast(err.message || 'Không thể vô hiệu hóa vai trò', 'error');
-          },
-        });
-      }
+      setRoleToToggle(role);
     }
   };
 
+  const handleConfirmDeactivate = () => {
+    if (!roleToToggle) return;
+    deactivateMutation.mutate(roleToToggle.id, {
+      onSuccess: () => {
+        showToast(`Đã vô hiệu hóa vai trò "${roleToToggle.name || roleToToggle.role}" thành công!`, 'info');
+        setRoleToToggle(null);
+      },
+      onError: (err: any) => {
+        showToast(err.message || 'Không thể vô hiệu hóa vai trò', 'error');
+        setRoleToToggle(null);
+      },
+    });
+  };
+
+  const handleSort = (key: string) => {
+    let order: 'asc' | 'desc' = 'asc';
+    if (sortConfig && sortConfig.key === key && sortConfig.order === 'asc') {
+      order = 'desc';
+    }
+    setSortConfig({ key, order });
+  };
+
+  // Filtered & Sorted Roles
+  const filteredRoles = useMemo(() => {
+    return roles.filter((role) => {
+      const q = search.toLowerCase().trim();
+      const matchSearch =
+        !q ||
+        (role.name && role.name.toLowerCase().includes(q)) ||
+        (role.role && role.role.toLowerCase().includes(q)) ||
+        (role.code && role.code.toLowerCase().includes(q)) ||
+        (role.description && role.description.toLowerCase().includes(q));
+
+      const isInactive = role.status === 'Vô hiệu hóa' || role.status === 'Inactive';
+      const matchStatus =
+        statusFilter === 'all' ||
+        (statusFilter === 'active' && !isInactive) ||
+        (statusFilter === 'inactive' && isInactive);
+
+      return matchSearch && matchStatus;
+    });
+  }, [roles, search, statusFilter]);
+
+  const sortedRoles = useMemo(() => {
+    if (!sortConfig) return filteredRoles;
+    return [...filteredRoles].sort((a, b) => {
+      const aVal = (a as any)[sortConfig.key] ?? '';
+      const bVal = (b as any)[sortConfig.key] ?? '';
+      if (typeof aVal === 'string' && typeof bVal === 'string') {
+        return sortConfig.order === 'asc'
+          ? aVal.localeCompare(bVal)
+          : bVal.localeCompare(aVal);
+      }
+      return sortConfig.order === 'asc'
+        ? Number(aVal) - Number(bVal)
+        : Number(bVal) - Number(aVal);
+    });
+  }, [filteredRoles, sortConfig]);
+
+  const totalPages = Math.ceil(sortedRoles.length / pageSize) || 1;
+  const paginatedRoles = useMemo(() => {
+    const start = (page - 1) * pageSize;
+    return sortedRoles.slice(start, start + pageSize);
+  }, [sortedRoles, page, pageSize]);
+
+  // Enterprise SaaS Minimalist Role Columns (No STT, Low Noise)
+  const roleColumns: Column<RoleItem>[] = [
+    {
+      id: 'name',
+      header: t('roles.roleName', { defaultValue: 'Tên vai trò' }),
+      sortable: true,
+      sortKey: 'name',
+      render: (r) => {
+        const isSuper = r.name?.toLowerCase().includes('admin') || r.role?.toLowerCase().includes('admin');
+        const roleName = r.name || r.role || 'Vai trò';
+
+        return (
+          <div className="min-w-0 py-0.5">
+            <div className="flex items-center gap-2">
+              <span
+                onClick={() => handleOpenConfigureRole(r)}
+                className="font-semibold text-slate-900 dark:text-zinc-100 text-xs hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors truncate"
+              >
+                {roleName}
+              </span>
+              {isSuper && (
+                <span className="px-1.5 py-0.2 text-[10px] font-medium bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 rounded border border-slate-200 dark:border-zinc-700 shrink-0">
+                  Hệ thống
+                </span>
+              )}
+            </div>
+            {r.description && (
+              <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-normal leading-normal truncate mt-0.5 max-w-md">
+                {r.description}
+              </p>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      id: 'code',
+      header: 'Mã vai trò',
+      align: 'left',
+      width: '140px',
+      sortable: true,
+      sortKey: 'code',
+      render: (r) => (
+        <span className="font-mono text-[11px] text-slate-600 dark:text-zinc-400">
+          {r.code || (r.name || r.role).slice(0, 8).toUpperCase()}
+        </span>
+      ),
+    },
+    {
+      id: 'userCount',
+      header: 'Thành viên',
+      align: 'left',
+      width: '120px',
+      sortable: true,
+      sortKey: 'userCount',
+      render: (r) => (
+        <span className="text-xs text-slate-600 dark:text-zinc-400 font-normal">
+          {r.userCount || 0} người dùng
+        </span>
+      ),
+    },
+    {
+      id: 'status',
+      header: t('roles.status', { defaultValue: 'Trạng thái' }),
+      align: 'left',
+      width: '130px',
+      sortable: true,
+      sortKey: 'status',
+      render: (r) => {
+        const isInactive = r.status === 'Vô hiệu hóa' || r.status === 'Inactive';
+        return <StatusBadge status={!isInactive} activeText="Hoạt động" inactiveText="Tạm khóa" />;
+      },
+    },
+    {
+      id: 'actions',
+      header: '',
+      align: 'right',
+      width: '50px',
+      render: (r) => {
+        const isInactive = r.status === 'Vô hiệu hóa' || r.status === 'Inactive';
+
+        return (
+          <TableRowActions
+            align="right"
+            items={[
+              {
+                label: 'Cấu hình quyền',
+                icon: <Settings className="w-3.5 h-3.5" />,
+                onClick: () => handleOpenConfigureRole(r),
+              },
+              {
+                label: isInactive ? 'Kích hoạt lại' : 'Vô hiệu hóa',
+                icon: isInactive ? <Unlock className="w-3.5 h-3.5" /> : <Lock className="w-3.5 h-3.5" />,
+                variant: isInactive ? 'default' : 'danger',
+                onClick: () => handleToggleStatus(r),
+              },
+            ]}
+          />
+        );
+      },
+    },
+  ];
+
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-black overflow-hidden transition-colors">
+    <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
       <Header
         title={t('roles.title', { defaultValue: 'Vai trò & Phân quyền' })}
         subTitle={t('roles.subtitle', { defaultValue: 'Chính sách kiểm soát truy cập và phân quyền chi tiết cho các nhóm người dùng' })}
       />
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 w-full">
-        {/* Error Alert if query fails */}
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 w-full max-w-7xl mx-auto space-y-4">
+        {/* Error Alert */}
         {isError && (
-          <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-lg flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
+          <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
               <span>Không thể đồng bộ vai trò từ máy chủ: {(error as any)?.message || 'Đang sử dụng dữ liệu dự phòng'}.</span>
             </div>
             <button
               onClick={() => refetch()}
-              className="px-2.5 py-1 bg-amber-200 dark:bg-amber-800 hover:bg-amber-300 dark:hover:bg-amber-700 rounded font-medium transition-colors flex items-center gap-1 cursor-pointer"
+              className="px-2 py-1 bg-amber-200 dark:bg-amber-800 hover:bg-amber-300 dark:hover:bg-amber-700 text-amber-900 dark:text-amber-100 font-medium rounded text-xs flex items-center gap-1 cursor-pointer"
             >
               <RefreshCw className="w-3 h-3" />
               <span>Thử lại</span>
@@ -72,102 +264,93 @@ export const RolesPage: React.FC = () => {
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <div>
-            <h3 className="text-sm font-bold text-slate-800 dark:text-zinc-200">
-              {t('roles.listTitle', { defaultValue: 'Danh sách vai trò' })} ({roles.length})
-            </h3>
-            <p className="text-xs text-slate-400 dark:text-zinc-500 mt-0.5">
-              {t('roles.subtitle', { defaultValue: 'Chính sách phân quyền và số lượng người dùng theo từng vai trò' })}
-            </p>
-          </div>
-
-          <button
-            onClick={() => showToast('Tính năng tạo vai trò mới đang được cập nhật', 'info')}
-            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-medium flex items-center gap-1.5 shadow-2xs shadow-blue-500/20 cursor-pointer transition-colors"
-          >
-            <Plus className="w-3.5 h-3.5" />
-            <span>{t('roles.addRole', { defaultValue: 'Thêm vai trò' })}</span>
-          </button>
-        </div>
-
-        {isLoading || isFetching ? (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[1, 2, 3, 4].map((i) => (
-              <div key={i} className="h-40 bg-white dark:bg-zinc-900 p-5 rounded-lg border border-slate-200 dark:border-zinc-800 animate-pulse" />
-            ))}
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {roles.map((r) => {
-              const isInactive = r.status === 'Vô hiệu hóa';
-              return (
-                <div
-                  key={r.id}
-                  className={`bg-white dark:bg-zinc-900 p-5 rounded-lg border shadow-2xs space-y-4 hover:border-blue-300 dark:hover:border-zinc-700 transition-all ${
-                    isInactive
-                      ? 'border-slate-200/60 dark:border-zinc-800/60 opacity-75'
-                      : 'border-slate-200 dark:border-zinc-800'
-                  }`}
+        {/* Unified Enterprise Table Container */}
+        <CustomTable<RoleItem>
+          toolbar={
+            <TableToolbar
+              isIntegratedHeader
+              searchValue={search}
+              onSearchChange={(q) => {
+                setSearch(q);
+                setPage(1);
+              }}
+              searchPlaceholder="Tìm kiếm vai trò, mã..."
+              totalCount={roles.length}
+              filteredCount={filteredRoles.length}
+              filterSlot={
+                <select
+                  value={statusFilter}
+                  onChange={(e) => {
+                    setStatusFilter(e.target.value);
+                    setPage(1);
+                  }}
+                  className="px-2.5 py-1.5 bg-slate-50/70 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-md text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer"
                 >
-                  <div className="flex items-center justify-between">
-                    <div className={`w-8 h-8 rounded flex items-center justify-center ${
-                      isInactive
-                        ? 'bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400'
-                        : 'bg-indigo-50 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400'
-                    }`}>
-                      <Shield className="w-4 h-4" />
-                    </div>
-                    <span className="text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 px-2 py-0.5 rounded">
-                      <Users className="w-3.5 h-3.5 text-slate-500 dark:text-zinc-400" />
-                      <span>{t('roles.usersCount', { count: r.userCount, defaultValue: `${r.userCount} người dùng` })}</span>
-                    </span>
-                  </div>
-
-                  <div>
-                    <h4 className="font-bold text-slate-900 dark:text-zinc-100 text-sm">{r.name || r.role}</h4>
-                    <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">{r.description || 'Chưa có mô tả chi tiết'}</p>
-                  </div>
-
-                  <div className="pt-3 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs">
-                    {isInactive ? (
-                      <span className="text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-                        <Lock className="w-3.5 h-3.5" />
-                        <span>Vô hiệu hóa</span>
-                      </span>
-                    ) : (
-                      <span className="text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-                        <CheckCircle className="w-3.5 h-3.5" />
-                        <span>Đang hoạt động</span>
-                      </span>
-                    )}
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleToggleStatus(r)}
-                        className={`text-xs font-medium cursor-pointer ${
-                          isInactive
-                            ? 'text-emerald-600 dark:text-emerald-400 hover:underline'
-                            : 'text-amber-600 dark:text-amber-400 hover:underline'
-                        }`}
-                      >
-                        {isInactive ? 'Kích hoạt' : 'Khóa'}
-                      </button>
-                      <span className="text-slate-300 dark:text-zinc-700">|</span>
-                      <button
-                        onClick={() => showToast(`Cấu hình quyền hạn cho ${r.name || r.role}`, 'info')}
-                        className="text-blue-600 dark:text-blue-400 hover:underline font-medium cursor-pointer"
-                      >
-                        {t('roles.configure', { defaultValue: 'Cấu hình quyền' })}
-                      </button>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
+                  <option value="all">Tất cả trạng thái</option>
+                  <option value="active">Hoạt động</option>
+                  <option value="inactive">Tạm khóa</option>
+                </select>
+              }
+              primaryAction={{
+                label: t('roles.addRole', { defaultValue: 'Thêm vai trò' }),
+                icon: <Plus className="w-3.5 h-3.5" />,
+                onClick: handleOpenAddRole,
+              }}
+            />
+          }
+          columns={roleColumns}
+          data={paginatedRoles}
+          isLoading={isLoading || isFetching}
+          skeletonRowCount={5}
+          sortConfig={sortConfig}
+          onSort={handleSort}
+          keyExtractor={(r) => r.id}
+          emptyState={{
+            isSearch: Boolean(search || statusFilter !== 'all'),
+            actionText: search ? undefined : t('roles.addRole', { defaultValue: 'Thêm vai trò' }),
+            onAction: search ? undefined : handleOpenAddRole,
+          }}
+          pagination={{
+            currentPage: page,
+            totalPages,
+            totalItems: filteredRoles.length,
+            pageSize,
+            onPageChange: setPage,
+            onPageSizeChange: (size) => {
+              setPageSize(size);
+              setPage(1);
+            },
+            pageSizeOptions: [10, 20, 50],
+          }}
+        />
       </div>
+
+      {/* Modal Cấu hình chi tiết vai trò & Phân quyền */}
+      {isDetailModalOpen && (
+        <RoleDetailModal
+          isOpen={isDetailModalOpen}
+          onClose={() => setIsDetailModalOpen(false)}
+          roleToEdit={selectedRoleForDetail}
+          onSuccessToast={(msg) => {
+            showToast(msg, 'success');
+            refetch();
+          }}
+        />
+      )}
+
+      {/* Modal Cảnh báo Vô hiệu hóa vai trò */}
+      <ConfirmModal
+        isOpen={Boolean(roleToToggle)}
+        onClose={() => setRoleToToggle(null)}
+        onConfirm={handleConfirmDeactivate}
+        title="Vô hiệu hóa vai trò"
+        message={`Bạn có chắc chắn muốn vô hiệu hóa vai trò "${roleToToggle?.name || roleToToggle?.role}" không? Người dùng thuộc vai trò này sẽ tạm thời không thể sử dụng các quyền tương ứng.`}
+        confirmText="Vô hiệu hóa"
+        type="warning"
+        isLoading={deactivateMutation.isPending}
+      />
     </div>
   );
 };
+
 export default RolesPage;

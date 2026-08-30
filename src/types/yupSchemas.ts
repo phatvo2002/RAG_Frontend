@@ -84,7 +84,15 @@ export const departmentYupSchema = yup.object({
     .trim()
     .required(validationMessages.department.nameRequired)
     .min(2, validationMessages.department.nameMin),
-  code: yup.string().optional(),
+  code: yup
+    .string()
+    .trim()
+    .required('Mã phòng ban không được để trống')
+    .min(2, 'Mã phòng ban tối thiểu 2 ký tự')
+    .max(20, 'Mã phòng ban tối đa 20 ký tự'),
+  parentDepartmentId: yup.string().nullable().optional(),
+  managerUserId: yup.string().nullable().optional(),
+  status: yup.string().optional().default('Active'),
   phone: yup
     .string()
     .optional()

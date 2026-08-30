@@ -1,34 +1,31 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from './client';
 import { Department, ApiResponse } from '@/types';
-import { mockDepartments } from '@/data/mockData';
 
 // ============================================================================
-// 1. TYPES & DATA STRUCTURES
+// 1. TYPES & DATA STRUCTURES (Payload matches Backend format)
 // ============================================================================
 export interface CreateDepartmentData {
   name: string;
-  code?: string;
-  parentDepartmentId?: string;
-  parentDepartment?: string;
+  code: string;
+  parentDepartmentId?: string | null;
+  managerUserId?: string | null;
+  status?: string;
   phone?: string;
   address?: string;
-  head?: string;
-  manager?: string;
   description?: string;
 }
 
 export interface UpdateDepartmentData {
+  departmentId?: string;
   name?: string;
   code?: string;
-  parentDepartmentId?: string;
-  parentDepartment?: string;
+  parentDepartmentId?: string | null;
+  managerUserId?: string | null;
+  status?: string;
   phone?: string;
   address?: string;
-  head?: string;
-  manager?: string;
   description?: string;
-  status?: string;
 }
 
 export interface DepartmentMember {
@@ -42,57 +39,78 @@ export interface DepartmentMember {
 }
 
 /**
- * Normalizer: Chuyển đổi dữ liệu phòng ban từ Backend sang Department chuẩn Frontend
+ * Normalizer: Chuyển đổi dữ liệu phòng ban từ Backend API sang Department chuẩn Frontend
+ * Chuẩn payload Backend:
+ * {
+ *   "departmentId": "656811bc-683a-40ab-aa91-8fb327c7ffa9",
+ *   "parentDepartmentId": null,
+ *   "code": "CNTT",
+ *   "name": "Phòng công nghệ thông tin",
+ *   "managerUserId": "0b5d1100-9261-46a4-944e-381eca50e559",
+ *   "status": "Active"
+ * }
  */
 export function normalizeDepartment(raw: any): Department {
   if (!raw || typeof raw !== 'object') {
     return {
-      id: `dept_${Date.now()}`,
-      name: 'Phòng ban',
+      id: '',
+      departmentId: '',
+      name: '',
+      code: '',
+      parentDepartmentId: null,
+      managerUserId: null,
+      status: 'Active',
       memberCount: 0,
     };
   }
 
-  const id = (raw.id || raw.departmentId || raw._id || '').toString();
-  const name = raw.name || raw.departmentName || raw.title || 'Phòng ban mới';
-  const code = raw.code || raw.departmentCode || name.slice(0, 4).toUpperCase();
+  const id = (raw.departmentId || raw.id || raw._id || '').toString();
+  const departmentId = id;
+  const parentDepartmentId = raw.parentDepartmentId !== undefined ? raw.parentDepartmentId : null;
+  const code = raw.code || raw.departmentCode || '';
+  const name = raw.name || raw.departmentName || raw.title || '';
+  const managerUserId = raw.managerUserId !== undefined ? raw.managerUserId : null;
+  const status = raw.status || 'Active';
+
   const parentDepartment = raw.parentDepartment || raw.parentDepartmentName || raw.parentName;
-  const phone = raw.phone || raw.phoneNumber || raw.tel;
-  const address = raw.address || raw.location || raw.office;
-  const head = raw.head || raw.manager || raw.lead || raw.leaderName;
-  const manager = raw.manager || raw.head;
+  const phone = raw.phone || raw.phoneNumber || raw.tel || '';
+  const address = raw.address || raw.location || raw.office || '';
+  const head = raw.head || raw.manager || raw.managerName || raw.lead || raw.leaderName || '';
+  const manager = raw.manager || raw.head || raw.managerName || '';
+  const managerName = raw.managerName || raw.head || raw.manager || '';
   const memberCount = typeof raw.memberCount === 'number'
     ? raw.memberCount
     : Array.isArray(raw.members)
     ? raw.members.length
     : 0;
   const description = raw.description || raw.desc || '';
-  const status = raw.status === 'archived' || raw.isArchived
-    ? 'Tạm dừng'
-    : raw.status || 'Đang hoạt động';
 
   return {
     id,
-    name,
+    departmentId,
+    parentDepartmentId,
     code,
+    name,
+    managerUserId,
+    status,
     parentDepartment,
-    phone,
-    address,
     head,
     manager,
+    managerName,
+    phone,
+    address,
     memberCount,
     description,
-    status,
   };
 }
 
 // ============================================================================
-// 2. HTTP FETCH SERVICE (8 Backend Endpoints)
+// 2. HTTP FETCH SERVICE (Direct Backend API)
 // ============================================================================
 export const departmentsApi = {
   /**
    * GET /api/departments
-   * Lấy danh sách toàn bộ phòng ban
+   * Lấy danh sách toàn bộ phòng ban từ Backend API
    */
   async getDepartments(params?: { search?: string; page?: number; pageSize?: number }): Promise<Department[]> {
     let queryStr = '';
@@ -105,49 +123,43 @@ export const departmentsApi = {
       if (qs) queryStr = `?${qs}`;
     }
 
-    try {
-      const response = await apiClient<ApiResponse<any[]> | any[]>(`/api/departments${queryStr}`, {
-        method: 'GET',
-      });
+    const response = await apiClient<ApiResponse<any[]> | any[]>(`/api/departments${queryStr}`, {
+      method: 'GET',
+    });
 
-      const rawList = (response as any).data || response;
-      if (Array.isArray(rawList)) {
-        return rawList.map(normalizeDepartment);
-      }
-      if (rawList && Array.isArray(rawList.items)) {
-        return rawList.items.map(normalizeDepartment);
-      }
-      return mockDepartments;
-    } catch {
-      // Fallback về mock data nếu backend chưa sẵn sàng
-      return mockDepartments;
+    const rawList = (response as any)?.data || response;
+    if (Array.isArray(rawList)) {
+      return rawList.map(normalizeDepartment);
     }
+    if (rawList && Array.isArray(rawList.items)) {
+      return rawList.items.map(normalizeDepartment);
+    }
+    return [];
   },
 
   /**
    * POST /api/departments
-   * Tạo mới phòng ban
+   * Tạo mới phòng ban qua Backend API
    */
   async createDepartment(data: CreateDepartmentData): Promise<Department> {
-    const payload = {
-      name: data.name,
-      code: data.code || data.name.slice(0, 4).toUpperCase(),
-      parentDepartmentId: data.parentDepartmentId,
-      parentDepartment: data.parentDepartment,
-      phoneNumber: data.phone,
-      phone: data.phone,
-      address: data.address,
-      head: data.head,
-      manager: data.manager || data.head,
-      description: data.description,
+    const payload: any = {
+      code: data.code.trim().toUpperCase(),
+      name: data.name.trim(),
+      parentDepartmentId: data.parentDepartmentId || null,
+      managerUserId: data.managerUserId || null,
+      status: data.status || 'Active',
     };
+
+    if (data.phone) payload.phone = data.phone;
+    if (data.address) payload.address = data.address;
+    if (data.description) payload.description = data.description;
 
     const response = await apiClient<ApiResponse<any> | any>('/api/departments', {
       method: 'POST',
       body: JSON.stringify(payload),
     });
 
-    const resData = (response as any).data || response;
+    const resData = (response as any)?.data || response;
     return normalizeDepartment(resData);
   },
 
@@ -160,58 +172,75 @@ export const departmentsApi = {
       method: 'GET',
     });
 
-    const resData = (response as any).data || response;
+    const resData = (response as any)?.data || response;
     return normalizeDepartment(resData);
   },
 
   /**
    * PUT /api/departments/{departmentId}
-   * Cập nhật thông tin phòng ban
+   * Cập nhật thông tin phòng ban qua Backend API
    */
   async updateDepartment(departmentId: string, data: UpdateDepartmentData): Promise<Department> {
-    const payload = {
-      name: data.name,
-      code: data.code,
-      parentDepartmentId: data.parentDepartmentId,
-      parentDepartment: data.parentDepartment,
-      phoneNumber: data.phone,
-      phone: data.phone,
-      address: data.address,
-      head: data.head,
-      manager: data.manager || data.head,
-      description: data.description,
-      status: data.status,
+    const payload: any = {
+      departmentId: departmentId || data.departmentId,
+      code: data.code?.trim().toUpperCase(),
+      name: data.name?.trim(),
+      parentDepartmentId: data.parentDepartmentId || null,
+      managerUserId: data.managerUserId || null,
+      status: data.status || 'Active',
     };
 
-    const response = await apiClient<ApiResponse<any> | any>(`/api/departments/${departmentId}`, {
-      method: 'PUT',
-      body: JSON.stringify(payload),
-    });
+    if (data.phone) payload.phone = data.phone;
+    if (data.address) payload.address = data.address;
+    if (data.description) payload.description = data.description;
 
-    const resData = (response as any).data || response;
+    let response: any;
+    try {
+      response = await apiClient<ApiResponse<any> | any>(`/api/departments/${departmentId}`, {
+        method: 'PUT',
+        body: JSON.stringify(payload),
+      });
+    } catch (err: any) {
+      if (err.status === 404 || err.status === 405) {
+        response = await apiClient<ApiResponse<any> | any>('/api/departments', {
+          method: 'PUT',
+          body: JSON.stringify(payload),
+        });
+      } else {
+        throw err;
+      }
+    }
+
+    const resData = (response as any)?.data || response;
     return normalizeDepartment(resData);
   },
 
   /**
-   * POST /api/departments/{departmentId}/archive
-   * Lưu trữ / vô hiệu hóa phòng ban
+   * DELETE /api/departments/{departmentId}
+   * Xóa / Vô hiệu hóa phòng ban qua Backend API
    */
   async archiveDepartment(departmentId: string): Promise<void> {
-    await apiClient<ApiResponse<any> | any>(`/api/departments/${departmentId}/archive`, {
-      method: 'POST',
-    });
+    try {
+      await apiClient<ApiResponse<any> | any>(`/api/departments/${departmentId}`, {
+        method: 'DELETE',
+      });
+    } catch {
+      await apiClient<ApiResponse<any> | any>(`/api/departments/${departmentId}/archive`, {
+        method: 'POST',
+      });
+    }
   },
 
   /**
    * GET /api/departments/{departmentId}/members
-   * Lấy danh sách thành viên trong phòng ban
+   * Lấy danh sách thành viên trong phòng ban qua Backend API
    */
   async getDepartmentMembers(departmentId: string): Promise<DepartmentMember[]> {
     const response = await apiClient<ApiResponse<any[]> | any[]>(`/api/departments/${departmentId}/members`, {
       method: 'GET',
     });
 
-    const resData = (response as any).data || response;
+    const resData = (response as any)?.data || response;
     if (Array.isArray(resData)) {
       return resData.map((m) => ({
         id: (m.id || m.userId || '').toString(),
@@ -228,7 +257,7 @@ export const departmentsApi = {
 
   /**
    * PUT /api/departments/{departmentId}/members/{userId}
-   * Thêm hoặc cập nhật thành viên vào phòng ban
+   * Thêm hoặc cập nhật thành viên vào phòng ban qua Backend API
    */
   async addDepartmentMember(departmentId: string, userId: string): Promise<void> {
     await apiClient<ApiResponse<any> | any>(`/api/departments/${departmentId}/members/${userId}`, {
@@ -238,7 +267,7 @@ export const departmentsApi = {
 
   /**
    * DELETE /api/departments/{departmentId}/members/{userId}
-   * Xóa thành viên khỏi phòng ban
+   * Xóa thành viên khỏi phòng ban qua Backend API
    */
   async removeDepartmentMember(departmentId: string, userId: string): Promise<void> {
     await apiClient<ApiResponse<any> | any>(`/api/departments/${departmentId}/members/${userId}`, {
@@ -260,7 +289,7 @@ export const departmentsQueryKeys = {
 };
 
 /**
- * Hook Query: Lấy danh sách toàn bộ phòng ban
+ * Hook Query: Lấy danh sách toàn bộ phòng ban trực tiếp từ API
  */
 export function useDepartmentsQuery(params?: { search?: string; page?: number; pageSize?: number }) {
   return useQuery({
@@ -268,12 +297,12 @@ export function useDepartmentsQuery(params?: { search?: string; page?: number; p
     queryFn: async () => {
       return await departmentsApi.getDepartments(params);
     },
-    staleTime: 1000 * 60 * 5, // Cache 5 phút
+    staleTime: 1000 * 60 * 2, // Cache 2 phút
   });
 }
 
 /**
- * Hook Query: Lấy chi tiết một phòng ban
+ * Hook Query: Lấy chi tiết một phòng ban trực tiếp từ API
  */
 export function useDepartmentQuery(departmentId: string) {
   return useQuery({
@@ -286,7 +315,7 @@ export function useDepartmentQuery(departmentId: string) {
 }
 
 /**
- * Hook Query: Lấy danh sách thành viên của phòng ban
+ * Hook Query: Lấy danh sách thành viên của phòng ban trực tiếp từ API
  */
 export function useDepartmentMembersQuery(departmentId: string) {
   return useQuery({
@@ -299,7 +328,7 @@ export function useDepartmentMembersQuery(departmentId: string) {
 }
 
 /**
- * Hook Mutation: Tạo mới phòng ban
+ * Hook Mutation: Tạo mới phòng ban qua API
  */
 export function useCreateDepartmentMutation() {
   const queryClient = useQueryClient();
@@ -315,7 +344,7 @@ export function useCreateDepartmentMutation() {
 }
 
 /**
- * Hook Mutation: Cập nhật phòng ban
+ * Hook Mutation: Cập nhật phòng ban qua API
  */
 export function useUpdateDepartmentMutation() {
   const queryClient = useQueryClient();
@@ -332,7 +361,7 @@ export function useUpdateDepartmentMutation() {
 }
 
 /**
- * Hook Mutation: Lưu trữ phòng ban
+ * Hook Mutation: Xóa / Lưu trữ phòng ban qua API
  */
 export function useArchiveDepartmentMutation() {
   const queryClient = useQueryClient();
@@ -349,7 +378,7 @@ export function useArchiveDepartmentMutation() {
 }
 
 /**
- * Hook Mutation: Thêm thành viên vào phòng ban
+ * Hook Mutation: Thêm thành viên vào phòng ban qua API
  */
 export function useAddDepartmentMemberMutation() {
   const queryClient = useQueryClient();
@@ -366,7 +395,7 @@ export function useAddDepartmentMemberMutation() {
 }
 
 /**
- * Hook Mutation: Xóa thành viên khỏi phòng ban
+ * Hook Mutation: Xóa thành viên khỏi phòng ban qua API
  */
 export function useRemoveDepartmentMemberMutation() {
   const queryClient = useQueryClient();

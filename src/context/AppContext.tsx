@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 import {
   NavModule,
   User,
@@ -179,8 +180,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (activeDark) {
       root.classList.add('dark');
+      root.setAttribute('data-theme', 'black');
     } else {
       root.classList.remove('dark');
+      root.setAttribute('data-theme', 'light');
     }
 
     localStorage.setItem('nexora_theme', theme);
@@ -195,8 +198,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsDark(activeDark);
       if (activeDark) {
         document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', 'black');
       } else {
         document.documentElement.classList.remove('dark');
+        document.documentElement.setAttribute('data-theme', 'light');
       }
     };
     mediaQuery.addEventListener('change', handleChange);
@@ -309,17 +314,27 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     }
   };
 
-  // Toast Helpers
+  // Toast Helpers with React-Toastify
   const showToast = (message: string, type: Toast['type'] = 'info') => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      removeToast(id);
-    }, 4000);
+    switch (type) {
+      case 'success':
+        toast.success(message);
+        break;
+      case 'error':
+        toast.error(message);
+        break;
+      case 'warning':
+        toast.warning(message);
+        break;
+      case 'info':
+      default:
+        toast.info(message);
+        break;
+    }
   };
 
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+  const removeToast = (_id: string) => {
+    toast.dismiss();
   };
 
   // Data helpers

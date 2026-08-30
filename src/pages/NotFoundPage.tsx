@@ -1,25 +1,34 @@
 import React from 'react';
 import { Link } from '@tanstack/react-router';
-import { ArrowLeft, AlertTriangle } from 'lucide-react';
+import { ArrowLeft, ShieldAlert } from 'lucide-react';
 
 export const NotFoundPage: React.FC = () => {
   return (
-    <div className="min-h-[70vh] flex flex-col items-center justify-center text-center p-6 space-y-4">
-      <div className="w-16 h-16 rounded-3xl bg-amber-50 text-amber-600 flex items-center justify-center shadow-xs">
-        <AlertTriangle className="w-8 h-8" />
+    <div className="min-h-[75vh] flex flex-col items-center justify-center text-center p-6 space-y-4 bg-slate-50/50 dark:bg-black transition-colors select-none">
+      <div className="w-14 h-14 rounded-2xl bg-slate-100 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-500 dark:text-zinc-400 flex items-center justify-center shadow-2xs">
+        <ShieldAlert className="w-7 h-7 text-slate-600 dark:text-zinc-300" />
       </div>
-      <h1 className="text-2xl font-bold text-slate-900">Trang không tồn tại (404)</h1>
-      <p className="text-xs text-slate-500 max-w-sm">
-        Đường dẫn bạn yêu cầu không tìm thấy hoặc đã bị di chuyển. Vui lòng quay lại màn hình chính.
-      </p>
-      <Link
-        to="/chat"
-        className="inline-flex items-center gap-2 px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl shadow-xs transition-colors"
-      >
-        <ArrowLeft className="w-4 h-4" />
-        <span>Về trang chủ</span>
-      </Link>
+
+      <div className="space-y-1">
+        <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+          404 — Không tìm thấy trang hoặc không có quyền truy cập
+        </h1>
+        <p className="text-xs text-slate-500 dark:text-zinc-400 max-w-md mx-auto leading-relaxed">
+          Trang bạn đang cố gắng truy cập không tồn tại, chưa được triển khai hoặc tài khoản của bạn chưa được phân quyền trong phân hệ này.
+        </p>
+      </div>
+
+      <div className="pt-2">
+        <Link
+          to="/admin/users"
+          className="inline-flex items-center gap-2 px-3.5 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white text-xs font-medium rounded-md shadow-2xs transition-all cursor-pointer"
+        >
+          <ArrowLeft className="w-3.5 h-3.5" />
+          <span>Quay lại trang chính</span>
+        </Link>
+      </div>
     </div>
   );
 };
+
 export default NotFoundPage;

@@ -32,11 +32,16 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
   const currentLang = languages.find((l) => l.code === language) || languages[0];
 
   return (
-    <div ref={dropdownRef} className={`relative inline-block ${className}`}>
+    <div
+      ref={dropdownRef}
+      className={`dropdown dropdown-end ${isOpen ? 'dropdown-open' : ''} ${className}`}
+    >
       <button
         type="button"
         onClick={() => setIsOpen(!isOpen)}
-        className="px-2 py-1 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors flex items-center gap-1.5 text-xs font-semibold cursor-pointer border border-transparent hover:border-slate-200 dark:hover:border-zinc-700"
+        tabIndex={0}
+        role="button"
+        className="btn btn-sm btn-ghost gap-1.5 text-xs font-semibold px-2"
         title="Change language / Đổi ngôn ngữ"
       >
         <span className="text-sm leading-none">{currentLang.flag}</span>
@@ -44,8 +49,11 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
       </button>
 
       {isOpen && (
-        <div className="absolute right-0 mt-1.5 w-36 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg py-1 z-50 animate-in fade-in zoom-in-95 duration-150 text-xs">
-          <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-100 dark:border-zinc-800 mb-0.5">
+        <div
+          tabIndex={0}
+          className="dropdown-content menu z-50 p-1.5 shadow-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-box w-40 text-xs text-slate-800 dark:text-zinc-100 mt-1"
+        >
+          <div className="px-2.5 py-1 text-[10px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-100 dark:border-zinc-800 mb-1">
             Language
           </div>
           {languages.map((l) => {
@@ -58,10 +66,10 @@ export const LanguageSwitcher: React.FC<LanguageSwitcherProps> = ({
                   setLanguage(l.code);
                   setIsOpen(false);
                 }}
-                className={`w-full text-left px-2.5 py-1.5 flex items-center justify-between transition-colors cursor-pointer ${
+                className={`btn btn-sm btn-ghost justify-between font-medium ${
                   isSelected
-                    ? 'bg-blue-50 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 font-semibold'
-                    : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800/80'
+                    ? 'bg-blue-50 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 font-bold'
+                    : ''
                 }`}
               >
                 <div className="flex items-center gap-2">

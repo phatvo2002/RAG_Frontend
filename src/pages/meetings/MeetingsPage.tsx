@@ -216,9 +216,9 @@ export const MeetingsPage: React.FC = () => {
                 <button
                   onClick={handleGenerateSummary}
                   disabled={isGeneratingAI}
-                  className="px-2.5 py-1 bg-blue-600 text-white rounded text-[11px] font-semibold hover:bg-blue-700 disabled:opacity-50 flex items-center gap-1 cursor-pointer transition-colors"
+                  className="btn btn-xs btn-primary text-white font-semibold flex items-center gap-1.5 cursor-pointer"
                 >
-                  {isGeneratingAI && <span className="w-3 h-3 border-2 border-white border-t-transparent rounded-full animate-spin" />}
+                  {isGeneratingAI && <span className="loading loading-spinner loading-xs" />}
                   <span>{selectedMeeting.hasSummary ? 'Tạo lại tóm tắt' : 'Tạo tóm tắt AI'}</span>
                 </button>
               </div>

@@ -28,15 +28,24 @@ export const Disclosure: React.FC<DisclosureProps> = ({
   }, []);
 
   return (
-    <div ref={containerRef} className={`relative inline-block ${className}`}>
-      <div onClick={() => setIsOpen(!isOpen)} className="cursor-pointer">
+    <div
+      ref={containerRef}
+      className={`dropdown ${align === 'right' ? 'dropdown-end' : 'dropdown-start'} ${
+        isOpen ? 'dropdown-open' : ''
+      } ${className}`}
+    >
+      <div
+        onClick={() => setIsOpen(!isOpen)}
+        tabIndex={0}
+        role="button"
+        className="cursor-pointer"
+      >
         {trigger}
       </div>
       {isOpen && (
         <div
-          className={`absolute z-50 mt-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg shadow-lg p-1.5 min-w-[160px] animate-in fade-in zoom-in-95 duration-150 ${
-            align === 'right' ? 'right-0' : 'left-0'
-          }`}
+          tabIndex={0}
+          className="dropdown-content menu z-50 p-2 shadow-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-box min-w-44 text-slate-800 dark:text-zinc-100"
         >
           {children}
         </div>
@@ -50,7 +59,8 @@ export interface ModalProps {
   onClose: () => void;
   title: string;
   children: React.ReactNode;
-  maxWidth?: 'sm' | 'md' | 'lg' | 'xl';
+  maxWidth?: 'sm' | 'md' | 'lg' | 'xl' | '2xl' | '3xl' | '4xl' | '5xl' | '6xl' | '7xl' | 'full';
+  className?: string;
 }
 
 export const Modal: React.FC<ModalProps> = ({
@@ -59,6 +69,7 @@ export const Modal: React.FC<ModalProps> = ({
   title,
   children,
   maxWidth = 'md',
+  className = '',
 }) => {
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -81,30 +92,41 @@ export const Modal: React.FC<ModalProps> = ({
     md: 'max-w-md',
     lg: 'max-w-lg',
     xl: 'max-w-xl',
+    '2xl': 'max-w-2xl',
+    '3xl': 'max-w-3xl',
+    '4xl': 'max-w-4xl',
+    '5xl': 'max-w-5xl',
+    '6xl': 'max-w-6xl',
+    '7xl': 'w-11/12 max-w-7xl',
+    full: 'w-[96vw] max-w-[96vw] h-[92vh] max-h-[92vh] flex flex-col',
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 overflow-y-auto">
+    <dialog className="modal modal-open z-50 bg-black/70 backdrop-blur-xs">
       <div
-        className="fixed inset-0 bg-black/60 backdrop-blur-xs transition-opacity animate-in fade-in"
-        onClick={onClose}
-      />
-      <div
-        className={`relative w-full ${maxWidthClasses[maxWidth]} bg-white dark:bg-zinc-900 rounded-lg shadow-xl border border-slate-200 dark:border-zinc-800 p-5 z-10 transition-all animate-in zoom-in-95 duration-150 text-slate-800 dark:text-zinc-100`}
+        className={`modal-box ${maxWidthClasses[maxWidth]} w-full p-6 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-2xl rounded-box text-slate-800 dark:text-zinc-100 ${className}`}
       >
-        <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-zinc-800">
-          <h3 className="text-sm font-bold text-slate-800 dark:text-zinc-100">{title}</h3>
+        <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100 dark:border-zinc-800 shrink-0">
+          <h3 className="font-bold text-sm text-slate-900 dark:text-zinc-100">{title}</h3>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            className="btn btn-sm btn-ghost btn-circle text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 cursor-pointer"
           >
             <X className="w-4 h-4" />
           </button>
         </div>
-        {children}
+        <div className="flex-1 overflow-y-auto min-h-0">
+          {children}
+        </div>
       </div>
-    </div>
+      <form method="dialog" className="modal-backdrop">
+        <button onClick={onClose} className="cursor-default">
+          close
+        </button>
+      </form>
+    </dialog>
   );
 };
 
+export * from './ConfirmModal';
 export default Disclosure;

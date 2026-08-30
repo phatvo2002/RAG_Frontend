@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
 import { Badge } from '@/components/button';
@@ -50,7 +50,7 @@ export const DashboardPage: React.FC = () => {
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 w-full">
         <div className="w-full space-y-6">
           {/* Welcome Banner with AI Assistant quick action */}
-          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-xl p-6 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden">
+          <div className="bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 rounded-box p-6 text-white shadow-lg shadow-blue-500/20 relative overflow-hidden">
             <div className="absolute right-0 top-0 bottom-0 w-1/3 opacity-10 pointer-events-none">
               <svg className="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
                 <path d="M0 0 C 50 100 80 0 100 100 Z" fill="white" />
@@ -58,7 +58,7 @@ export const DashboardPage: React.FC = () => {
             </div>
 
             <div className="relative z-10 space-y-3 max-w-2xl">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 bg-white/15 backdrop-blur-md rounded-md text-xs font-semibold text-blue-100">
+              <div className="badge badge-neutral bg-white/15 border-none text-blue-100 gap-1.5 font-semibold text-xs py-2 px-3">
                 <Sparkles className="w-3.5 h-3.5" />
                 <span>NEXORA AI Executive Dashboard</span>
               </div>
@@ -71,14 +71,14 @@ export const DashboardPage: React.FC = () => {
               <div className="pt-1 flex items-center gap-3">
                 <button
                   onClick={() => setActiveModule('chat')}
-                  className="px-4 py-2 bg-white text-blue-700 hover:bg-blue-50 text-xs font-bold rounded shadow-xs transition-colors flex items-center gap-2 cursor-pointer"
+                  className="btn btn-sm bg-white text-blue-700 hover:bg-blue-50 text-xs font-bold shadow-xs border-none"
                 >
                   <Sparkles className="w-3.5 h-3.5 text-blue-600" />
                   <span>Hỏi AI về tiến độ hôm nay</span>
                 </button>
                 <button
                   onClick={() => setActiveModule('reports')}
-                  className="px-4 py-2 bg-white/10 hover:bg-white/20 text-white text-xs font-semibold rounded backdrop-blur-md transition-colors cursor-pointer"
+                  className="btn btn-sm btn-ghost bg-white/10 hover:bg-white/20 text-white text-xs font-semibold"
                 >
                   Xem Báo cáo Tổng hợp
                 </button>
@@ -86,81 +86,69 @@ export const DashboardPage: React.FC = () => {
             </div>
           </div>
 
-          {/* 4 Stat Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* DaisyUI Stats Overview Bar */}
+          <div className="stats stats-vertical sm:stats-horizontal shadow-xs w-full bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-box">
             <div
               onClick={() => setActiveModule('projects')}
-              className="bg-white dark:bg-zinc-900 p-5 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs hover:border-blue-300 dark:hover:border-zinc-700 transition-all cursor-pointer group"
+              className="stat cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors"
             >
-              <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs font-medium mb-3">
-                <span>Dự án đang chạy</span>
-                <div className="w-8 h-8 rounded bg-blue-50 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 flex items-center justify-center group-hover:bg-blue-600 group-hover:text-white transition-colors">
-                  <FolderKanban className="w-4 h-4" />
+              <div className="stat-figure text-blue-600 dark:text-blue-400">
+                <div className="w-10 h-10 rounded-full bg-blue-50 dark:bg-zinc-800 flex items-center justify-center">
+                  <FolderKanban className="w-5 h-5" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-zinc-100 mb-1">{projects.length}</div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1">
-                  <TrendingUp className="w-3 h-3" />
-                  <span>{projects.filter(p => p.status === 'Đang tiến hành' || p.status === 'Đang triển khai').length} tiến hành</span>
-                </span>
-                <span className="text-slate-400 dark:text-zinc-500">Xem chi tiết →</span>
+              <div className="stat-title text-slate-500 dark:text-zinc-400 text-xs font-semibold">Dự án đang chạy</div>
+              <div className="stat-value text-blue-600 dark:text-blue-400 text-2xl font-bold">{projects.length}</div>
+              <div className="stat-desc text-emerald-600 dark:text-emerald-400 font-semibold flex items-center gap-1 mt-0.5">
+                <TrendingUp className="w-3 h-3" />
+                <span>{projects.filter(p => p.status === 'Đang tiến hành' || p.status === 'Đang triển khai').length} tiến hành</span>
               </div>
             </div>
 
             <div
               onClick={() => setActiveModule('tasks')}
-              className="bg-white dark:bg-zinc-900 p-5 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs hover:border-blue-300 dark:hover:border-zinc-700 transition-all cursor-pointer group"
+              className="stat cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors"
             >
-              <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs font-medium mb-3">
-                <span>Công việc cần xử lý</span>
-                <div className="w-8 h-8 rounded bg-indigo-50 dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 flex items-center justify-center group-hover:bg-indigo-600 group-hover:text-white transition-colors">
-                  <CheckSquare className="w-4 h-4" />
+              <div className="stat-figure text-indigo-600 dark:text-indigo-400">
+                <div className="w-10 h-10 rounded-full bg-indigo-50 dark:bg-zinc-800 flex items-center justify-center">
+                  <CheckSquare className="w-5 h-5" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-zinc-100 mb-1">
+              <div className="stat-title text-slate-500 dark:text-zinc-400 text-xs font-semibold">Công việc cần xử lý</div>
+              <div className="stat-value text-indigo-600 dark:text-indigo-400 text-2xl font-bold">
                 {tasks.filter(t => t.status !== 'Hoàn thành' && t.status !== 'Đã hoàn thành').length}
               </div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-amber-600 dark:text-amber-400 font-semibold">
-                  {tasks.filter(t => t.priority === 'Khẩn cấp' || t.priority === 'Cao').length} việc ưu tiên cao
-                </span>
-                <span className="text-slate-400 dark:text-zinc-500">Kanban →</span>
+              <div className="stat-desc text-amber-600 dark:text-amber-400 font-semibold mt-0.5">
+                {tasks.filter(t => t.priority === 'Khẩn cấp' || t.priority === 'Cao').length} việc ưu tiên cao
               </div>
             </div>
 
             <div
               onClick={() => setActiveModule('data-repo')}
-              className="bg-white dark:bg-zinc-900 p-5 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs hover:border-blue-300 dark:hover:border-zinc-700 transition-all cursor-pointer group"
+              className="stat cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors"
             >
-              <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs font-medium mb-3">
-                <span>Kho tài liệu RAG</span>
-                <div className="w-8 h-8 rounded bg-amber-50 dark:bg-zinc-800 text-amber-600 dark:text-amber-400 flex items-center justify-center group-hover:bg-amber-600 group-hover:text-white transition-colors">
-                  <Folder className="w-4 h-4" />
+              <div className="stat-figure text-amber-600 dark:text-amber-400">
+                <div className="w-10 h-10 rounded-full bg-amber-50 dark:bg-zinc-800 flex items-center justify-center">
+                  <Folder className="w-5 h-5" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-zinc-100 mb-1">{documents.length}</div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-blue-600 dark:text-blue-400 font-semibold">Tự động Index Vector</span>
-                <span className="text-slate-400 dark:text-zinc-500">Kho dữ liệu →</span>
-              </div>
+              <div className="stat-title text-slate-500 dark:text-zinc-400 text-xs font-semibold">Kho tài liệu RAG</div>
+              <div className="stat-value text-amber-600 dark:text-amber-400 text-2xl font-bold">{documents.length}</div>
+              <div className="stat-desc text-blue-600 dark:text-blue-400 font-semibold mt-0.5">Tự động Index Vector</div>
             </div>
 
             <div
               onClick={() => setActiveModule('meetings')}
-              className="bg-white dark:bg-zinc-900 p-5 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs hover:border-blue-300 dark:hover:border-zinc-700 transition-all cursor-pointer group"
+              className="stat cursor-pointer hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors"
             >
-              <div className="flex items-center justify-between text-slate-500 dark:text-zinc-400 text-xs font-medium mb-3">
-                <span>Phòng họp & Biên bản</span>
-                <div className="w-8 h-8 rounded bg-emerald-50 dark:bg-zinc-800 text-emerald-600 dark:text-emerald-400 flex items-center justify-center group-hover:bg-emerald-600 group-hover:text-white transition-colors">
-                  <Users2 className="w-4 h-4" />
+              <div className="stat-figure text-emerald-600 dark:text-emerald-400">
+                <div className="w-10 h-10 rounded-full bg-emerald-50 dark:bg-zinc-800 flex items-center justify-center">
+                  <Users2 className="w-5 h-5" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-slate-900 dark:text-zinc-100 mb-1">{meetings.length}</div>
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-emerald-600 dark:text-emerald-400 font-semibold">AI Transcript sẵn sàng</span>
-                <span className="text-slate-400 dark:text-zinc-500">Lịch họp →</span>
-              </div>
+              <div className="stat-title text-slate-500 dark:text-zinc-400 text-xs font-semibold">Phòng họp & Biên bản</div>
+              <div className="stat-value text-emerald-600 dark:text-emerald-400 text-2xl font-bold">{meetings.length}</div>
+              <div className="stat-desc text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5">AI Transcript sẵn sàng</div>
             </div>
           </div>
 
@@ -178,7 +166,7 @@ export const DashboardPage: React.FC = () => {
                 </div>
                 <button
                   onClick={() => setActiveModule('projects')}
-                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
+                  className="btn btn-link btn-xs text-blue-600 dark:text-blue-400 no-underline hover:underline p-0 flex items-center gap-1"
                 >
                   <span>Xem tất cả ({projects.length})</span>
                   <ArrowRight className="w-3.5 h-3.5" />
@@ -189,7 +177,7 @@ export const DashboardPage: React.FC = () => {
                 {projects.slice(0, 3).map((proj) => (
                   <div
                     key={proj.id}
-                    className="bg-white dark:bg-zinc-900 p-4.5 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs hover:border-blue-300 dark:hover:border-zinc-700 transition-all group space-y-3"
+                    className="card bg-white dark:bg-zinc-900 p-4.5 rounded-box border border-slate-200 dark:border-zinc-800 shadow-xs hover:border-blue-400 dark:hover:border-zinc-700 transition-all group space-y-3"
                   >
                     <div className="flex items-start justify-between gap-3">
                       <div>
@@ -198,12 +186,12 @@ export const DashboardPage: React.FC = () => {
                             {proj.name}
                           </h4>
                           <span
-                            className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                            className={`badge badge-sm font-bold ${
                               proj.status === 'Đang triển khai' || proj.status === 'Đang tiến hành'
-                                ? 'bg-blue-50 dark:bg-zinc-800 text-blue-700 dark:text-blue-300'
+                                ? 'badge-primary'
                                 : proj.status === 'Hoàn thành'
-                                ? 'bg-emerald-50 dark:bg-zinc-800 text-emerald-700 dark:text-emerald-300'
-                                : 'bg-rose-50 dark:bg-zinc-800 text-rose-700 dark:text-rose-300'
+                                ? 'badge-success text-white'
+                                : 'badge-error text-white'
                             }`}
                           >
                             {proj.status}
@@ -214,7 +202,7 @@ export const DashboardPage: React.FC = () => {
 
                       <button
                         onClick={() => handleAskAIAboutProject(proj.name)}
-                        className="px-2.5 py-1.5 bg-blue-50 dark:bg-zinc-800 hover:bg-blue-100 dark:hover:bg-zinc-700 text-blue-700 dark:text-blue-300 rounded text-xs font-semibold flex items-center gap-1.5 shrink-0 transition-colors cursor-pointer"
+                        className="btn btn-xs btn-outline btn-primary gap-1.5 shrink-0"
                         title="Yêu cầu AI tóm tắt dự án"
                       >
                         <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -228,18 +216,17 @@ export const DashboardPage: React.FC = () => {
                         <span className="text-slate-500 dark:text-zinc-400">Tiến độ hoàn thành</span>
                         <span className="font-bold text-slate-800 dark:text-zinc-200">{proj.progress}%</span>
                       </div>
-                      <div className="w-full bg-slate-100 dark:bg-zinc-800 rounded-full h-2 overflow-hidden">
-                        <div
-                          className={`h-full rounded-full transition-all ${
-                            proj.progress >= 80
-                              ? 'bg-emerald-500'
-                              : proj.progress >= 50
-                              ? 'bg-blue-600'
-                              : 'bg-amber-500'
-                          }`}
-                          style={{ width: `${proj.progress}%` }}
-                        />
-                      </div>
+                      <progress
+                        className={`progress w-full h-2 ${
+                          proj.progress >= 80
+                            ? 'progress-success'
+                            : proj.progress >= 50
+                            ? 'progress-primary'
+                            : 'progress-warning'
+                        }`}
+                        value={proj.progress}
+                        max="100"
+                      />
                       <div className="flex items-center justify-between text-[11px] text-slate-400 dark:text-zinc-500 pt-1">
                         <span className="flex items-center gap-1">
                           <Users className="w-3 h-3" />
@@ -259,7 +246,7 @@ export const DashboardPage: React.FC = () => {
             {/* Right 1 Col: Urgent Tasks & Next Meetings */}
             <div className="space-y-6">
               {/* Urgent Tasks */}
-              <div className="bg-white dark:bg-zinc-900 p-5 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs space-y-3.5">
+              <div className="card bg-white dark:bg-zinc-900 p-5 rounded-box border border-slate-200 dark:border-zinc-800 shadow-xs space-y-3.5">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
                   <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
                     <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
@@ -267,7 +254,7 @@ export const DashboardPage: React.FC = () => {
                   </h3>
                   <button
                     onClick={() => setActiveModule('tasks')}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    className="btn btn-link btn-xs text-blue-600 dark:text-blue-400 no-underline hover:underline p-0"
                   >
                     Xem tất cả
                   </button>
@@ -281,13 +268,13 @@ export const DashboardPage: React.FC = () => {
                       <div
                         key={t.id}
                         onClick={() => setActiveModule('tasks')}
-                        className="p-3 bg-slate-50 dark:bg-zinc-800/80 hover:bg-blue-50/50 dark:hover:bg-zinc-800 rounded-lg border border-slate-200/60 dark:border-zinc-700/60 transition-colors cursor-pointer space-y-1.5 group"
+                        className="p-3 bg-slate-50 dark:bg-zinc-800/80 hover:bg-blue-50/50 dark:hover:bg-zinc-800 rounded-box border border-slate-200/60 dark:border-zinc-700/60 transition-colors cursor-pointer space-y-1.5 group"
                       >
                         <div className="flex items-start justify-between gap-2">
                           <h4 className="font-semibold text-slate-900 dark:text-zinc-100 text-xs group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors line-clamp-1">
                             {t.title}
                           </h4>
-                          <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 shrink-0">
+                          <span className="badge badge-xs badge-error text-white font-bold shrink-0">
                             {t.priority}
                           </span>
                         </div>
@@ -301,7 +288,7 @@ export const DashboardPage: React.FC = () => {
               </div>
 
               {/* Upcoming Meetings */}
-              <div className="bg-white dark:bg-zinc-900 p-5 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs space-y-3.5">
+              <div className="card bg-white dark:bg-zinc-900 p-5 rounded-box border border-slate-200 dark:border-zinc-800 shadow-xs space-y-3.5">
                 <div className="flex items-center justify-between pb-2 border-b border-slate-100 dark:border-zinc-800">
                   <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-xs uppercase tracking-wider flex items-center gap-1.5">
                     <Calendar className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
@@ -309,7 +296,7 @@ export const DashboardPage: React.FC = () => {
                   </h3>
                   <button
                     onClick={() => setActiveModule('meetings')}
-                    className="text-xs text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                    className="btn btn-link btn-xs text-blue-600 dark:text-blue-400 no-underline hover:underline p-0"
                   >
                     Phòng họp
                   </button>
@@ -320,7 +307,7 @@ export const DashboardPage: React.FC = () => {
                     <div
                       key={m.id}
                       onClick={() => setActiveModule('meetings')}
-                      className="p-3 bg-slate-50 dark:bg-zinc-800/80 rounded-lg border border-slate-200/60 dark:border-zinc-700/60 space-y-1 cursor-pointer hover:border-blue-300 dark:hover:border-zinc-700 transition-colors"
+                      className="p-3 bg-slate-50 dark:bg-zinc-800/80 rounded-box border border-slate-200/60 dark:border-zinc-700/60 space-y-1 cursor-pointer hover:border-blue-400 dark:hover:border-zinc-700 transition-colors"
                     >
                       <h4 className="font-semibold text-slate-900 dark:text-zinc-100 text-xs line-clamp-1">{m.title}</h4>
                       <p className="text-[11px] text-slate-500 dark:text-zinc-400 flex items-center gap-1.5">

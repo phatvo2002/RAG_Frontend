@@ -26,31 +26,54 @@ export function normalizeUser(data: any): User {
     deptName = userObj.departmentName || userObj.department_name;
   }
 
-  // Extract role
+  // Extract roles array & primary role
   let roleName = '';
   let roleId = userObj.roleId || userObj.role_id || undefined;
-  if (typeof userObj.role === 'string') {
+  const rolesList: any[] = [];
+
+  if (Array.isArray(userObj.roles) && userObj.roles.length > 0) {
+    userObj.roles.forEach((r: any) => {
+      if (typeof r === 'string') {
+        rolesList.push({ roleId: r, roleName: r });
+        if (!roleName) roleName = r;
+      } else if (typeof r === 'object' && r) {
+        const rName = r.roleName || r.name || r.role || 'Vai trò';
+        const rId = r.roleId || r.id || r._id || '';
+        rolesList.push({
+          roleId: rId,
+          roleName: rName,
+          status: r.status,
+          validFrom: r.validFrom,
+          expiresAt: r.expiresAt,
+        });
+        if (!roleName) {
+          roleName = rName;
+          roleId = roleId || rId;
+        }
+      }
+    });
+  } else if (typeof userObj.role === 'string') {
     roleName = userObj.role;
+    rolesList.push({ roleId: roleId || `role_${roleName}`, roleName });
   } else if (userObj.role && typeof userObj.role === 'object') {
-    roleName = userObj.role.name || userObj.role.role || '';
-    roleId = roleId || userObj.role.id;
+    roleName = userObj.role.name || userObj.role.role || userObj.role.roleName || '';
+    roleId = roleId || userObj.role.id || userObj.role.roleId;
+    rolesList.push({ roleId: roleId || `role_${roleName}`, roleName });
   } else if (userObj.roleName || userObj.role_name || userObj.userRole || userObj.user_role) {
     roleName = userObj.roleName || userObj.role_name || userObj.userRole || userObj.user_role;
-  } else if (Array.isArray(userObj.roles) && userObj.roles.length > 0) {
-    const firstRole = userObj.roles[0];
-    if (typeof firstRole === 'string') {
-      roleName = firstRole;
-    } else if (typeof firstRole === 'object') {
-      roleName = firstRole.name || firstRole.role || '';
-      roleId = roleId || firstRole.id;
-    }
+    rolesList.push({ roleId: roleId || `role_${roleName}`, roleName });
   }
 
-  const userId = userObj.userId || userObj.id?.toString() || userObj._id?.toString() || `usr_${Date.now()}`;
+  const userId = (userObj.userId || userObj.id || userObj._id || '').toString() || `usr_${Date.now()}`;
   const displayName = userObj.displayName || userObj.display_name || userObj.fullName || userObj.name || fallbackName;
-  const userName = userObj.userName || userObj.username || email.split('@')[0];
+  const userName = userObj.userName || userObj.username || email;
   const phoneNumber = userObj.phoneNumber || userObj.phone || userObj.phone_number || '';
   const isActive = userObj.isActive !== undefined ? Boolean(userObj.isActive) : userObj.is_active !== undefined ? Boolean(userObj.is_active) : true;
+  const apiFunctions = Array.isArray(userObj.apiFunctions)
+    ? userObj.apiFunctions
+    : Array.isArray(data.apiFunctions)
+    ? data.apiFunctions
+    : [];
 
   return {
     id: userId,
@@ -65,12 +88,14 @@ export function normalizeUser(data: any): User {
     isActive: isActive,
     role: roleName || 'Nhân viên',
     roleId: roleId,
-    status: userObj.status || (isActive ? 'Đang hoạt động' : 'Bị khóa'),
+    roles: rolesList,
+    status: userObj.status || (isActive ? 'Active' : 'Inactive'),
     department: deptName || 'Công nghệ thông tin',
     departmentId: deptId,
     preferredLanguage: userObj.preferredLanguage || userObj.preferred_language || 'vi',
     timeZone: userObj.timeZone || userObj.timezone || null,
     avatar: userObj.avatar || userObj.avatarUrl || userObj.avatar_url,
+    apiFunctions: apiFunctions,
   };
 }
 

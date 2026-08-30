@@ -37,13 +37,13 @@ export const Header: React.FC<HeaderProps> = ({ title, subTitle }) => {
   const currentInfo = getModuleTitle(activeModule);
 
   return (
-    <header className="h-14 bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800/80 px-4 md:px-6 flex items-center justify-between shrink-0 select-none transition-colors">
+    <header className="navbar min-h-14 h-14 bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800/80 px-4 md:px-6 flex items-center justify-between shrink-0 select-none transition-colors">
       {/* Left: Sidebar Toggle + Title & Subtitle */}
       <div className="flex items-center gap-3">
         {/* Toggle Sidebar Button */}
         <button
           onClick={toggleSidebar}
-          className="p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white transition-colors cursor-pointer"
+          className="btn btn-sm btn-ghost btn-square text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white"
           title={isSidebarOpen ? t('common:actions.close', { defaultValue: 'Close sidebar' }) : t('common:actions.viewAll', { defaultValue: 'Open sidebar' })}
         >
           <Menu className="w-4 h-4" />
@@ -56,11 +56,11 @@ export const Header: React.FC<HeaderProps> = ({ title, subTitle }) => {
             
             {/* Quick Switch to Dashboard */}
             <button
-              onClick={() => navigate({ to: '/dashboard' as any })}
-              className="ml-2 px-2.5 py-1 bg-blue-50 dark:bg-zinc-800/90 hover:bg-blue-100 dark:hover:bg-zinc-700 text-blue-700 dark:text-blue-300 border border-blue-200/60 dark:border-zinc-700/80 rounded text-xs font-semibold flex items-center gap-1.5 transition-colors cursor-pointer"
+              onClick={() => navigate({ to: '/admin/users' as any })}
+              className="ml-2 btn btn-xs btn-primary btn-outline gap-1.5 font-semibold text-xs"
             >
-              <LayoutDashboard className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>{t('buttons.goToDashboard', { defaultValue: 'Dashboard' })}</span>
+              <LayoutDashboard className="w-3.5 h-3.5" />
+              <span>{t('buttons.goToDashboard', { defaultValue: 'Vào Dashboard Quản lý' })}</span>
             </button>
           </div>
         ) : (
@@ -79,7 +79,7 @@ export const Header: React.FC<HeaderProps> = ({ title, subTitle }) => {
             {/* Quick Switch back to Chat */}
             <button
               onClick={() => navigate({ to: '/chat' as any })}
-              className="ml-2 px-2.5 py-1 bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 border border-slate-200/80 dark:border-zinc-700 rounded text-xs font-medium flex items-center gap-1.5 transition-colors cursor-pointer"
+              className="ml-2 btn btn-xs btn-ghost border border-slate-200 dark:border-zinc-700 gap-1.5 font-medium text-xs text-slate-700 dark:text-zinc-200"
             >
               <MessageSquare className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
               <span>{t('buttons.openAiChat', { defaultValue: 'Open AI Assistant' })}</span>
@@ -88,56 +88,61 @@ export const Header: React.FC<HeaderProps> = ({ title, subTitle }) => {
         )}
       </div>
 
-      {/* Right Controls */}
-      <div className="flex items-center gap-1.5">
+      {/* Right Controls with DaisyUI Tooltips */}
+      <div className="flex items-center gap-1">
         {/* Language Switcher Component (🇬🇧 EN / 🇻🇳 VI) */}
         <LanguageSwitcher />
 
         {/* Dark / Light Theme Toggle Button */}
-        <button
-          onClick={toggleTheme}
-          className="p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-          title={isDark ? t('common:theme.light', { defaultValue: 'Light Mode' }) : t('common:theme.dark', { defaultValue: 'Dark Mode' })}
-        >
-          {isDark ? (
-            <Sun className="w-4 h-4 text-amber-400 hover:rotate-45 transition-transform" />
-          ) : (
-            <Moon className="w-4 h-4 text-slate-600 hover:-rotate-12 transition-transform" />
-          )}
-        </button>
+        <div className="tooltip tooltip-bottom" data-tip={isDark ? t('common:theme.light', { defaultValue: 'Giao diện Sáng' }) : t('common:theme.dark', { defaultValue: 'Giao diện Tối' })}>
+          <button
+            onClick={toggleTheme}
+            className="btn btn-sm btn-ghost btn-square text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200"
+          >
+            {isDark ? (
+              <Sun className="w-4 h-4 text-amber-400 hover:rotate-45 transition-transform" />
+            ) : (
+              <Moon className="w-4 h-4 text-slate-600 hover:-rotate-12 transition-transform" />
+            )}
+          </button>
+        </div>
 
-        <button
-          onClick={() => showToast(t('common:notifications.savedSuccess', { defaultValue: 'Pinned session' }), 'success')}
-          className="p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-          title={t('common:actions.pin', { defaultValue: 'Pin Session' })}
-        >
-          <Pin className="w-4 h-4" />
-        </button>
+        <div className="tooltip tooltip-bottom" data-tip={t('common:actions.pin', { defaultValue: 'Ghim phiên làm việc' })}>
+          <button
+            onClick={() => showToast(t('common:notifications.savedSuccess', { defaultValue: 'Pinned session' }), 'success')}
+            className="btn btn-sm btn-ghost btn-square text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200"
+          >
+            <Pin className="w-4 h-4" />
+          </button>
+        </div>
 
-        <button
-          onClick={() => showToast(t('common:actions.refresh', { defaultValue: 'Refreshing...' }), 'info')}
-          className="p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-          title={t('common:actions.refresh', { defaultValue: 'Refresh' })}
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
+        <div className="tooltip tooltip-bottom" data-tip={t('common:actions.refresh', { defaultValue: 'Làm mới dữ liệu' })}>
+          <button
+            onClick={() => showToast(t('common:actions.refresh', { defaultValue: 'Refreshing...' }), 'info')}
+            className="btn btn-sm btn-ghost btn-square text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200"
+          >
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        </div>
 
-        <button
-          onClick={() => showToast(t('common:notifications.noNew', { defaultValue: 'No new notifications' }), 'info')}
-          className="p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors relative cursor-pointer"
-          title="Notifications"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="w-2 h-2 rounded-full bg-blue-600 absolute top-1.5 right-1.5" />
-        </button>
+        <div className="tooltip tooltip-bottom" data-tip="Thông báo hệ thống">
+          <button
+            onClick={() => showToast(t('common:notifications.noNew', { defaultValue: 'No new notifications' }), 'info')}
+            className="btn btn-sm btn-ghost btn-square text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 relative"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="badge badge-xs badge-primary absolute top-2 right-2 p-0.5" />
+          </button>
+        </div>
 
-        <button
-          onClick={() => showToast(t('common:actions.options', { defaultValue: 'Options' }), 'info')}
-          className="p-1.5 hover:bg-slate-100 dark:hover:bg-zinc-800 rounded text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-          title={t('common:actions.options', { defaultValue: 'Options' })}
-        >
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
+        <div className="tooltip tooltip-bottom" data-tip={t('common:actions.options', { defaultValue: 'Tùy chọn khác' })}>
+          <button
+            onClick={() => showToast(t('common:actions.options', { defaultValue: 'Options' }), 'info')}
+            className="btn btn-sm btn-ghost btn-square text-slate-500 dark:text-zinc-400 hover:text-slate-700 dark:hover:text-zinc-200"
+          >
+            <MoreHorizontal className="w-4 h-4" />
+          </button>
+        </div>
       </div>
     </header>
   );
