@@ -111,72 +111,83 @@ export function useUserPermissions(): UserPermissionsResult {
       modules.add('authorization');
       modules.add('auth');
       modules.add('organization');
+      modules.add('activitylog');
+      modules.add('activity_log');
+      modules.add('log');
+      modules.add('logs');
+      modules.add('audit');
       return modules;
     }
 
+    // Helper map ApiFunction module & code sang normalized module keys
+    const registerFunctionPermissions = (fn: any) => {
+      if (!fn) return;
+      if (fn.module) {
+        const m = fn.module.toLowerCase().trim();
+        modules.add(m);
+        if (m === 'role' || m === 'roles' || m === 'authorization') {
+          modules.add('role');
+          modules.add('roles');
+          modules.add('authorization');
+        }
+        if (m === 'activitylog' || m === 'activity_log' || m === 'log' || m === 'logs' || m === 'audit') {
+          modules.add('activitylog');
+          modules.add('activity_log');
+          modules.add('log');
+          modules.add('logs');
+          modules.add('audit');
+        }
+      }
+
+      if (fn.code) {
+        const c = fn.code.toUpperCase().trim();
+        if (c.startsWith('ROLE.') || c.startsWith('API_FUNCTION.')) {
+          modules.add('role');
+          modules.add('roles');
+          modules.add('authorization');
+        }
+        if (c.startsWith('DEPARTMENT.')) {
+          modules.add('department');
+        }
+        if (c.startsWith('USER.')) {
+          modules.add('user');
+        }
+        if (c.startsWith('AUTH.')) {
+          modules.add('auth');
+        }
+        if (c.startsWith('ORGANIZATION.')) {
+          modules.add('organization');
+        }
+        if (c.startsWith('ACTIVITY_LOG.') || c.startsWith('ACTIVITYLOG.') || c.startsWith('LOG.') || c.startsWith('AUDIT.')) {
+          modules.add('activitylog');
+          modules.add('activity_log');
+          modules.add('log');
+          modules.add('logs');
+          modules.add('audit');
+        }
+      }
+
+      if (fn.routeTemplate) {
+        const route = fn.routeTemplate.toLowerCase();
+        if (route.includes('activity-log') || route.includes('logs')) {
+          modules.add('activitylog');
+          modules.add('activity_log');
+          modules.add('log');
+          modules.add('logs');
+          modules.add('audit');
+        }
+      }
+    };
+
     // A. Trích xuất trực tiếp từ currentUser.apiFunctions (khi Backend trả về lúc login / getMe)
     if (Array.isArray(currentUser?.apiFunctions)) {
-      currentUser.apiFunctions.forEach((fn: any) => {
-        if (fn.module) {
-          const m = fn.module.toLowerCase().trim();
-          modules.add(m);
-          if (m === 'role' || m === 'roles' || m === 'authorization') {
-            modules.add('role');
-            modules.add('roles');
-            modules.add('authorization');
-          }
-        }
-        if (fn.code) {
-          const c = fn.code.toUpperCase();
-          if (c.startsWith('ROLE.') || c.startsWith('API_FUNCTION.')) {
-            modules.add('role');
-            modules.add('roles');
-            modules.add('authorization');
-          }
-          if (c.startsWith('DEPARTMENT.')) {
-            modules.add('department');
-          }
-          if (c.startsWith('USER.')) {
-            modules.add('user');
-          }
-          if (c.startsWith('AUTH.')) {
-            modules.add('auth');
-          }
-          if (c.startsWith('ORGANIZATION.')) {
-            modules.add('organization');
-          }
-        }
-      });
+      currentUser.apiFunctions.forEach(registerFunctionPermissions);
     }
 
     // B. Trích xuất từ ApiFunctions lấy theo Role Details
     roleDetails.forEach((rd) => {
       if (rd && Array.isArray(rd.apiFunctions)) {
-        rd.apiFunctions.forEach((fn) => {
-          if (fn.module) {
-            const m = fn.module.toLowerCase().trim();
-            modules.add(m);
-            if (m === 'role' || m === 'roles' || m === 'authorization') {
-              modules.add('role');
-              modules.add('roles');
-              modules.add('authorization');
-            }
-          }
-          if (fn.code) {
-            const c = fn.code.toUpperCase();
-            if (c.startsWith('ROLE.') || c.startsWith('API_FUNCTION.')) {
-              modules.add('role');
-              modules.add('roles');
-              modules.add('authorization');
-            }
-            if (c.startsWith('DEPARTMENT.')) {
-              modules.add('department');
-            }
-            if (c.startsWith('USER.')) {
-              modules.add('user');
-            }
-          }
-        });
+        rd.apiFunctions.forEach(registerFunctionPermissions);
       }
     });
 
@@ -208,6 +219,11 @@ export function useUserPermissions(): UserPermissionsResult {
         modules.add('role');
         modules.add('roles');
         modules.add('authorization');
+        modules.add('activitylog');
+        modules.add('activity_log');
+        modules.add('log');
+        modules.add('logs');
+        modules.add('audit');
       }
     });
 
@@ -218,6 +234,11 @@ export function useUserPermissions(): UserPermissionsResult {
       modules.add('role');
       modules.add('roles');
       modules.add('authorization');
+      modules.add('activitylog');
+      modules.add('activity_log');
+      modules.add('log');
+      modules.add('logs');
+      modules.add('audit');
     }
 
     return modules;
@@ -243,6 +264,8 @@ export function useUserPermissions(): UserPermissionsResult {
         return hasModuleAccess('department');
       case '/admin/roles':
         return hasModuleAccess(['role', 'roles', 'authorization']);
+      case '/admin/logs':
+        return hasModuleAccess(['activitylog', 'activity_log', 'log', 'logs', 'audit']);
       case '/admin':
         return true;
       default:

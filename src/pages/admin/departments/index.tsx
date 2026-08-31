@@ -256,12 +256,19 @@ export const DepartmentsPage: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
-      <Header
-        title={t('departments.title', { defaultValue: 'Quản lý phòng ban' })}
-        subTitle={t('departments.subtitle', { defaultValue: 'Cấu trúc phòng ban, sơ đồ tổ chức và phân công quản lý' })}
-      />
+      <Header />
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 w-full max-w-7xl mx-auto space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 w-full space-y-4">
+        {/* Page Title & Subtitle */}
+        <div className="space-y-1">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+            {t('departments.title', { defaultValue: 'Quản lý phòng ban' })}
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-zinc-400">
+            {t('departments.subtitle', { defaultValue: 'Cấu trúc phòng ban, sơ đồ tổ chức và phân công quản lý' })}
+          </p>
+        </div>
+
         {/* Error Alert */}
         {isError && (
           <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">

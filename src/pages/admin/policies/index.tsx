@@ -11,12 +11,18 @@ export const PoliciesPage: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-black overflow-hidden transition-colors">
-      <Header
-        title={t('policies.title', { defaultValue: 'Data & Security Policies' })}
-        subTitle={t('policies.subtitle', { defaultValue: 'Control RAG document access rights, prevent data leakage, and safeguard internal assets' })}
-      />
+      <Header />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 w-full">
+        {/* Page Title & Subtitle */}
+        <div className="space-y-1">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+            {t('policies.title', { defaultValue: 'Chính sách Dữ liệu & An ninh' })}
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-zinc-400">
+            {t('policies.subtitle', { defaultValue: 'Kiểm soát quyền truy cập tài liệu RAG, chống thất thoát dữ liệu và an toàn tài sản số' })}
+          </p>
+        </div>
         <div className="flex items-center justify-between">
           <div>
             <h3 className="text-sm font-bold text-slate-800 dark:text-zinc-200">

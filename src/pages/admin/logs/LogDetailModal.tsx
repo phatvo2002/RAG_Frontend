@@ -191,3 +191,4 @@ export const LogDetailModal: React.FC<LogDetailModalProps> = ({ isOpen, onClose,
 };
 
 export default LogDetailModal;
+

@@ -18,12 +18,18 @@ export const ConfigPage: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-black overflow-hidden transition-colors">
-      <Header
-        title={t('config.title', { defaultValue: 'System & AI Configuration' })}
-        subTitle={t('config.subtitle', { defaultValue: 'Configure Large Language Models, Vector Database indexing, and resource quotas' })}
-      />
+      <Header />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 w-full">
+        {/* Page Title & Subtitle */}
+        <div className="space-y-1">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+            {t('config.title', { defaultValue: 'Cấu hình Hệ thống & AI' })}
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-zinc-400">
+            {t('config.subtitle', { defaultValue: 'Thiết lập mô hình Large Language Model, Vector Database và phân bổ tài nguyên' })}
+          </p>
+        </div>
         <form onSubmit={handleSave} className="space-y-5 text-xs w-full">
           {/* AI LLM Settings */}
           <div className="bg-white dark:bg-zinc-900 p-5 rounded-lg border border-slate-200 dark:border-zinc-800 shadow-2xs space-y-4 transition-colors">

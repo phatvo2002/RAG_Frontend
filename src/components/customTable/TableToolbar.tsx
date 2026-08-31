@@ -17,6 +17,7 @@ export interface TableToolbarProps {
   onClearSelection?: () => void;
   bulkActions?: BulkAction[];
   filterSlot?: React.ReactNode;
+  actionSlot?: React.ReactNode;
   primaryAction?: {
     label: string;
     icon?: React.ReactNode;
@@ -45,6 +46,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   onClearSelection,
   bulkActions = [],
   filterSlot,
+  actionSlot,
   primaryAction,
   secondaryAction,
   totalCount,
@@ -107,6 +109,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
 
         {/* Right: Actions (Primary CTA highlighted) */}
         <div className="flex items-center gap-2">
+          {actionSlot}
           {secondaryAction && (
             <button
               type="button"

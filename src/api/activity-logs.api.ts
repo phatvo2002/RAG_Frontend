@@ -55,16 +55,25 @@ export function normalizeActivityLog(data: any): ActivityLogItem {
   const raw = data.data || data;
   const id = raw.id || raw.logId || raw._id || `log_${Date.now()}_${Math.random()}`;
 
-  let parsedMetadata: ActivityLogMetadata = {};
+  let rawMeta: any = {};
   if (typeof raw.metadataJson === 'string') {
     try {
-      parsedMetadata = JSON.parse(raw.metadataJson);
+      rawMeta = JSON.parse(raw.metadataJson);
     } catch {
-      parsedMetadata = {};
+      rawMeta = {};
     }
   } else if (typeof raw.metadataJson === 'object' && raw.metadataJson) {
-    parsedMetadata = raw.metadataJson;
+    rawMeta = raw.metadataJson;
   }
+
+  // Handle both PascalCase (C# Backend) and camelCase (TS)
+  const parsedMetadata: ActivityLogMetadata = {
+    ...rawMeta,
+    statusCode: rawMeta.statusCode ?? rawMeta.StatusCode,
+    elapsedMilliseconds: rawMeta.elapsedMilliseconds ?? rawMeta.ElapsedMilliseconds,
+    routeTemplate: rawMeta.routeTemplate ?? rawMeta.RouteTemplate,
+    userAgent: rawMeta.userAgent ?? rawMeta.UserAgent,
+  };
 
   return {
     id: String(id),
@@ -74,10 +83,10 @@ export function normalizeActivityLog(data: any): ActivityLogItem {
     apiFunctionId: raw.apiFunctionId || null,
     apiFunctionName: raw.apiFunctionName || undefined,
     module: raw.module || 'HTTP',
-    action: raw.action || 'GET',
+    action: (raw.action || raw.actionType || raw.httpMethod || 'GET').toUpperCase(),
     resourceType: raw.resourceType || 'Request',
     result: (raw.result || 'SUCCESS').toUpperCase(),
-    description: raw.description || raw.routeTemplate || raw.path || '',
+    description: raw.description || parsedMetadata.routeTemplate || raw.routeTemplate || raw.path || '',
     ip: raw.ip || raw.ipAddress || '127.0.0.1',
     metadataJson: raw.metadataJson,
     parsedMetadata,
@@ -104,17 +113,23 @@ export const activityLogsApi = {
       if (params?.result && params.result !== 'all') paramsObj.append('result', params.result);
 
       const queryString = paramsObj.toString() ? `?${paramsObj.toString()}` : '';
-      const response = await apiClient<ApiResponse<ActivityLogItem[]> | ActivityLogItem[]>(
+      const response = await apiClient<any>(
         `/api/activity-logs${queryString}`
       );
 
-      const list = Array.isArray(response)
-        ? response
-        : Array.isArray((response as any)?.data)
-        ? (response as any).data
-        : Array.isArray((response as any)?.items)
-        ? (response as any).items
-        : [];
+      // Support direct array, response.data (array), response.data.items (paged object), response.items
+      let list: any[] = [];
+      if (Array.isArray(response)) {
+        list = response;
+      } else if (Array.isArray(response?.data)) {
+        list = response.data;
+      } else if (Array.isArray(response?.data?.items)) {
+        list = response.data.items;
+      } else if (Array.isArray(response?.data?.data)) {
+        list = response.data.data;
+      } else if (Array.isArray(response?.items)) {
+        list = response.items;
+      }
 
       return list.map(normalizeActivityLog);
     } catch {
@@ -151,4 +166,3 @@ export function useActivityLogDetailQuery(id?: string) {
     enabled: Boolean(id),
   });
 }
-

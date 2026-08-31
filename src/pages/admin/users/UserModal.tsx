@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
+import { useForm } from '@tanstack/react-form';
 import { Modal } from '@/components/disclosure';
 import { User, userYupSchema, UserFormData } from '@/types';
 import { useCreateUserMutation, useUpdateUserMutation } from '@/api/users.api';
@@ -25,6 +24,7 @@ export const UserModal: React.FC<UserModalProps> = ({
 }) => {
   const isEditMode = Boolean(userToEdit);
   const [showPassword, setShowPassword] = useState(false);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   // Fetch departments and roles from Backend APIs
   const { data: fetchedDepartments = [] } = useDepartmentsQuery();
@@ -99,23 +99,102 @@ export const UserModal: React.FC<UserModalProps> = ({
   const createMutation = useCreateUserMutation();
   const updateMutation = useUpdateUserMutation();
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setValue,
-    setError,
-    formState: { errors },
-  } = useForm<UserFormData>({
-    resolver: yupResolver(userYupSchema) as any,
+  const form = useForm({
     defaultValues: {
       displayName: '',
       name: '',
       email: '',
-      password: '',
+      password: 'Nexora@2026',
       role: 'Nhân viên',
       department: 'Công nghệ thông tin',
       phone: '',
+    } as UserFormData,
+    validators: {
+      onSubmit: ({ value }) => {
+        try {
+          userYupSchema.validateSync(value, { abortEarly: false });
+          return undefined;
+        } catch (err: any) {
+          return err.message || 'Dữ liệu người dùng không hợp lệ';
+        }
+      },
+    },
+    onSubmit: async ({ value }) => {
+      setServerError(null);
+
+      const matchedRole = availableRoles.find(
+        (r) => r.name === value.role || (r as any).role === value.role || r.id === value.role
+      );
+      const matchedDept = availableDepartments.find(
+        (d) => d.name === value.department || d.id === value.department
+      );
+
+      const roleName = value.role;
+      const roleId = matchedRole?.id;
+
+      if (isEditMode && userToEdit) {
+        updateMutation.mutate(
+          {
+            userId: userToEdit.id || userToEdit.userId || '',
+            data: {
+              displayName: value.displayName || value.name,
+              userName: value.name || value.email,
+              name: value.name,
+              fullName: value.name,
+              email: value.email,
+              role: roleName,
+              roleName: roleName,
+              roleId: roleId,
+              roles: roleId ? [{ roleId, roleName, status: 'Active' }] : [{ roleName, status: 'Active' }],
+              roleIds: roleId ? [roleId] : [],
+              department: value.department,
+              departmentId: matchedDept?.id,
+              phone: value.phone || '',
+              phoneNumber: value.phone || '',
+            },
+          },
+          {
+            onSuccess: (updatedUser) => {
+              onSuccessToast(`Đã cập nhật thông tin người dùng ${updatedUser.name} thành công!`);
+              form.reset();
+              onClose();
+            },
+            onError: (err: any) => {
+              setServerError(err.message || 'Không thể cập nhật người dùng');
+            },
+          }
+        );
+      } else {
+        createMutation.mutate(
+          {
+            displayName: value.displayName || value.name,
+            name: value.name,
+            fullName: value.name,
+            email: value.email,
+            userName: value.name || value.email.split('@')[0],
+            password: value.password || 'Nexora@2026',
+            role: roleName,
+            roleName: roleName,
+            roleId: roleId,
+            roles: roleId ? [{ roleId, roleName, status: 'Active' }] : [{ roleName, status: 'Active' }],
+            roleIds: roleId ? [roleId] : [],
+            department: value.department,
+            departmentId: matchedDept?.id,
+            phone: value.phone || '',
+            phoneNumber: value.phone || '',
+          },
+          {
+            onSuccess: (createdUser) => {
+              onSuccessToast(`Đã thêm người dùng ${createdUser.name} thành công!`);
+              form.reset();
+              onClose();
+            },
+            onError: (err: any) => {
+              setServerError(err.message || 'Không thể tạo mới người dùng');
+            },
+          }
+        );
+      }
     },
   });
 
@@ -123,6 +202,7 @@ export const UserModal: React.FC<UserModalProps> = ({
   useEffect(() => {
     if (isOpen) {
       setShowPassword(false);
+      setServerError(null);
       if (userToEdit) {
         // Tìm phòng ban khớp
         const matchedDept = availableDepartments.find(
@@ -156,127 +236,25 @@ export const UserModal: React.FC<UserModalProps> = ({
           (availableRoles[0] as any)?.role ||
           'Nhân viên';
 
-        reset({
-          displayName: userToEdit.displayName || userToEdit.name || userToEdit.fullName || '',
-          name: userToEdit.name || userToEdit.fullName || userToEdit.displayName || '',
-          email: userToEdit.email || '',
-          role: resolvedRole,
-          department: resolvedDept,
-          phone: userToEdit.phone || userToEdit.phoneNumber || '',
-          password: '',
-        });
-
-        // Đồng bộ trực tiếp vào React Hook Form state
-        setValue('role', resolvedRole);
-        setValue('department', resolvedDept);
+        form.setFieldValue('displayName', userToEdit.displayName || userToEdit.name || userToEdit.fullName || '');
+        form.setFieldValue('name', userToEdit.name || userToEdit.fullName || userToEdit.displayName || '');
+        form.setFieldValue('email', userToEdit.email || '');
+        form.setFieldValue('role', resolvedRole);
+        form.setFieldValue('department', resolvedDept);
+        form.setFieldValue('phone', userToEdit.phone || userToEdit.phoneNumber || '');
+        form.setFieldValue('password', '');
       } else {
         const defaultRole = availableRoles[0]?.name || (availableRoles[0] as any)?.role || 'Nhân viên';
         const defaultDept = availableDepartments[0]?.name || 'Công nghệ thông tin';
-        reset({
-          displayName: '',
-          name: '',
-          email: '',
-          password: 'Nexora@2026',
-          role: defaultRole,
-          department: defaultDept,
-          phone: '',
-        });
-        setValue('role', defaultRole);
-        setValue('department', defaultDept);
+        form.reset();
+        form.setFieldValue('role', defaultRole);
+        form.setFieldValue('department', defaultDept);
+        form.setFieldValue('password', 'Nexora@2026');
       }
     }
-  }, [isOpen, userToEdit, availableDepartments, availableRoles, reset, setValue]);
+  }, [isOpen, userToEdit, availableDepartments, availableRoles]);
 
   if (!isOpen) return null;
-
-  const handleBackendError = (err: any) => {
-    const errorDetails =
-      err?.data?.error?.details ||
-      err?.data?.details ||
-      err?.data?.errors ||
-      err?.details;
-
-    if (Array.isArray(errorDetails) && errorDetails.length > 0) {
-      errorDetails.forEach((d: { field?: string; message?: string }) => {
-        if (d.field && d.message) {
-          const fieldName = d.field.charAt(0).toLowerCase() + d.field.slice(1);
-          setError(fieldName as any, { message: d.message });
-        }
-      });
-    } else {
-      setError('root', { message: err.message || 'Không thể thực hiện thao tác' });
-    }
-  };
-
-  const onSubmit = (data: UserFormData) => {
-    const matchedRole = availableRoles.find(
-      (r) => r.name === data.role || (r as any).role === data.role || r.id === data.role
-    );
-    const matchedDept = availableDepartments.find(
-      (d) => d.name === data.department || d.id === data.department
-    );
-
-    const roleName = data.role;
-    const roleId = matchedRole?.id;
-
-    if (isEditMode && userToEdit) {
-      updateMutation.mutate(
-        {
-          userId: userToEdit.id || userToEdit.userId || '',
-          data: {
-            displayName: data.displayName || data.name,
-            userName: data.name || data.email,
-            name: data.name,
-            fullName: data.name,
-            email: data.email,
-            role: roleName,
-            roleName: roleName,
-            roleId: roleId,
-            roles: roleId ? [{ roleId, roleName, status: 'Active' }] : [{ roleName, status: 'Active' }],
-            roleIds: roleId ? [roleId] : [],
-            department: data.department,
-            departmentId: matchedDept?.id,
-            phone: data.phone || '',
-            phoneNumber: data.phone || '',
-          },
-        },
-        {
-          onSuccess: (updatedUser) => {
-            onSuccessToast(`Đã cập nhật thông tin người dùng ${updatedUser.name} thành công!`);
-            onClose();
-          },
-          onError: handleBackendError,
-        }
-      );
-    } else {
-      createMutation.mutate(
-        {
-          displayName: data.displayName || data.name,
-          name: data.name,
-          fullName: data.name,
-          email: data.email,
-          userName: data.name || data.email.split('@')[0],
-          password: data.password || 'Nexora@2026',
-          role: roleName,
-          roleName: roleName,
-          roleId: roleId,
-          roles: roleId ? [{ roleId, roleName, status: 'Active' }] : [{ roleName, status: 'Active' }],
-          roleIds: roleId ? [roleId] : [],
-          department: data.department,
-          departmentId: matchedDept?.id,
-          phone: data.phone || '',
-          phoneNumber: data.phone || '',
-        },
-        {
-          onSuccess: (createdUser) => {
-            onSuccessToast(`Đã thêm người dùng ${createdUser.name} thành công!`);
-            onClose();
-          },
-          onError: handleBackendError,
-        }
-      );
-    }
-  };
 
   const isPending = createMutation.isPending || updateMutation.isPending;
 
@@ -287,206 +265,304 @@ export const UserModal: React.FC<UserModalProps> = ({
       title={isEditMode ? 'Chỉnh sửa thông tin người dùng' : 'Thêm người dùng mới'}
       maxWidth="lg"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-xs">
-        {errors.root && (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+        className="space-y-4 text-xs"
+      >
+        {serverError && (
           <div className="p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded text-rose-700 dark:text-rose-300 text-xs leading-relaxed flex items-center gap-1.5">
             <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{errors.root.message}</span>
+            <span>{serverError}</span>
           </div>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Tên hiển thị (displayName) */}
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-              Tên hiển thị (Display Name) <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative flex items-center">
-              <input
-                type="text"
-                {...register('displayName')}
-                placeholder="VD: lenhu"
-                className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
-                  errors.displayName ? 'input-error' : ''
-                }`}
-              />
-              <UserIcon className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-            </div>
-            {errors.displayName && (
-              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{errors.displayName.message}</span>
-              </p>
-            )}
-          </div>
+          <form.Field
+            name="displayName"
+            validators={{
+              onChange: ({ value }) => (!value?.trim() ? 'Tên hiển thị không được để trống' : undefined),
+            }}
+          >
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
+
+              return (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Tên hiển thị (Display Name) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      name={field.name}
+                      value={field.state.value || ''}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="VD: lenhu"
+                      className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                        hasError ? 'input-error' : ''
+                      }`}
+                    />
+                    <UserIcon className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                  </div>
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
 
           {/* Họ và tên (Full Name) */}
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-              Họ và tên (Full Name) <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative flex items-center">
-              <input
-                type="text"
-                {...register('name')}
-                placeholder="VD: Lê Thị Quỳnh Như"
-                className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
-                  errors.name ? 'input-error' : ''
-                }`}
-              />
-              <UserIcon className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-            </div>
-            {errors.name && (
-              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{errors.name.message}</span>
-              </p>
-            )}
-          </div>
+          <form.Field
+            name="name"
+            validators={{
+              onChange: ({ value }) => (!value?.trim() ? 'Họ và tên không được để trống' : undefined),
+            }}
+          >
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
+
+              return (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Họ và tên (Full Name) <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      name={field.name}
+                      value={field.state.value || ''}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="VD: Lê Thị Quỳnh Như"
+                      className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                        hasError ? 'input-error' : ''
+                      }`}
+                    />
+                    <UserIcon className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                  </div>
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
         </div>
 
         {/* Email đăng nhập */}
-        <div>
-          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-            Email đăng nhập <span className="text-rose-500">*</span>
-          </label>
-          <div className="relative flex items-center">
-            <input
-              type="email"
-              {...register('email')}
-              placeholder="VD: lethiquynhu@gmail.com"
-              className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
-                errors.email ? 'input-error' : ''
-              }`}
-            />
-            <Mail className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-          </div>
-          {errors.email && (
-            <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              <span>{errors.email.message}</span>
-            </p>
-          )}
-        </div>
+        <form.Field
+          name="email"
+          validators={{
+            onChange: ({ value }) => (!value?.trim() ? 'Email không được để trống' : undefined),
+          }}
+        >
+          {(field) => {
+            const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+            const hasError = Boolean(errorMessage);
+
+            return (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  Email đăng nhập <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type="email"
+                    name={field.name}
+                    value={field.state.value || ''}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="VD: lethiquynhu@gmail.com"
+                    className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                      hasError ? 'input-error' : ''
+                    }`}
+                  />
+                  <Mail className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                </div>
+                {hasError && (
+                  <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </p>
+                )}
+              </div>
+            );
+          }}
+        </form.Field>
 
         {/* Mật khẩu khởi tạo (Chỉ hiển thị khi thêm mới) */}
         {!isEditMode && (
-          <div>
-            <div className="flex items-center justify-between mb-1">
-              <label className="block font-semibold text-slate-700 dark:text-zinc-300">
-                Mật khẩu khởi tạo <span className="text-rose-500">*</span>
-              </label>
-              <span className="text-[11px] text-slate-400 dark:text-zinc-500">Mặc định: Nexora@2026</span>
-            </div>
-            <div className="relative flex items-center">
-              <input
-                type={showPassword ? 'text' : 'password'}
-                {...register('password')}
-                placeholder="Nhập mật khẩu cho tài khoản (tối thiểu 6 ký tự)"
-                className={`input input-bordered input-sm w-full pl-9 pr-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
-                  errors.password ? 'input-error' : ''
-                }`}
-              />
-              <KeyRound className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-              <button
-                type="button"
-                onClick={() => setShowPassword(!showPassword)}
-                className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 cursor-pointer z-10"
-              >
-                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-              </button>
-            </div>
-            {errors.password && (
-              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{errors.password.message}</span>
-              </p>
-            )}
-          </div>
+          <form.Field
+            name="password"
+            validators={{
+              onChange: ({ value }) => (!value || value.length < 6 ? 'Mật khẩu phải có ít nhất 6 ký tự' : undefined),
+            }}
+          >
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
+
+              return (
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300">
+                      Mật khẩu khởi tạo <span className="text-rose-500">*</span>
+                    </label>
+                    <span className="text-[11px] text-slate-400 dark:text-zinc-500">Mặc định: Nexora@2026</span>
+                  </div>
+                  <div className="relative flex items-center">
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      name={field.name}
+                      value={field.state.value || ''}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="Nhập mật khẩu cho tài khoản (tối thiểu 6 ký tự)"
+                      className={`input input-bordered input-sm w-full pl-9 pr-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                        hasError ? 'input-error' : ''
+                      }`}
+                    />
+                    <KeyRound className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 cursor-pointer z-10"
+                    >
+                      {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
         )}
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
           {/* Phòng ban Dropdown */}
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-              Phòng ban <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative flex items-center">
-              <select
-                {...register('department')}
-                className={`select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 ${
-                  errors.department ? 'select-error' : ''
-                }`}
-              >
-                {availableDepartments.map((d) => (
-                  <option key={d.id || d.name} value={d.name}>
-                    {d.name}
-                  </option>
-                ))}
-              </select>
-              <Building className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-            </div>
-            {errors.department && (
-              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{errors.department.message}</span>
-              </p>
-            )}
-          </div>
+          <form.Field name="department">
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
+
+              return (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Phòng ban <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <select
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      className={`select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 ${
+                        hasError ? 'select-error' : ''
+                      }`}
+                    >
+                      {availableDepartments.map((d) => (
+                        <option key={d.id || d.name} value={d.name}>
+                          {d.name}
+                        </option>
+                      ))}
+                    </select>
+                    <Building className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                  </div>
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
 
           {/* Vai trò Dropdown */}
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-              Vai trò <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative flex items-center">
-              <select
-                {...register('role')}
-                className={`select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 ${
-                  errors.role ? 'select-error' : ''
-                }`}
-              >
-                {availableRoles.map((r) => {
-                  const roleName = r.name || (r as any).role || r.id;
-                  return (
-                    <option key={r.id || roleName} value={roleName}>
-                      {roleName}
-                    </option>
-                  );
-                })}
-              </select>
-              <Shield className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-            </div>
-            {errors.role && (
-              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{errors.role.message}</span>
-              </p>
-            )}
-          </div>
+          <form.Field name="role">
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
+
+              return (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Vai trò <span className="text-rose-500">*</span>
+                  </label>
+                  <div className="relative flex items-center">
+                    <select
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      className={`select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 ${
+                        hasError ? 'select-error' : ''
+                      }`}
+                    >
+                      {availableRoles.map((r) => {
+                        const roleName = r.name || (r as any).role || r.id;
+                        return (
+                          <option key={r.id || roleName} value={roleName}>
+                            {roleName}
+                          </option>
+                        );
+                      })}
+                    </select>
+                    <Shield className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                  </div>
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
         </div>
 
         {/* Số điện thoại */}
-        <div>
-          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Số điện thoại</label>
-          <div className="relative flex items-center">
-            <input
-              type="text"
-              {...register('phone')}
-              placeholder="VD: 0708 223 608"
-              className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
-                errors.phone ? 'input-error' : ''
-              }`}
-            />
-            <Phone className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-          </div>
-          {errors.phone && (
-            <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              <span>{errors.phone.message}</span>
-            </p>
+        <form.Field name="phone">
+          {(field) => (
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Số điện thoại</label>
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  name={field.name}
+                  value={field.state.value || ''}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="VD: 0708 223 608"
+                  className="input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500"
+                />
+                <Phone className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+              </div>
+            </div>
           )}
-        </div>
+        </form.Field>
 
         <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
           <button
@@ -509,4 +585,5 @@ export const UserModal: React.FC<UserModalProps> = ({
     </Modal>
   );
 };
+
 export default UserModal;

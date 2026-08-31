@@ -241,12 +241,19 @@ export const RolesPage: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
-      <Header
-        title={t('roles.title', { defaultValue: 'Vai trò & Phân quyền' })}
-        subTitle={t('roles.subtitle', { defaultValue: 'Chính sách kiểm soát truy cập và phân quyền chi tiết cho các nhóm người dùng' })}
-      />
+      <Header />
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 w-full max-w-7xl mx-auto space-y-4">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 w-full space-y-4">
+        {/* Page Title & Subtitle */}
+        <div className="space-y-1">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+            {t('roles.title', { defaultValue: 'Vai trò & Phân quyền' })}
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-zinc-400">
+            {t('roles.subtitle', { defaultValue: 'Chính sách kiểm soát truy cập và phân quyền chi tiết cho các nhóm người dùng' })}
+          </p>
+        </div>
+
         {/* Error Alert */}
         {isError && (
           <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">

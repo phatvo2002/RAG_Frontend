@@ -1,12 +1,24 @@
-import React from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getPaginationRowModel,
+  getFilteredRowModel,
+  flexRender,
+  ColumnDef,
+  SortingState,
+  RowSelectionState,
+} from '@tanstack/react-table';
 import { useTranslation } from 'react-i18next';
 import { ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { TableSkeleton } from './TableSkeleton';
 import { TableEmptyState, TableEmptyStateProps } from './TableEmptyState';
 
+// Legacy Column Interface support alongside TanStack ColumnDef
 export interface Column<T> {
   id?: string;
-  header: string;
+  header: string | ((info: any) => React.ReactNode);
   accessor?: keyof T;
   render?: (item: T, index: number) => React.ReactNode;
   align?: 'left' | 'center' | 'right';
@@ -35,7 +47,7 @@ export interface PaginationConfig {
 export interface CustomTableProps<T> {
   title?: string;
   toolbar?: React.ReactNode;
-  columns: Column<T>[];
+  columns: (ColumnDef<T, any> | Column<T>)[];
   data: T[];
   keyExtractor?: (item: T, index: number) => string | number;
 
@@ -68,10 +80,10 @@ export interface CustomTableProps<T> {
 }
 
 /**
- * Enterprise SaaS Minimalist Table Component.
- * Low visual noise, clean borders, high typography clarity, and unified container.
+ * Enterprise SaaS Table Component Powered by @tanstack/react-table (v8)
+ * Combines TanStack Table headless engine with unified container, low visual noise, and clean Enterprise typography.
  */
-export function CustomTable<T>({
+export function CustomTable<T extends object>({
   title,
   toolbar,
   columns,
@@ -95,8 +107,38 @@ export function CustomTable<T>({
 }: CustomTableProps<T>) {
   const { t } = useTranslation(['table', 'common']);
 
+  // Convert Sorting to TanStack Table SortingState
+  const [internalSorting, setInternalSorting] = useState<SortingState>(() => {
+    if (sortConfig) {
+      return [{ id: sortConfig.key, desc: sortConfig.order === 'desc' }];
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (sortConfig) {
+      setInternalSorting([{ id: sortConfig.key, desc: sortConfig.order === 'desc' }]);
+    }
+  }, [sortConfig]);
+
+  // Convert Selection to TanStack Table RowSelectionState
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  // Sync external selectedIds with TanStack rowSelection
+  useEffect(() => {
+    if (!selectable) return;
+    const newSelection: RowSelectionState = {};
+    data.forEach((item, idx) => {
+      const key = keyExtractor(item, idx);
+      if (selectedIds.includes(key)) {
+        newSelection[idx] = true;
+      }
+    });
+    setRowSelection(newSelection);
+  }, [selectedIds, data, selectable]);
+
   // Checkbox Select All Logic
-  const allItemKeys = data.map((item, idx) => keyExtractor(item, idx));
+  const allItemKeys = useMemo(() => data.map((item, idx) => keyExtractor(item, idx)), [data, keyExtractor]);
   const isAllSelected = data.length > 0 && allItemKeys.every((key) => selectedIds.includes(key));
   const isSomeSelected = selectedIds.length > 0 && !isAllSelected;
 
@@ -119,7 +161,67 @@ export function CustomTable<T>({
     }
   };
 
-  const getAlignClass = (align?: 'left' | 'center' | 'right') => {
+  // Convert Columns to TanStack ColumnDef format
+  const tanstackColumns = useMemo<ColumnDef<T, any>[]>(() => {
+    return columns.map((col: any, idx) => {
+      // If already a TanStack ColumnDef with accessorKey/accessorFn/cell
+      if (col.accessorKey || col.accessorFn || col.cell || (typeof col.header === 'function' && !col.render)) {
+        return col as ColumnDef<T, any>;
+      }
+
+      // Convert legacy Column format to TanStack ColumnDef
+      const columnId = col.id || col.sortKey || (col.accessor ? String(col.accessor) : `col_${idx}`);
+      const isSortable = col.sortable !== false && (Boolean(col.sortKey) || Boolean(col.accessor) || Boolean(onSort));
+
+      return {
+        id: columnId,
+        header: typeof col.header === 'function' ? col.header : () => col.header,
+        accessorKey: col.accessor ? String(col.accessor) : undefined,
+        accessorFn: col.accessor ? (row: any) => row[col.accessor] : undefined,
+        enableSorting: isSortable,
+        cell: ({ row, cell }: any) => {
+          if (col.render) {
+            return col.render(row.original, row.index);
+          }
+          return cell.getValue() ?? '';
+        },
+        meta: {
+          align: col.align || 'left',
+          width: col.width,
+          className: col.className,
+          headerClassName: col.headerClassName,
+          sortKey: col.sortKey || columnId,
+        },
+      } as ColumnDef<T, any>;
+    });
+  }, [columns, onSort]);
+
+  // Instantiate TanStack React Table
+  const table = useReactTable({
+    data,
+    columns: tanstackColumns,
+    state: {
+      sorting: internalSorting,
+      rowSelection,
+    },
+    enableRowSelection: selectable,
+    onRowSelectionChange: setRowSelection,
+    onSortingChange: (updater) => {
+      const nextSorting = typeof updater === 'function' ? updater(internalSorting) : updater;
+      setInternalSorting(nextSorting);
+      if (onSort && nextSorting.length > 0) {
+        onSort(nextSorting[0].id);
+      }
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: true,
+    pageCount: pagination?.totalPages || 1,
+  });
+
+  const getAlignClass = (align?: string) => {
     if (align === 'center') return 'text-center';
     if (align === 'right') return 'text-right';
     return 'text-left';
@@ -151,74 +253,83 @@ export function CustomTable<T>({
       {/* Main Table Content */}
       <div className="overflow-x-auto w-full">
         <table className="w-full text-left border-collapse">
-          {/* Header */}
+          {/* Header via TanStack Table */}
           <thead
             className={`bg-slate-50/70 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800/90 text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider select-none ${
               stickyHeader ? 'sticky top-0 z-10' : ''
             }`}
           >
-            <tr>
-              {/* Select All Checkbox */}
-              {selectable && (
-                <th className="w-10 px-3 py-3 text-center">
-                  <input
-                    type="checkbox"
-                    checked={isAllSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = isSomeSelected;
-                    }}
-                    onChange={handleSelectAll}
-                    className="w-3.5 h-3.5 rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-0 cursor-pointer"
-                  />
-                </th>
-              )}
-
-              {/* Column Headers */}
-              {columns.map((col, idx) => {
-                const alignClass = getAlignClass(col.align);
-                const isSorted = sortConfig && (sortConfig.key === col.sortKey || sortConfig.key === String(col.accessor));
-                const isSortable = col.sortable && Boolean(onSort);
-
-                return (
-                  <th
-                    key={col.id || idx}
-                    style={{ width: col.width }}
-                    className={`px-4 py-2.5 ${alignClass} ${col.headerClassName || ''} ${col.className || ''} ${
-                      isSortable ? 'cursor-pointer hover:text-slate-800 dark:hover:text-zinc-200 transition-colors' : ''
-                    }`}
-                    onClick={() => {
-                      if (isSortable && onSort) {
-                        onSort(col.sortKey || String(col.accessor));
-                      }
-                    }}
-                  >
-                    <div
-                      className={`inline-flex items-center gap-1.5 ${
-                        col.align === 'right' ? 'justify-end' : col.align === 'center' ? 'justify-center' : 'justify-start'
-                      }`}
-                    >
-                      <span>{col.header}</span>
-                      {isSortable && (
-                        <span className="text-slate-400 dark:text-zinc-500">
-                          {isSorted ? (
-                            sortConfig.order === 'asc' ? (
-                              <ArrowUp className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                            ) : (
-                              <ArrowDown className="w-3 h-3 text-blue-600 dark:text-blue-400" />
-                            )
-                          ) : (
-                            <ArrowUpDown className="w-2.5 h-2.5 opacity-40 hover:opacity-100" />
-                          )}
-                        </span>
-                      )}
-                    </div>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {/* Select All Checkbox */}
+                {selectable && (
+                  <th className="w-10 px-3 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = isSomeSelected;
+                      }}
+                      onChange={handleSelectAll}
+                      className="w-3.5 h-3.5 rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-0 cursor-pointer"
+                    />
                   </th>
-                );
-              })}
-            </tr>
+                )}
+
+                {/* Headers */}
+                {headerGroup.headers.map((header) => {
+                  const meta: any = header.column.columnDef.meta || {};
+                  const alignClass = getAlignClass(meta.align);
+                  const isSortable = header.column.getCanSort();
+                  const isSorted = header.column.getIsSorted();
+
+                  return (
+                    <th
+                      key={header.id}
+                      style={{ width: meta.width }}
+                      className={`px-4 py-2.5 ${alignClass} ${meta.headerClassName || ''} ${meta.className || ''} ${
+                        isSortable ? 'cursor-pointer hover:text-slate-800 dark:hover:text-zinc-200 transition-colors' : ''
+                      }`}
+                      onClick={() => {
+                        if (isSortable) {
+                          if (onSort) {
+                            onSort(meta.sortKey || header.id);
+                          } else {
+                            header.column.toggleSorting();
+                          }
+                        }
+                      }}
+                    >
+                      <div
+                        className={`inline-flex items-center gap-1.5 ${
+                          meta.align === 'right' ? 'justify-end' : meta.align === 'center' ? 'justify-center' : 'justify-start'
+                        }`}
+                      >
+                        <span>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </span>
+                        {isSortable && (
+                          <span className="text-slate-400 dark:text-zinc-500">
+                            {isSorted === 'asc' ? (
+                              <ArrowUp className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                            ) : isSorted === 'desc' ? (
+                              <ArrowDown className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                            ) : (
+                              <ArrowUpDown className="w-2.5 h-2.5 opacity-40 hover:opacity-100" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
           </thead>
 
-          {/* Body */}
+          {/* Body via TanStack Table */}
           <tbody className="divide-y divide-slate-100 dark:divide-zinc-900 text-xs">
             {isLoading ? (
               <TableSkeleton
@@ -239,15 +350,15 @@ export function CustomTable<T>({
                 </td>
               </tr>
             ) : (
-              data.map((item, rowIdx) => {
-                const key = keyExtractor(item, rowIdx);
+              table.getRowModel().rows.map((row, rowIdx) => {
+                const key = keyExtractor(row.original, rowIdx);
                 const isSelected = selectable && selectedIds.includes(key);
                 const isClickable = Boolean(onRowClick);
 
                 return (
                   <tr
-                    key={key}
-                    onClick={() => onRowClick?.(item, rowIdx)}
+                    key={row.id || key}
+                    onClick={() => onRowClick?.(row.original, rowIdx)}
                     className={`${
                       isSelected
                         ? 'bg-blue-50/40 dark:bg-blue-950/20'
@@ -272,20 +383,17 @@ export function CustomTable<T>({
                     )}
 
                     {/* Row Cells */}
-                    {columns.map((col, colIdx) => {
-                      const alignClass = getAlignClass(col.align);
+                    {row.getVisibleCells().map((cell) => {
+                      const meta: any = cell.column.columnDef.meta || {};
+                      const alignClass = getAlignClass(meta.align);
                       const paddingClass = compact ? 'px-3 py-2' : 'px-4 py-3';
 
                       return (
                         <td
-                          key={col.id || colIdx}
-                          className={`${alignClass} ${paddingClass} text-slate-700 dark:text-zinc-300 ${col.className || ''}`}
+                          key={cell.id}
+                          className={`${alignClass} ${paddingClass} text-slate-700 dark:text-zinc-300 ${meta.className || ''}`}
                         >
-                          {col.render
-                            ? col.render(item, rowIdx)
-                            : col.accessor
-                            ? String(item[col.accessor] ?? '')
-                            : null}
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       );
                     })}

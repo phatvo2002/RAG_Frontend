@@ -114,9 +114,19 @@ export const TasksPage: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-black transition-colors">
-      <Header title="Công việc & Nhiệm vụ" subTitle="Bảng Kanban theo dõi tiến độ và phân công công việc cá nhân" />
+      <Header />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 w-full">
+        {/* Page Title & Subtitle */}
+        <div className="space-y-1">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+            Công việc & Nhiệm vụ
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-zinc-400">
+            Bảng Kanban theo dõi tiến độ và phân công công việc cá nhân
+          </p>
+        </div>
+
         {/* Header Search & Actions */}
         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
           <div className="relative w-full sm:w-80">

@@ -182,8 +182,7 @@ const adminLogsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/logs',
   component: () => (
-    <PermissionGuard isImplemented={false}>
-    <PermissionGuard module={['audit', 'all', 'system', 'role', 'user']} isImplemented={true}>
+    <PermissionGuard module={['activitylog', 'activity_log', 'log', 'logs', 'audit']} isImplemented={true}>
       <LogsPage />
     </PermissionGuard>
   ),

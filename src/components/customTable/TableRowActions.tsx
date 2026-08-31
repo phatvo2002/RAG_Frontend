@@ -6,6 +6,7 @@ export interface ActionMenuItem {
   icon?: React.ReactNode;
   onClick: () => void;
   variant?: 'default' | 'danger';
+  danger?: boolean;
   disabled?: boolean;
 }
 

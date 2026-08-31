@@ -26,11 +26,21 @@ export const CalendarPage: React.FC = () => {
 
   return (
     <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-black transition-colors">
-      <Header title="Lịch & Phòng họp" subTitle="Lịch làm việc tập trung, đặt phòng họp và đồng bộ lịch họp AI" />
+      <Header />
 
       <div className="flex-1 flex overflow-hidden">
         {/* Main Calendar Area */}
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 w-full">
+          {/* Page Title & Subtitle */}
+          <div className="space-y-1">
+            <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+              Lịch & Phòng họp
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-zinc-400">
+              Lịch làm việc tập trung, đặt phòng họp và đồng bộ lịch họp AI
+            </p>
+          </div>
+
           {/* Month Navigator Controls */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">

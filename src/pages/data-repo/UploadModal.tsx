@@ -1,10 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
+import { useForm } from '@tanstack/react-form';
 import { Modal } from '@/components/disclosure';
 import { useApp } from '@/context/AppContext';
 import { uploadDocumentYupSchema, UploadDocumentFormData, validationMessages } from '@/types';
-import { Upload, FileText, X, AlertCircle, Sparkles, Database, Check } from 'lucide-react';
+import { Upload, FileText, X, AlertCircle, Sparkles, Database } from 'lucide-react';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -18,15 +17,60 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    formState: { errors },
-  } = useForm<UploadDocumentFormData>({
-    resolver: yupResolver(uploadDocumentYupSchema) as any,
+  const form = useForm({
     defaultValues: {
       accessScope: 'Dự án NEXORA',
+    } as UploadDocumentFormData,
+    validators: {
+      onSubmit: ({ value }) => {
+        try {
+          uploadDocumentYupSchema.validateSync(value, { abortEarly: false });
+          return undefined;
+        } catch (err: any) {
+          return err.message || 'Dữ liệu không hợp lệ';
+        }
+      },
+    },
+    onSubmit: async ({ value }) => {
+      if (!file) {
+        setFileError(validationMessages.document.fileRequired);
+        return;
+      }
+
+      setIsProcessing(true);
+      setCurrentStep(3);
+
+      setTimeout(() => {
+        const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
+        const docType = (['pdf', 'xlsx', 'docx', 'pptx'].includes(ext) ? ext : 'pdf') as any;
+
+        const now = new Date();
+        const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1)
+          .toString()
+          .padStart(2, '0')}/${now.getFullYear()} ${now
+          .getHours()
+          .toString()
+          .padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
+
+        addDocument({
+          name: file.name,
+          type: docType,
+          updatedBy: currentUser.name,
+          updatedAt: dateStr,
+          accessScope: value.accessScope,
+          size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+        });
+
+        setCurrentStep(4);
+        setIsProcessing(false);
+        showToast(`Đã tải lên & Index Vector tài liệu "${file.name}" thành công!`, 'success');
+
+        setTimeout(() => {
+          setFile(null);
+          form.reset();
+          onClose();
+        }, 600);
+      }, 800);
     },
   });
 
@@ -36,11 +80,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
       setFileError(null);
       setCurrentStep(1);
       setIsProcessing(false);
-      reset({
-        accessScope: 'Dự án NEXORA',
-      });
+      form.reset();
     }
-  }, [isOpen, reset]);
+  }, [isOpen]);
 
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
@@ -61,51 +103,16 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
 
   if (!isOpen) return null;
 
-  const onSubmit = (data: UploadDocumentFormData) => {
-    if (!file) {
-      setFileError(validationMessages.document.fileRequired);
-      return;
-    }
-
-    setIsProcessing(true);
-    setCurrentStep(3);
-
-    setTimeout(() => {
-      const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
-      const docType = (['pdf', 'xlsx', 'docx', 'pptx'].includes(ext) ? ext : 'pdf') as any;
-
-      const now = new Date();
-      const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1)
-        .toString()
-        .padStart(2, '0')}/${now.getFullYear()} ${now
-        .getHours()
-        .toString()
-        .padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-      addDocument({
-        name: file.name,
-        type: docType,
-        updatedBy: currentUser.name,
-        updatedAt: dateStr,
-        accessScope: data.accessScope,
-        size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-      });
-
-      setCurrentStep(4);
-      setIsProcessing(false);
-      showToast(`Đã tải lên & Index Vector tài liệu "${file.name}" thành công!`, 'success');
-
-      setTimeout(() => {
-        setFile(null);
-        reset();
-        onClose();
-      }, 600);
-    }, 800);
-  };
-
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Tải tài liệu vào Kho Tri thức RAG" maxWidth="lg">
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-xs">
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+        className="space-y-4 text-xs"
+      >
         {/* DaisyUI Steps Visual Indicator */}
         <div className="py-1">
           <ul className="steps steps-horizontal w-full text-[11px] font-medium">
@@ -164,55 +171,80 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
                 setFile(null);
                 setCurrentStep(1);
               }}
-              className="btn btn-ghost btn-xs btn-circle text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300"
+              className="btn btn-ghost btn-xs btn-square text-slate-400 hover:text-rose-500 cursor-pointer"
             >
-              <X className="w-3.5 h-3.5" />
+              <X className="w-4 h-4" />
             </button>
           </div>
         )}
 
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-            Quyền truy cập tài liệu <span className="text-rose-500">*</span>
-          </label>
-          <select
-            {...register('accessScope')}
-            className={`select select-bordered select-sm w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 ${
-              errors.accessScope ? 'select-error' : ''
-            }`}
-          >
-            <option value="Dự án NEXORA">Dự án NEXORA</option>
-            <option value="Phòng Sản phẩm">Phòng Sản phẩm</option>
-            <option value="Phòng Marketing">Phòng Marketing</option>
-            <option value="Toàn bộ công ty">Toàn bộ công ty</option>
-          </select>
-          {errors.accessScope && (
-            <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-              <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-              <span>{errors.accessScope.message}</span>
-            </p>
+        {/* Form Field: accessScope */}
+        <form.Field name="accessScope">
+          {(field) => (
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                Phạm vi bảo mật & Phân quyền truy cập <span className="text-rose-500">*</span>
+              </label>
+              <select
+                name={field.name}
+                value={field.state.value}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                className="select select-bordered select-sm w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+              >
+                <option value="Toàn bộ công ty">Toàn bộ công ty (Public)</option>
+                <option value="Phòng Công nghệ Thông tin">Phòng Công nghệ Thông tin (Internal Dept)</option>
+                <option value="Dự án NEXORA">Dự án NEXORA (Project Specific)</option>
+                <option value="Ban Giám đốc">Ban Giám đốc (Confidential)</option>
+              </select>
+            </div>
           )}
-        </div>
+        </form.Field>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-slate-100 dark:border-zinc-800">
+        {/* Processing Indicator */}
+        {isProcessing && (
+          <div className="p-3.5 bg-blue-50/60 dark:bg-zinc-800 border border-blue-200 dark:border-zinc-700 rounded-box space-y-2">
+            <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300">
+              <span className="flex items-center gap-1.5 font-bold">
+                <Sparkles className="w-3.5 h-3.5 animate-spin" />
+                Đang phân đoạn chunking & sinh Embedding Vector...
+              </span>
+              <span className="font-mono text-[11px]">Milvus DB</span>
+            </div>
+            <progress className="progress progress-primary w-full h-1.5" />
+          </div>
+        )}
+
+        <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
           <button
             type="button"
             onClick={onClose}
+            disabled={isProcessing}
             className="btn btn-sm btn-ghost text-slate-700 dark:text-zinc-300 font-medium"
           >
             Hủy
           </button>
           <button
             type="submit"
-            disabled={!file || isProcessing}
-            className="btn btn-sm btn-primary text-white font-medium shadow-xs"
+            disabled={isProcessing || !file}
+            className="btn btn-sm btn-primary text-white font-medium shadow-xs gap-1.5"
           >
-            {isProcessing && <span className="loading loading-spinner loading-xs" />}
-            <span>{isProcessing ? 'Đang Index Vector...' : 'Tải lên & Tự động Index'}</span>
+            {isProcessing ? (
+              <>
+                <span className="loading loading-spinner loading-xs" />
+                <span>Đang xử lý RAG...</span>
+              </>
+            ) : (
+              <>
+                <Database className="w-3.5 h-3.5" />
+                <span>Bắt đầu tải lên & Vectorize</span>
+              </>
+            )}
           </button>
         </div>
       </form>
     </Modal>
   );
 };
+
 export default UploadModal;

@@ -1,12 +1,11 @@
-import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
-import { yupResolver } from '@hookform/resolvers/yup';
+import React, { useEffect, useState } from 'react';
+import { useForm } from '@tanstack/react-form';
 import { Modal } from '@/components/disclosure';
 import { useApp } from '@/context/AppContext';
 import { departmentYupSchema, DepartmentFormData, Department } from '@/types';
 import { useCreateDepartmentMutation, useUpdateDepartmentMutation, useDepartmentsQuery } from '@/api/departments.api';
 import { useUsersQuery } from '@/api/users.api';
-import { Building, Phone, MapPin, User, AlertCircle, ShieldCheck, UserCheck } from 'lucide-react';
+import { Building, Phone, MapPin, AlertCircle, UserCheck } from 'lucide-react';
 
 interface DepartmentModalProps {
   isOpen: boolean;
@@ -23,6 +22,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
 }) => {
   const { showToast } = useApp();
   const isEditMode = Boolean(departmentToEdit);
+  const [serverError, setServerError] = useState<string | null>(null);
 
   const { data: departments = [] } = useDepartmentsQuery();
   const { data: users = [] } = useUsersQuery();
@@ -30,15 +30,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
   const createMutation = useCreateDepartmentMutation();
   const updateMutation = useUpdateDepartmentMutation();
 
-  const {
-    register,
-    handleSubmit,
-    reset,
-    setError,
-    setValue,
-    formState: { errors },
-  } = useForm<DepartmentFormData>({
-    resolver: yupResolver(departmentYupSchema) as any,
+  const form = useForm({
     defaultValues: {
       name: '',
       code: '',
@@ -48,91 +40,91 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
       phone: '',
       address: '',
       description: '',
+    } as DepartmentFormData,
+    validators: {
+      onSubmit: ({ value }) => {
+        try {
+          departmentYupSchema.validateSync(value, { abortEarly: false });
+          return undefined;
+        } catch (err: any) {
+          return err.message || 'Dữ liệu phòng ban không hợp lệ';
+        }
+      },
+    },
+    onSubmit: async ({ value }) => {
+      const toastCallback = onSuccessToast || showToast;
+      setServerError(null);
+
+      const payloadData = {
+        name: value.name.trim(),
+        code: value.code.trim().toUpperCase(),
+        parentDepartmentId: value.parentDepartmentId && value.parentDepartmentId !== '' ? value.parentDepartmentId : null,
+        managerUserId: value.managerUserId && value.managerUserId !== '' ? value.managerUserId : null,
+        status: value.status || 'Active',
+        phone: value.phone?.trim() || '',
+        address: value.address?.trim() || '',
+        description: value.description?.trim() || '',
+      };
+
+      if (isEditMode && departmentToEdit) {
+        const deptId = departmentToEdit.departmentId || departmentToEdit.id || '';
+        updateMutation.mutate(
+          {
+            departmentId: deptId,
+            data: payloadData,
+          },
+          {
+            onSuccess: (updatedDept) => {
+              toastCallback(`Cập nhật phòng ban "${updatedDept.name || value.name}" thành công!`, 'success');
+              form.reset();
+              onClose();
+            },
+            onError: (err: any) => {
+              const errorMsg = err.data?.message || err.message || 'Không thể cập nhật phòng ban';
+              setServerError(errorMsg);
+              showToast(errorMsg, 'error');
+            },
+          }
+        );
+      } else {
+        createMutation.mutate(
+          payloadData,
+          {
+            onSuccess: (createdDept) => {
+              toastCallback(`Đã thêm phòng ban "${createdDept.name || value.name}" thành công!`, 'success');
+              form.reset();
+              onClose();
+            },
+            onError: (err: any) => {
+              const errorMsg = err.data?.message || err.message || 'Không thể tạo mới phòng ban';
+              setServerError(errorMsg);
+              showToast(errorMsg, 'error');
+            },
+          }
+        );
+      }
     },
   });
 
   useEffect(() => {
     if (isOpen) {
+      setServerError(null);
       if (departmentToEdit) {
-        reset({
-          name: departmentToEdit.name || '',
-          code: departmentToEdit.code || '',
-          parentDepartmentId: departmentToEdit.parentDepartmentId || '',
-          managerUserId: departmentToEdit.managerUserId || '',
-          status: departmentToEdit.status === 'Inactive' || departmentToEdit.status === 'Tạm dừng' ? 'Inactive' : 'Active',
-          phone: departmentToEdit.phone || '',
-          address: departmentToEdit.address || '',
-          description: departmentToEdit.description || '',
-        });
+        form.setFieldValue('name', departmentToEdit.name || '');
+        form.setFieldValue('code', departmentToEdit.code || '');
+        form.setFieldValue('parentDepartmentId', departmentToEdit.parentDepartmentId || '');
+        form.setFieldValue('managerUserId', departmentToEdit.managerUserId || '');
+        form.setFieldValue('status', departmentToEdit.status === 'Inactive' || departmentToEdit.status === 'Tạm dừng' ? 'Inactive' : 'Active');
+        form.setFieldValue('phone', departmentToEdit.phone || '');
+        form.setFieldValue('address', departmentToEdit.address || '');
+        form.setFieldValue('description', departmentToEdit.description || '');
       } else {
-        reset({
-          name: '',
-          code: '',
-          parentDepartmentId: '',
-          managerUserId: '',
-          status: 'Active',
-          phone: '',
-          address: '',
-          description: '',
-        });
+        form.reset();
       }
     }
-  }, [isOpen, departmentToEdit, reset]);
+  }, [isOpen, departmentToEdit]);
 
   if (!isOpen) return null;
-
-  const onSubmit = (data: DepartmentFormData) => {
-    const toastCallback = onSuccessToast || showToast;
-
-    const payloadData = {
-      name: data.name.trim(),
-      code: data.code.trim().toUpperCase(),
-      parentDepartmentId: data.parentDepartmentId && data.parentDepartmentId !== '' ? data.parentDepartmentId : null,
-      managerUserId: data.managerUserId && data.managerUserId !== '' ? data.managerUserId : null,
-      status: data.status || 'Active',
-      phone: data.phone?.trim() || '',
-      address: data.address?.trim() || '',
-      description: data.description?.trim() || '',
-    };
-
-    if (isEditMode && departmentToEdit) {
-      const deptId = departmentToEdit.departmentId || departmentToEdit.id || '';
-      updateMutation.mutate(
-        {
-          departmentId: deptId,
-          data: payloadData,
-        },
-        {
-          onSuccess: (updatedDept) => {
-            toastCallback(`Cập nhật phòng ban "${updatedDept.name || data.name}" thành công!`, 'success');
-            reset();
-            onClose();
-          },
-          onError: (err: any) => {
-            const errorMsg = err.data?.message || err.message || 'Không thể cập nhật phòng ban';
-            setError('root', { message: errorMsg });
-            showToast(errorMsg, 'error');
-          },
-        }
-      );
-    } else {
-      createMutation.mutate(
-        payloadData,
-        {
-          onSuccess: (createdDept) => {
-            toastCallback(`Đã thêm phòng ban "${createdDept.name || data.name}" thành công!`, 'success');
-            reset();
-            onClose();
-          },
-          onError: (err: any) => {
-            const errorMsg = err.data?.message || err.message || 'Không thể tạo mới phòng ban';
-            setError('root', { message: errorMsg });
-            showToast(errorMsg, 'error');
-          },
-        }
-      );
-    }
-  };
 
   // Lọc danh sách phòng ban cấp trên: Loại bỏ chính phòng ban đang sửa để tránh vòng lặp cha-con
   const eligibleParentDepartments = departments.filter((d) => {
@@ -150,183 +142,274 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
       title={isEditMode ? 'Chỉnh sửa phòng ban' : 'Thêm phòng ban mới'}
       maxWidth="lg"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 text-xs">
-        {errors.root && (
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+        className="space-y-4 text-xs"
+      >
+        {serverError && (
           <div className="p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded text-rose-700 dark:text-rose-300 text-xs leading-relaxed flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0 text-rose-600 dark:text-rose-400" />
-            <span>{errors.root.message}</span>
+            <span>{serverError}</span>
           </div>
         )}
 
         {/* Row 1: Tên phòng ban & Mã code */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="sm:col-span-2">
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-              Tên phòng ban <span className="text-rose-500">*</span>
-            </label>
-            <div className="relative flex items-center">
-              <input
-                type="text"
-                {...register('name')}
-                placeholder="VD: Phòng Công nghệ Thông tin"
-                onChange={(e) => {
-                  register('name').onChange(e);
-                  if (!isEditMode) {
-                    const words = e.target.value
-                      .normalize('NFD')
-                      .replace(/[\u0300-\u036f]/g, '')
-                      .split(' ')
-                      .filter(Boolean);
-                    if (words.length > 0) {
-                      const codeSuggest = words.map((w) => w[0]).join('').toUpperCase();
-                      setValue('code', codeSuggest);
-                    }
-                  }
-                }}
-                className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
-                  errors.name ? 'input-error' : ''
-                }`}
-              />
-              <Building className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-            </div>
-            {errors.name && (
-              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{errors.name.message}</span>
-              </p>
-            )}
+            <form.Field
+              name="name"
+              validators={{
+                onChange: ({ value }) => (!value?.trim() ? 'Tên phòng ban không được để trống' : undefined),
+              }}
+            >
+              {(field) => {
+                const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+                const hasError = Boolean(errorMessage);
+
+                return (
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Tên phòng ban <span className="text-rose-500">*</span>
+                    </label>
+                    <div className="relative flex items-center">
+                      <input
+                        type="text"
+                        name={field.name}
+                        value={field.state.value}
+                        onBlur={field.handleBlur}
+                        onChange={(e) => {
+                          field.handleChange(e.target.value);
+                          if (!isEditMode) {
+                            const words = e.target.value
+                              .normalize('NFD')
+                              .replace(/[\u0300-\u036f]/g, '')
+                              .split(' ')
+                              .filter(Boolean);
+                            if (words.length > 0) {
+                              const codeSuggest = words.map((w) => w[0]).join('').toUpperCase();
+                              form.setFieldValue('code', codeSuggest);
+                            }
+                          }
+                        }}
+                        placeholder="VD: Phòng Công nghệ Thông tin"
+                        className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                          hasError ? 'input-error' : ''
+                        }`}
+                      />
+                      <Building className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                    </div>
+                    {hasError && (
+                      <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        <span>{errorMessage}</span>
+                      </p>
+                    )}
+                  </div>
+                );
+              }}
+            </form.Field>
           </div>
 
           <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-              Mã code <span className="text-rose-500">*</span>
-            </label>
-            <input
-              type="text"
-              {...register('code')}
-              placeholder="VD: CNTT"
-              className={`input input-bordered input-sm w-full px-3 text-xs uppercase font-mono bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
-                errors.code ? 'input-error' : ''
-              }`}
-            />
-            {errors.code && (
-              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium">
-                {errors.code.message}
-              </p>
-            )}
+            <form.Field
+              name="code"
+              validators={{
+                onChange: ({ value }) => (!value?.trim() ? 'Mã phòng ban không được để trống' : undefined),
+              }}
+            >
+              {(field) => {
+                const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+                const hasError = Boolean(errorMessage);
+
+                return (
+                  <div>
+                    <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                      Mã code <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      type="text"
+                      name={field.name}
+                      value={field.state.value}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value.toUpperCase())}
+                      placeholder="VD: CNTT"
+                      className={`input input-bordered input-sm w-full px-3 text-xs uppercase font-mono bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                        hasError ? 'input-error' : ''
+                      }`}
+                    />
+                    {hasError && (
+                      <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium">
+                        {errorMessage}
+                      </p>
+                    )}
+                  </div>
+                );
+              }}
+            </form.Field>
           </div>
         </div>
 
         {/* Row 2: Phòng ban cấp trên & Trưởng phòng */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-              Phòng ban cấp trên (Parent Department)
-            </label>
-            <div className="relative flex items-center">
-              <select
-                {...register('parentDepartmentId')}
-                className="select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
-              >
-                <option value="">-- Không có (Phòng ban gốc) --</option>
-                {eligibleParentDepartments.map((dept) => {
-                  const deptId = dept.id || dept.departmentId || '';
-                  return (
-                    <option key={deptId} value={deptId}>
-                      {dept.name} ({dept.code || 'PB'})
-                    </option>
-                  );
-                })}
-              </select>
-              <Building className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-            </div>
-          </div>
+          <form.Field name="parentDepartmentId">
+            {(field) => (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  Phòng ban cấp trên (Parent Department)
+                </label>
+                <div className="relative flex items-center">
+                  <select
+                    name={field.name}
+                    value={field.state.value || ''}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    className="select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+                  >
+                    <option value="">-- Không có (Phòng ban gốc) --</option>
+                    {eligibleParentDepartments.map((dept) => {
+                      const deptId = dept.id || dept.departmentId || '';
+                      return (
+                        <option key={deptId} value={deptId}>
+                          {dept.name} ({dept.code || 'PB'})
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <Building className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                </div>
+              </div>
+            )}
+          </form.Field>
 
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-              Trưởng phòng / Quản lý (Manager)
-            </label>
-            <div className="relative flex items-center">
-              <select
-                {...register('managerUserId')}
-                className="select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
-              >
-                <option value="">-- Chưa phân công --</option>
-                {users.map((user) => {
-                  const uId = user.id || (user as any).userId || '';
-                  return (
-                    <option key={uId} value={uId}>
-                      {user.name || (user as any).displayName} ({user.email || 'No email'})
-                    </option>
-                  );
-                })}
-              </select>
-              <UserCheck className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-            </div>
-          </div>
+          <form.Field name="managerUserId">
+            {(field) => (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  Trưởng phòng / Quản lý (Manager)
+                </label>
+                <div className="relative flex items-center">
+                  <select
+                    name={field.name}
+                    value={field.state.value || ''}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    className="select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+                  >
+                    <option value="">-- Chưa phân công --</option>
+                    {users.map((user) => {
+                      const uId = user.id || (user as any).userId || '';
+                      return (
+                        <option key={uId} value={uId}>
+                          {user.name || (user as any).displayName} ({user.email || 'No email'})
+                        </option>
+                      );
+                    })}
+                  </select>
+                  <UserCheck className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                </div>
+              </div>
+            )}
+          </form.Field>
         </div>
 
         {/* Row 3: Trạng thái & Số điện thoại */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-              Trạng thái (Status)
-            </label>
-            <select
-              {...register('status')}
-              className="select select-bordered select-sm w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
-            >
-              <option value="Active">Active (Đang hoạt động)</option>
-              <option value="Inactive">Inactive (Tạm dừng)</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Số điện thoại liên hệ</label>
-            <div className="relative flex items-center">
-              <input
-                type="text"
-                {...register('phone')}
-                placeholder="VD: 0274 374 0530"
-                className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
-                  errors.phone ? 'input-error' : ''
-                }`}
-              />
-              <Phone className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-            </div>
-            {errors.phone && (
-              <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
-                <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                <span>{errors.phone.message}</span>
-              </p>
+          <form.Field name="status">
+            {(field) => (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  Trạng thái (Status)
+                </label>
+                <select
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  className="select select-bordered select-sm w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+                >
+                  <option value="Active">Active (Đang hoạt động)</option>
+                  <option value="Inactive">Inactive (Tạm dừng)</option>
+                </select>
+              </div>
             )}
-          </div>
+          </form.Field>
+
+          <form.Field name="phone">
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
+
+              return (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Số điện thoại liên hệ</label>
+                  <div className="relative flex items-center">
+                    <input
+                      type="text"
+                      name={field.name}
+                      value={field.state.value || ''}
+                      onBlur={field.handleBlur}
+                      onChange={(e) => field.handleChange(e.target.value)}
+                      placeholder="VD: 0274 374 0530"
+                      className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                        hasError ? 'input-error' : ''
+                      }`}
+                    />
+                    <Phone className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                  </div>
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
         </div>
 
         {/* Row 4: Vị trí / Địa chỉ */}
-        <div>
-          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Địa chỉ / Vị trí văn phòng</label>
-          <div className="relative flex items-center">
-            <input
-              type="text"
-              {...register('address')}
-              placeholder="VD: Tầng 4, Tòa nhà Trụ sở chính"
-              className="input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500"
-            />
-            <MapPin className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
-          </div>
-        </div>
+        <form.Field name="address">
+          {(field) => (
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Địa chỉ / Vị trí văn phòng</label>
+              <div className="relative flex items-center">
+                <input
+                  type="text"
+                  name={field.name}
+                  value={field.state.value || ''}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="VD: Tầng 4, Tòa nhà Trụ sở chính"
+                  className="input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500"
+                />
+                <MapPin className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+              </div>
+            </div>
+          )}
+        </form.Field>
 
         {/* Row 5: Mô tả chức năng */}
-        <div>
-          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Mô tả chức năng</label>
-          <textarea
-            rows={2}
-            {...register('description')}
-            placeholder="Mô tả ngắn về nhiệm vụ và phạm vi của phòng ban..."
-            className="textarea textarea-bordered w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 resize-none"
-          />
-        </div>
+        <form.Field name="description">
+          {(field) => (
+            <div>
+              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Mô tả chức năng</label>
+              <textarea
+                rows={2}
+                name={field.name}
+                value={field.state.value || ''}
+                onBlur={field.handleBlur}
+                onChange={(e) => field.handleChange(e.target.value)}
+                placeholder="Mô tả ngắn về nhiệm vụ và phạm vi của phòng ban..."
+                className="textarea textarea-bordered w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 resize-none"
+              />
+            </div>
+          )}
+        </form.Field>
 
         {/* Form Actions */}
         <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-zinc-800">
@@ -350,4 +433,5 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
     </Modal>
   );
 };
+
 export default DepartmentModal;
