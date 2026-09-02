@@ -1,363 +1,760 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
-import { Badge } from '@/components/button';
-import { CustomTable, Column } from '@/components/customTable';
 import { UploadModal } from './UploadModal';
-import { DocumentItem } from '@/types';
 import {
   Upload,
+  FolderPlus,
   Search,
   Filter,
   List,
   Grid,
   Folder,
-  MoreHorizontal,
   Star,
-  Lock,
-  Users,
-  ChevronLeft,
-  ChevronRight,
+  Clock,
   ChevronDown,
-  ArrowUpDown,
-  FileText
+  ChevronRight,
+  MoreHorizontal,
+  RefreshCw,
+  FileText,
+  CheckCircle2,
+  AlertCircle,
+  Clock3,
+  HardDrive,
+  Database,
+  Share2,
+  ShieldAlert,
+  ShieldCheck,
+  Plus,
+  ExternalLink,
+  ChevronLeft,
 } from 'lucide-react';
-import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
-import { mockFolders, mockRecentUploads, mockSharedDocuments } from '@/data/mockData';
+
+interface KnowledgeDocItem {
+  id: string;
+  name: string;
+  type: 'pdf' | 'docx' | 'xlsx' | 'pptx';
+  folder: string;
+  department: string;
+  size: string;
+  updatedAt: string;
+  indexStatus: 'indexed' | 'processing' | 'needs_check';
+  accessScope: 'Nội bộ' | 'Hạn chế' | 'Phòng ban';
+  isStarred?: boolean;
+}
+
+const mockKnowledgeDocs: KnowledgeDocItem[] = [
+  {
+    id: 'kd-1',
+    name: 'Quy trình mua hàng 2024.pdf',
+    type: 'pdf',
+    folder: 'Quy trình & Hướng dẫn',
+    department: 'PMO',
+    size: '2.4 MB',
+    updatedAt: '28/05/2024 10:24',
+    indexStatus: 'indexed',
+    accessScope: 'Nội bộ',
+    isStarred: true,
+  },
+  {
+    id: 'kd-2',
+    name: 'Báo cáo tiến độ ERP — Tuần 21.docx',
+    type: 'docx',
+    folder: 'Báo cáo & Phân tích',
+    department: 'PMO',
+    size: '1.8 MB',
+    updatedAt: '28/05/2024 09:12',
+    indexStatus: 'indexed',
+    accessScope: 'Nội bộ',
+  },
+  {
+    id: 'kd-3',
+    name: 'Chính sách bảo mật dữ liệu.pdf',
+    type: 'pdf',
+    folder: 'Chính sách & Quy định',
+    department: 'IT',
+    size: '1.3 MB',
+    updatedAt: '27/05/2024 16:45',
+    indexStatus: 'indexed',
+    accessScope: 'Hạn chế',
+  },
+  {
+    id: 'kd-4',
+    name: 'Kế hoạch kiểm thử UAT.xlsx',
+    type: 'xlsx',
+    folder: 'Dự án ERP Nexora',
+    department: 'QA',
+    size: '2.1 MB',
+    updatedAt: '27/05/2024 11:00',
+    indexStatus: 'processing',
+    accessScope: 'Phòng ban',
+  },
+  {
+    id: 'kd-5',
+    name: 'Biên bản họp Ban Điều hành.docx',
+    type: 'docx',
+    folder: 'Biên bản họp',
+    department: 'Ban Điều hành',
+    size: '1.6 MB',
+    updatedAt: '26/05/2024 14:20',
+    indexStatus: 'needs_check',
+    accessScope: 'Nội bộ',
+    isStarred: true,
+  },
+  {
+    id: 'kd-6',
+    name: 'Hướng dẫn sử dụng phần mềm.pdf',
+    type: 'pdf',
+    folder: 'Tài liệu đào tạo',
+    department: 'IT',
+    size: '3.2 MB',
+    updatedAt: '26/05/2024 10:05',
+    indexStatus: 'indexed',
+    accessScope: 'Nội bộ',
+  },
+  {
+    id: 'kd-7',
+    name: 'Danh sách khách hàng Q2/2024.xlsx',
+    type: 'xlsx',
+    folder: 'Báo cáo & Phân tích',
+    department: 'Kinh doanh',
+    size: '1.1 MB',
+    updatedAt: '25/05/2024 17:30',
+    indexStatus: 'indexed',
+    accessScope: 'Phòng ban',
+  },
+  {
+    id: 'kd-8',
+    name: 'Mẫu hợp đồng dịch vụ.docx',
+    type: 'docx',
+    folder: 'Biểu mẫu & Mẫu',
+    department: 'Pháp chế',
+    size: '1.4 MB',
+    updatedAt: '24/05/2024 15:18',
+    indexStatus: 'processing',
+    accessScope: 'Hạn chế',
+  },
+  {
+    id: 'kd-9',
+    name: 'Quy định làm việc từ xa.pdf',
+    type: 'pdf',
+    folder: 'Chính sách & Quy định',
+    department: 'Nhân sự',
+    size: '912 KB',
+    updatedAt: '24/05/2024 09:45',
+    indexStatus: 'indexed',
+    accessScope: 'Nội bộ',
+  },
+  {
+    id: 'kd-10',
+    name: 'Kế hoạch đào tạo nhân sự 2024.docx',
+    type: 'docx',
+    folder: 'Tài liệu đào tạo',
+    department: 'Nhân sự',
+    size: '2.7 MB',
+    updatedAt: '23/05/2024 11:22',
+    indexStatus: 'indexed',
+    accessScope: 'Phòng ban',
+  },
+];
 
 export const DataRepoPage: React.FC = () => {
-  const { documents, showToast } = useApp();
-  const [activeTab, setActiveTab] = useState<'all' | 'proj' | 'dept' | 'shared' | 'recent'>('all');
-  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
+  const { showToast } = useApp();
+  const [selectedFolder, setSelectedFolder] = useState('all');
   const [search, setSearch] = useState('');
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [deptFilter, setDeptFilter] = useState('all');
+  const [indexFilter, setIndexFilter] = useState('all');
+  const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
 
-  const filteredDocs = documents.filter((d) =>
-    d.name.toLowerCase().includes(search.toLowerCase()) ||
-    (d.updatedBy || d.uploadedBy || '').toLowerCase().includes(search.toLowerCase())
-  );
+  // Filtered Docs
+  const filteredDocs = useMemo(() => {
+    return mockKnowledgeDocs.filter((d) => {
+      const q = search.toLowerCase();
+      const matchSearch =
+        !q ||
+        d.name.toLowerCase().includes(q) ||
+        d.folder.toLowerCase().includes(q) ||
+        d.department.toLowerCase().includes(q);
 
-  const pieData = [
-    { name: 'Đã sử dụng', value: 13.6, color: '#2563eb' },
-    { name: 'Còn trống', value: 6.4, color: '#e2e8f0' }
-  ];
+      const matchType = typeFilter === 'all' || d.type === typeFilter;
+      const matchDept = deptFilter === 'all' || d.department === deptFilter;
+      const matchIndex = indexFilter === 'all' || d.indexStatus === indexFilter;
 
-  // Cấu hình Column cho CustomTable
-  const docColumns: Column<DocumentItem>[] = [
-    {
-      header: 'Tên tài liệu',
-      render: (doc) => {
-        const fileTypeColor =
-          doc.type === 'pdf'
-            ? 'bg-rose-100 text-rose-700'
-            : doc.type === 'xlsx'
-            ? 'bg-emerald-100 text-emerald-700'
-            : 'bg-blue-100 text-blue-700';
+      return matchSearch && matchType && matchDept && matchIndex;
+    });
+  }, [search, typeFilter, deptFilter, indexFilter]);
 
+  const getDocTypeBadge = (type: string) => {
+    switch (type) {
+      case 'pdf':
+        return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400">PDF</span>;
+      case 'docx':
+        return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">DOCX</span>;
+      case 'xlsx':
+        return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">XLSX</span>;
+      default:
+        return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-500/15 text-slate-600">FILE</span>;
+    }
+  };
+
+  const getIndexStatusBadge = (status: string) => {
+    switch (status) {
+      case 'indexed':
         return (
-          <div className="flex items-center gap-3">
-            <span className={`p-1.5 rounded-lg text-[10px] font-bold uppercase shrink-0 ${fileTypeColor}`}>
-              {doc.type}
-            </span>
-            <span className="font-semibold text-slate-900 group-hover:text-blue-600">
-              {doc.name}
-            </span>
-          </div>
+          <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            Đã lập chỉ mục
+          </span>
         );
-      },
-    },
-    {
-      header: 'Quyền truy cập',
-      render: (doc) => (
-        <Badge variant="secondary">{doc.accessScope || doc.department || 'Chung'}</Badge>
-      ),
-    },
-    {
-      header: 'Cập nhật',
-      render: (doc) => (
-        <div>
-          <p className="text-slate-800 font-medium">{doc.updatedAt || doc.uploadedAt}</p>
-          <p className="text-[10px] text-slate-400">{doc.updatedBy || doc.uploadedBy}</p>
-        </div>
-      ),
-    },
-    {
-      header: 'Kích thước',
-      render: (doc) => <span className="font-medium text-slate-600">{doc.size || '1.5 MB'}</span>,
-    },
-    {
-      header: 'Thao tác',
-      className: 'text-right',
-      render: (doc) => (
-        <button
-          onClick={(e) => {
-            e.stopPropagation();
-            showToast(`Tùy chọn ${doc.name}`, 'info');
-          }}
-          className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-        >
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
-      ),
-    },
-  ];
+      case 'processing':
+        return (
+          <span className="inline-flex items-center gap-1.5 text-xs text-amber-500 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+            Đang xử lý
+          </span>
+        );
+      case 'needs_check':
+        return (
+          <span className="inline-flex items-center gap-1.5 text-xs text-rose-500 font-medium">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
+            Cần kiểm tra
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const getAccessBadge = (scope: string) => {
+    switch (scope) {
+      case 'Hạn chế':
+        return (
+          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+            Hạn chế
+          </span>
+        );
+      default:
+        return (
+          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+            {scope}
+          </span>
+        );
+    }
+  };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50">
-      <Header title="Kho dữ liệu" subTitle="Quản lý tài liệu và thư mục doanh nghiệp" />
+    <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
+      
+      {/* Global Header */}
+      <Header />
 
-      <div className="flex-1 flex overflow-hidden">
-        {/* Main Content Column */}
-        <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Header Action & Tabs Row */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 pb-3">
-            <div className="flex items-center gap-6 overflow-x-auto text-xs font-semibold">
-              {[
-                { id: 'all', label: 'Tất cả tài liệu' },
-                { id: 'proj', label: 'Dự án' },
-                { id: 'dept', label: 'Phòng ban' },
-                { id: 'shared', label: 'Được chia sẻ' },
-                { id: 'recent', label: 'Gần đây' }
-              ].map((tab) => (
-                <button
-                  key={tab.id}
-                  onClick={() => setActiveTab(tab.id as typeof activeTab)}
-                  className={`pb-3 relative transition-colors cursor-pointer ${
-                    activeTab === tab.id
-                      ? 'text-blue-600 font-bold'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  <span>{tab.label}</span>
-                  {activeTab === tab.id && (
-                    <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 rounded-full" />
-                  )}
-                </button>
-              ))}
+      {/* Page Title & Actions Bar matching 03-knowledge-repository.png */}
+      <div className="px-4 py-3 bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-4 flex-wrap shrink-0">
+        <div className="space-y-0.5">
+          <h1 className="text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+            Kho tri thức RAG
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-zinc-400">
+            Quản lý tài liệu, quyền truy cập và trạng thái lập chỉ mục
+          </p>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <button
+            onClick={() => showToast('Tạo thư mục mới', 'info')}
+            className="px-3 py-1.5 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+          >
+            <FolderPlus className="w-3.5 h-3.5" />
+            <span>Tạo thư mục</span>
+          </button>
+
+          <button
+            onClick={() => setIsUploadOpen(true)}
+            className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+          >
+            <Upload className="w-3.5 h-3.5" />
+            <span>Tải tài liệu</span>
+          </button>
+        </div>
+      </div>
+
+      {/* Main 3-Column Content Body */}
+      <div className="flex-1 flex overflow-hidden w-full">
+        
+        {/* ==================================================================== */}
+        {/* 1. LEFT COLUMN: Cây Thư Mục (Folder Tree) 240px */}
+        {/* ==================================================================== */}
+        <aside className="w-60 border-r border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full shrink-0 overflow-y-auto p-4 space-y-4 text-xs select-none">
+          
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <span className="font-bold text-xs text-slate-800 dark:text-zinc-200">Thư mục</span>
+            <div className="flex items-center gap-1">
+              <button
+                onClick={() => showToast('Thêm thư mục', 'info')}
+                className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 rounded cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
+              <button
+                onClick={() => showToast('Làm mới danh sách thư mục', 'info')}
+                className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 rounded cursor-pointer"
+              >
+                <RefreshCw className="w-3 h-3" />
+              </button>
             </div>
-
-            <button
-              onClick={() => setIsUploadOpen(true)}
-              className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-xl shadow-xs shadow-blue-500/20 flex items-center gap-2 transition-all cursor-pointer"
-            >
-              <Upload className="w-4 h-4" />
-              <span>Tải tài liệu lên</span>
-            </button>
           </div>
 
-          {/* Folder Categories Grid */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="text-xs font-bold text-slate-800 uppercase tracking-wider">
-                Thư mục ({mockFolders.length})
-              </span>
+          {/* Root Links */}
+          <div className="space-y-1">
+            <div
+              onClick={() => setSelectedFolder('all')}
+              className={`p-2 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${
+                selectedFolder === 'all'
+                  ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
+                  : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Folder className="w-4 h-4 fill-blue-500/20 text-blue-600 dark:text-blue-400" />
+                <span>Tất cả tài liệu</span>
+              </div>
+              <span className="text-[11px] font-mono font-medium">1.248</span>
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
-              {mockFolders.map((folder) => (
+            <div
+              onClick={() => setSelectedFolder('starred')}
+              className="p-2 rounded-lg flex items-center justify-between text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Star className="w-4 h-4 text-amber-500 fill-amber-500/20" />
+                <span>Yêu thích</span>
+              </div>
+              <span className="text-[11px] font-mono text-slate-400">32</span>
+            </div>
+
+            <div
+              onClick={() => setSelectedFolder('recent')}
+              className="p-2 rounded-lg flex items-center justify-between text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 cursor-pointer"
+            >
+              <div className="flex items-center gap-2">
+                <Clock className="w-4 h-4 text-slate-400" />
+                <span>Gần đây</span>
+              </div>
+              <span className="text-[11px] font-mono text-slate-400">28</span>
+            </div>
+          </div>
+
+          {/* Group: Thư mục của tôi */}
+          <div className="space-y-1 pt-2">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 px-1">
+              <span>Thư mục của tôi</span>
+              <span>0</span>
+            </div>
+            <div className="space-y-0.5">
+              {[
+                { name: 'Dự án ERP Nexora', count: 128 },
+                { name: 'Phòng PMO', count: 86 },
+                { name: 'Phòng Kế toán', count: 64 },
+                { name: 'Phòng Nhân sự', count: 52 },
+                { name: 'Phòng Kinh doanh', count: 71 },
+                { name: 'Phòng IT', count: 43 },
+              ].map((f) => (
                 <div
-                  key={folder.id}
-                  className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs hover:border-blue-300 hover:shadow-xs transition-all cursor-pointer group"
-                  onClick={() => showToast(`Mở thư mục ${folder.name}`, 'info')}
+                  key={f.name}
+                  onClick={() => setSelectedFolder(f.name)}
+                  className={`px-2 py-1.5 rounded-lg flex items-center justify-between text-xs cursor-pointer ${
+                    selectedFolder === f.name
+                      ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
+                      : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-900'
+                  }`}
                 >
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="w-10 h-10 rounded-xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-105 transition-transform">
-                      <Folder className="w-5 h-5 fill-blue-100 text-blue-600" />
-                    </div>
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        showToast(`Tùy chọn ${folder.name}`, 'info');
-                      }}
-                      className="text-slate-400 hover:text-slate-600 p-1 cursor-pointer"
-                    >
-                      <MoreHorizontal className="w-4 h-4" />
-                    </button>
+                  <div className="flex items-center gap-2 truncate">
+                    <Folder className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="truncate">{f.name}</span>
                   </div>
-                  <h4 className="font-bold text-slate-900 text-xs truncate group-hover:text-blue-600">
-                    {folder.name}
-                  </h4>
-                  <div className="flex items-center justify-between text-[11px] text-slate-400 mt-1">
-                    <span>{folder.itemCount} tệp</span>
-                    <span>{folder.updatedAt}</span>
-                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 shrink-0">{f.count}</span>
                 </div>
               ))}
             </div>
           </div>
 
-          {/* Filter, Search & View Controls */}
-          <div className="space-y-4">
-            <div className="bg-white p-4 rounded-2xl border border-slate-200/80 shadow-2xs flex flex-col sm:flex-row items-center justify-between gap-3">
-              <div className="relative flex-1 w-full max-w-md">
+          {/* Group: Thư mục hệ thống */}
+          <div className="space-y-1 pt-2">
+            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 px-1">
+              <span>Thư mục hệ thống</span>
+              <span>0</span>
+            </div>
+            <div className="space-y-0.5">
+              {[
+                { name: 'Chính sách & Quy định', count: 112 },
+                { name: 'Quy trình & Hướng dẫn', count: 218 },
+                { name: 'Biểu mẫu & Mẫu', count: 156 },
+                { name: 'Tài liệu đào tạo', count: 98 },
+                { name: 'Báo cáo & Phân tích', count: 204 },
+                { name: 'Khác', count: 16 },
+              ].map((f) => (
+                <div
+                  key={f.name}
+                  onClick={() => setSelectedFolder(f.name)}
+                  className={`px-2 py-1.5 rounded-lg flex items-center justify-between text-xs cursor-pointer ${
+                    selectedFolder === f.name
+                      ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
+                      : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-900'
+                  }`}
+                >
+                  <div className="flex items-center gap-2 truncate">
+                    <Folder className="w-3.5 h-3.5 text-slate-400" />
+                    <span className="truncate">{f.name}</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 shrink-0">{f.count}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+        </aside>
+
+        {/* ==================================================================== */}
+        {/* 2. MIDDLE COLUMN: Bảng Tài Liệu RAG */}
+        {/* ==================================================================== */}
+        <main className="flex-1 overflow-y-auto p-4 md:p-5 space-y-3.5 min-w-0">
+          
+          {/* Toolbar Filters matching 03-knowledge-repository.png */}
+          <div className="flex items-center justify-between gap-3 flex-wrap">
+            <div className="flex items-center gap-2 flex-1 min-w-[240px]">
+              <div className="relative flex-1">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Tìm kiếm tài liệu theo tên, người cập nhật..."
+                  placeholder="Tìm tài liệu, nội dung hoặc người cập nhật..."
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
-                  className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs placeholder:text-slate-400 text-slate-800 focus:outline-none focus:border-blue-600 focus:bg-white transition-colors"
+                  className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs"
                 />
               </div>
 
-              <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-                <button
-                  onClick={() => showToast('Mở bộ lọc nâng cao', 'info')}
-                  className="px-3 py-2 border border-slate-200 rounded-xl text-xs font-semibold text-slate-600 hover:bg-slate-50 flex items-center gap-1.5 transition-colors cursor-pointer"
-                >
-                  <Filter className="w-3.5 h-3.5" />
-                  <span>Bộ lọc</span>
-                </button>
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
+              >
+                <option value="all">Loại tài liệu</option>
+                <option value="pdf">PDF</option>
+                <option value="docx">DOCX</option>
+                <option value="xlsx">XLSX</option>
+              </select>
 
-                <div className="flex items-center border border-slate-200 rounded-xl p-0.5 bg-slate-50">
-                  <button
-                    onClick={() => setViewMode('list')}
-                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                      viewMode === 'list'
-                        ? 'bg-white shadow-2xs text-blue-600 font-bold'
-                        : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    <List className="w-4 h-4" />
+              <select
+                value={deptFilter}
+                onChange={(e) => setDeptFilter(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
+              >
+                <option value="all">Phòng ban</option>
+                <option value="PMO">PMO</option>
+                <option value="IT">IT</option>
+                <option value="QA">QA</option>
+                <option value="Ban Điều hành">Ban Điều hành</option>
+                <option value="Kinh doanh">Kinh doanh</option>
+                <option value="Nhân sự">Nhân sự</option>
+              </select>
+
+              <select
+                value={indexFilter}
+                onChange={(e) => setIndexFilter(e.target.value)}
+                className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
+              >
+                <option value="all">Trạng thái chỉ mục</option>
+                <option value="indexed">Đã lập chỉ mục</option>
+                <option value="processing">Đang xử lý</option>
+                <option value="needs_check">Cần kiểm tra</option>
+              </select>
+
+              <button
+                onClick={() => showToast('Mở bộ lọc nâng cao', 'info')}
+                className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-2xs cursor-pointer"
+              >
+                <Filter className="w-3.5 h-3.5" />
+                <span>Bộ lọc</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Document Table Card */}
+          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-2xs overflow-hidden">
+            
+            {/* Table Header Info Row */}
+            <div className="px-4 py-2.5 bg-slate-50/60 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
+              <span>Hiển thị 1–{filteredDocs.length} trong 1.248</span>
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setViewMode('list')}
+                  className={`p-1.5 rounded transition-colors ${
+                    viewMode === 'list' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-2xs font-bold' : 'text-slate-400'
+                  }`}
+                >
+                  <List className="w-3.5 h-3.5" />
+                </button>
+                <button
+                  onClick={() => setViewMode('grid')}
+                  className={`p-1.5 rounded transition-colors ${
+                    viewMode === 'grid' ? 'bg-white dark:bg-zinc-800 text-blue-600 shadow-2xs font-bold' : 'text-slate-400'
+                  }`}
+                >
+                  <Grid className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+
+            {/* Main Table */}
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
+                  <tr>
+                    <th className="w-10 px-4 py-3 text-center">
+                      <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700" />
+                    </th>
+                    <th className="px-3 py-3">TÊN TÀI LIỆU</th>
+                    <th className="px-3 py-3">THƯ MỤC</th>
+                    <th className="px-3 py-3">PHÒNG BAN</th>
+                    <th className="px-3 py-3">KÍCH THƯỚC</th>
+                    <th className="px-3 py-3">CẬP NHẬT ⇣</th>
+                    <th className="px-3 py-3">CHỈ MỤC</th>
+                    <th className="px-3 py-3">QUYỀN TRUY CẬP</th>
+                    <th className="w-10 px-4 py-3 text-right"></th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+                  {filteredDocs.map((doc) => (
+                    <tr key={doc.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                      <td className="px-4 py-3 text-center">
+                        <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" />
+                      </td>
+                      <td className="px-3 py-3 font-semibold text-slate-900 dark:text-zinc-100">
+                        <div className="flex items-center gap-2.5">
+                          {getDocTypeBadge(doc.type)}
+                          <span
+                            onClick={() => showToast(`Xem tài liệu ${doc.name}`, 'info')}
+                            className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors truncate max-w-[220px]"
+                          >
+                            {doc.name}
+                          </span>
+                          {doc.isStarred && (
+                            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-3 py-3 text-slate-600 dark:text-zinc-400">
+                        {doc.folder}
+                      </td>
+                      <td className="px-3 py-3 text-slate-700 dark:text-zinc-300 font-medium">
+                        {doc.department}
+                      </td>
+                      <td className="px-3 py-3 font-mono text-slate-500 text-[11px]">
+                        {doc.size}
+                      </td>
+                      <td className="px-3 py-3 font-mono text-slate-500 text-[11px]">
+                        {doc.updatedAt}
+                      </td>
+                      <td className="px-3 py-3">
+                        {getIndexStatusBadge(doc.indexStatus)}
+                      </td>
+                      <td className="px-3 py-3">
+                        {getAccessBadge(doc.accessScope)}
+                      </td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => showToast(`Tùy chọn ${doc.name}`, 'info')}
+                          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded cursor-pointer"
+                        >
+                          <MoreHorizontal className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {/* Pagination Footer */}
+            <div className="px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
+              <div className="flex items-center gap-2">
+                <span>Số dòng mỗi trang</span>
+                <select className="px-2 py-1 border border-slate-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 text-xs">
+                  <option value="25">25</option>
+                  <option value="50">50</option>
+                  <option value="100">100</option>
+                </select>
+              </div>
+              <div className="flex items-center gap-3">
+                <span>1 / 50</span>
+                <div className="flex items-center gap-1">
+                  <button className="p-1 border border-slate-200 dark:border-zinc-800 rounded hover:bg-slate-50 disabled:opacity-40" disabled>
+                    <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
-                  <button
-                    onClick={() => setViewMode('grid')}
-                    className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
-                      viewMode === 'grid'
-                        ? 'bg-white shadow-2xs text-blue-600 font-bold'
-                        : 'text-slate-400 hover:text-slate-600'
-                    }`}
-                  >
-                    <Grid className="w-4 h-4" />
+                  <button className="p-1 border border-slate-200 dark:border-zinc-800 rounded hover:bg-slate-50">
+                    <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
               </div>
             </div>
 
-            {/* Documents Table (TÁI SỬ DỤNG CUSTOMTABLE) / Grid View */}
-            {viewMode === 'list' ? (
-              <CustomTable<DocumentItem>
-                columns={docColumns}
-                data={filteredDocs}
-                keyExtractor={(doc) => doc.id}
-                onRowClick={(doc) => showToast(`Xem tài liệu: ${doc.name}`, 'info')}
-                emptyText="Không tìm thấy tài liệu nào"
-              />
-            ) : (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">
-                {filteredDocs.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="p-4 bg-white rounded-2xl border border-slate-200/80 space-y-2 hover:border-blue-300 transition-all cursor-pointer shadow-2xs"
-                    onClick={() => showToast(`Xem tài liệu ${doc.name}`, 'info')}
-                  >
-                    <div className="flex items-center justify-between">
-                      <span className="p-1.5 rounded-lg text-[10px] font-bold uppercase bg-blue-100 text-blue-700">
-                        {doc.type}
-                      </span>
-                      <span className="text-[10px] text-slate-400">{doc.size || '1.5 MB'}</span>
-                    </div>
-                    <p className="font-bold text-slate-800 text-xs truncate">{doc.name}</p>
-                    <p className="text-[10px] text-slate-400">Cập nhật: {doc.updatedAt || doc.uploadedAt}</p>
-                  </div>
-                ))}
-              </div>
-            )}
           </div>
-        </div>
 
-        {/* Right Info & Statistics Sidebar */}
-        <aside className="w-80 bg-white border-l border-slate-200 p-5 flex flex-col gap-6 shrink-0 overflow-y-auto hidden lg:flex select-none text-xs">
-          {/* Dung lượng lưu trữ */}
-          <div className="space-y-3">
-            <h3 className="font-bold text-slate-900 text-sm">Dung lượng lưu trữ</h3>
-            <div className="h-44 w-full flex items-center justify-center relative">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={pieData}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={50}
-                    outerRadius={68}
-                    paddingAngle={3}
-                    dataKey="value"
-                  >
-                    {pieData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={entry.color} />
-                    ))}
-                  </Pie>
-                </PieChart>
-              </ResponsiveContainer>
-              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-                <span className="text-xl font-bold text-slate-900">13.6 GB</span>
-                <span className="text-[10px] text-slate-400">/ 20 GB</span>
+        </main>
+
+        {/* ==================================================================== */}
+        {/* 3. RIGHT COLUMN: Sức Khỏe Kho Tri Thức 300px */}
+        {/* ==================================================================== */}
+        <aside className="w-72 border-l border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full shrink-0 overflow-y-auto p-4 space-y-5 text-xs">
+          
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-xs text-slate-800 dark:text-zinc-200">Sức khỏe kho tri thức</h3>
+            <span className="text-slate-400">⌃</span>
+          </div>
+
+          {/* Storage & Index Metrics */}
+          <div className="space-y-4">
+            {/* Storage Progress */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                <span>Dung lượng lưu trữ</span>
+                <span className="font-bold text-slate-800 dark:text-zinc-200">43%</span>
+              </div>
+              <p className="font-mono text-[11px] text-slate-400">215.6 GB / 500 GB</p>
+              <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-blue-600 h-full w-[43%]" />
               </div>
             </div>
 
-            <div className="space-y-1.5 text-xs">
-              <div className="flex justify-between items-center text-slate-600">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
-                  <span>Đã sử dụng (68%)</span>
-                </span>
-                <span className="font-bold text-slate-800">13.6 GB</span>
+            {/* Indexed Progress */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                <span>Tài liệu đã lập chỉ mục</span>
+                <span className="font-bold text-emerald-600 dark:text-emerald-400">85%</span>
               </div>
-              <div className="flex justify-between items-center text-slate-600">
-                <span className="flex items-center gap-1.5">
-                  <span className="w-2.5 h-2.5 rounded-full bg-slate-200" />
-                  <span>Còn trống (32%)</span>
-                </span>
-                <span className="font-bold text-slate-800">6.4 GB</span>
+              <p className="font-mono text-[11px] text-slate-400">1.062 / 1.248</p>
+              <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-emerald-500 h-full w-[85%]" />
               </div>
+            </div>
+
+            {/* Error Progress */}
+            <div className="space-y-1.5">
+              <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
+                <span>Tài liệu lỗi chỉ mục</span>
+                <span className="font-bold text-rose-500">1%</span>
+              </div>
+              <p className="font-mono text-[11px] text-slate-400">12</p>
+              <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
+                <div className="bg-rose-500 h-full w-[1%]" />
+              </div>
+            </div>
+          </div>
+
+          {/* Kết nối nguồn dữ liệu */}
+          <div className="pt-2 border-t border-slate-100 dark:border-zinc-800/80 space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="font-bold text-slate-800 dark:text-zinc-200">Kết nối nguồn dữ liệu</span>
+              <button
+                onClick={() => showToast('Mở chi tiết kết nối dữ liệu', 'info')}
+                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+              >
+                Xem chi tiết
+              </button>
+            </div>
+            <p className="text-[11px] text-slate-500">5 / 6 kết nối hoạt động</p>
+            
+            {/* Cloud Storage Source Icons */}
+            <div className="flex items-center gap-2 pt-1">
+              <div className="w-7 h-7 rounded-lg bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center font-bold text-xs">
+                S
+              </div>
+              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 flex items-center justify-center">
+                <Database className="w-3.5 h-3.5" />
+              </div>
+              <div className="w-7 h-7 rounded-lg bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400 flex items-center justify-center font-bold text-xs">
+                G
+              </div>
+              <div className="w-7 h-7 rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 flex items-center justify-center font-bold text-xs">
+                D
+              </div>
+              <div className="w-7 h-7 rounded-lg bg-sky-50 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400 flex items-center justify-center font-bold text-xs">
+                O
+              </div>
+              <button
+                onClick={() => showToast('Thêm kết nối kho lưu trữ đám mây', 'info')}
+                className="w-7 h-7 rounded-lg border border-dashed border-slate-300 dark:border-zinc-700 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+              </button>
             </div>
           </div>
 
           {/* Tải lên gần đây */}
-          <div className="space-y-3 pt-4 border-t border-slate-100">
+          <div className="pt-2 border-t border-slate-100 dark:border-zinc-800/80 space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800">Tải lên gần đây</span>
-              <button onClick={() => showToast('Xem toàn bộ lịch sử tải lên', 'info')} className="text-blue-600 hover:underline font-semibold text-[11px] cursor-pointer">
+              <span className="font-bold text-slate-800 dark:text-zinc-200">Tải lên gần đây</span>
+              <button
+                onClick={() => showToast('Mở toàn bộ tài liệu gần đây', 'info')}
+                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+              >
                 Xem tất cả
               </button>
             </div>
 
-            <div className="space-y-2">
-              {mockRecentUploads.map((up) => (
-                <div key={up.id} className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl space-y-0.5">
-                  <p className="font-semibold text-slate-800 truncate">{up.name}</p>
-                  <p className="text-[10px] text-slate-400 flex justify-between">
-                    <span>{(up.updatedAt || up.uploadedAt || '').split(' ')[0]}</span>
-                    <span>{up.updatedBy || up.uploadedBy || ''}</span>
-                  </p>
+            <div className="space-y-2 text-[11px]">
+              <div className="flex items-center justify-between gap-2 p-2 bg-slate-50/70 dark:bg-zinc-900 rounded-lg">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-slate-800 dark:text-zinc-200 truncate">Quy trình mua hàng 2024.pdf</p>
+                  <span className="text-[10px] text-slate-400">28/05/2024 10:24 • PMO</span>
                 </div>
-              ))}
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              </div>
+
+              <div className="flex items-center justify-between gap-2 p-2 bg-slate-50/70 dark:bg-zinc-900 rounded-lg">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-slate-800 dark:text-zinc-200 truncate">Báo cáo tiến độ ERP — Tuần 21.docx</p>
+                  <span className="text-[10px] text-slate-400">28/05/2024 09:12 • PMO</span>
+                </div>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              </div>
+
+              <div className="flex items-center justify-between gap-2 p-2 bg-slate-50/70 dark:bg-zinc-900 rounded-lg">
+                <div className="min-w-0 flex-1">
+                  <p className="font-semibold text-slate-800 dark:text-zinc-200 truncate">Chính sách bảo mật dữ liệu.pdf</p>
+                  <span className="text-[10px] text-slate-400">27/05/2024 16:45 • IT</span>
+                </div>
+                <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+              </div>
             </div>
           </div>
 
-          {/* Tài liệu được chia sẻ */}
-          <div className="space-y-2.5 pt-4 border-t border-slate-100">
-            <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800">Tài liệu được chia sẻ</span>
-              <button onClick={() => showToast('Quản lý chia sẻ', 'info')} className="text-blue-600 hover:underline font-semibold text-[11px] cursor-pointer">
-                Quản lý
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {mockSharedDocuments.map((sh) => (
-                <div key={sh.id} className="p-2.5 bg-slate-50 border border-slate-100 rounded-xl space-y-0.5">
-                  <p className="font-semibold text-slate-800 truncate">{sh.title}</p>
-                  <p className="text-[10px] text-slate-400">{sh.sharedWithText}</p>
-                </div>
-              ))}
-            </div>
+          {/* Kiểm tra lỗi chỉ mục CTA */}
+          <div className="pt-2 border-t border-slate-100 dark:border-zinc-800/80 space-y-2">
+            <span className="font-bold text-slate-800 dark:text-zinc-200 block">Kiểm tra lỗi chỉ mục</span>
+            <p className="text-[11px] text-slate-500">Phát hiện và đề xuất cách khắc phục lỗi chỉ mục.</p>
+            <button
+              onClick={() => showToast('Bắt đầu quét & kiểm tra lỗi chỉ mục Vector DB', 'success')}
+              className="w-full py-2 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
+              <span>Kiểm tra ngay</span>
+            </button>
           </div>
+
         </aside>
+
       </div>
 
+      {/* Upload Modal */}
       <UploadModal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
     </div>
   );
 };
+
 export default DataRepoPage;

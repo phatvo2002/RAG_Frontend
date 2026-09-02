@@ -1,11 +1,24 @@
-import React, { useState } from 'react';
-import { ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown, ArrowRight } from 'lucide-react';
+import React, { useMemo, useState, useEffect } from 'react';
+import {
+  useReactTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getPaginationRowModel,
+  getFilteredRowModel,
+  flexRender,
+  ColumnDef,
+  SortingState,
+  RowSelectionState,
+} from '@tanstack/react-table';
+import { useTranslation } from 'react-i18next';
+import { ChevronLeft, ChevronRight, ArrowUpDown, ArrowUp, ArrowDown } from 'lucide-react';
 import { TableSkeleton } from './TableSkeleton';
 import { TableEmptyState, TableEmptyStateProps } from './TableEmptyState';
 
+// Legacy Column Interface support alongside TanStack ColumnDef
 export interface Column<T> {
   id?: string;
-  header: string;
+  header: string | ((info: any) => React.ReactNode);
   accessor?: keyof T;
   render?: (item: T, index: number) => React.ReactNode;
   align?: 'left' | 'center' | 'right';
@@ -33,7 +46,8 @@ export interface PaginationConfig {
 
 export interface CustomTableProps<T> {
   title?: string;
-  columns: Column<T>[];
+  toolbar?: React.ReactNode;
+  columns: (ColumnDef<T, any> | Column<T>)[];
   data: T[];
   keyExtractor?: (item: T, index: number) => string | number;
 
@@ -65,8 +79,13 @@ export interface CustomTableProps<T> {
   pagination?: PaginationConfig;
 }
 
-export function CustomTable<T>({
+/**
+ * Enterprise SaaS Table Component Powered by @tanstack/react-table (v8)
+ * Combines TanStack Table headless engine with unified container, low visual noise, and clean Enterprise typography.
+ */
+export function CustomTable<T extends object>({
   title,
+  toolbar,
   columns,
   data,
   keyExtractor = (_, idx) => idx,
@@ -75,21 +94,51 @@ export function CustomTable<T>({
   onSelectionChange,
   sortConfig,
   onSort,
-  striped = true,
+  striped = false,
   compact = false,
   stickyHeader = false,
   className = '',
   isLoading = false,
   skeletonRowCount = 5,
   emptyState,
-  emptyText = 'Không có dữ liệu',
+  emptyText,
   onRowClick,
   pagination,
 }: CustomTableProps<T>) {
-  const [jumpPageInput, setJumpPageInput] = useState('');
+  const { t } = useTranslation(['table', 'common']);
+
+  // Convert Sorting to TanStack Table SortingState
+  const [internalSorting, setInternalSorting] = useState<SortingState>(() => {
+    if (sortConfig) {
+      return [{ id: sortConfig.key, desc: sortConfig.order === 'desc' }];
+    }
+    return [];
+  });
+
+  useEffect(() => {
+    if (sortConfig) {
+      setInternalSorting([{ id: sortConfig.key, desc: sortConfig.order === 'desc' }]);
+    }
+  }, [sortConfig]);
+
+  // Convert Selection to TanStack Table RowSelectionState
+  const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
+
+  // Sync external selectedIds with TanStack rowSelection
+  useEffect(() => {
+    if (!selectable) return;
+    const newSelection: RowSelectionState = {};
+    data.forEach((item, idx) => {
+      const key = keyExtractor(item, idx);
+      if (selectedIds.includes(key)) {
+        newSelection[idx] = true;
+      }
+    });
+    setRowSelection(newSelection);
+  }, [selectedIds, data, selectable]);
 
   // Checkbox Select All Logic
-  const allItemKeys = data.map((item, idx) => keyExtractor(item, idx));
+  const allItemKeys = useMemo(() => data.map((item, idx) => keyExtractor(item, idx)), [data, keyExtractor]);
   const isAllSelected = data.length > 0 && allItemKeys.every((key) => selectedIds.includes(key));
   const isSomeSelected = selectedIds.length > 0 && !isAllSelected;
 
@@ -112,105 +161,176 @@ export function CustomTable<T>({
     }
   };
 
-  const handleJumpPage = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!pagination) return;
-    const p = parseInt(jumpPageInput, 10);
-    if (!isNaN(p) && p >= 1 && p <= pagination.totalPages) {
-      pagination.onPageChange(p);
-      setJumpPageInput('');
-    }
-  };
+  // Convert Columns to TanStack ColumnDef format
+  const tanstackColumns = useMemo<ColumnDef<T, any>[]>(() => {
+    return columns.map((col: any, idx) => {
+      // If already a TanStack ColumnDef with accessorKey/accessorFn/cell
+      if (col.accessorKey || col.accessorFn || col.cell || (typeof col.header === 'function' && !col.render)) {
+        return col as ColumnDef<T, any>;
+      }
 
-  const getAlignClass = (align?: 'left' | 'center' | 'right') => {
+      // Convert legacy Column format to TanStack ColumnDef
+      const columnId = col.id || col.sortKey || (col.accessor ? String(col.accessor) : `col_${idx}`);
+      const isSortable = col.sortable !== false && (Boolean(col.sortKey) || Boolean(col.accessor) || Boolean(onSort));
+
+      return {
+        id: columnId,
+        header: typeof col.header === 'function' ? col.header : () => col.header,
+        accessorKey: col.accessor ? String(col.accessor) : undefined,
+        accessorFn: col.accessor ? (row: any) => row[col.accessor] : undefined,
+        enableSorting: isSortable,
+        cell: ({ row, cell }: any) => {
+          if (col.render) {
+            return col.render(row.original, row.index);
+          }
+          return cell.getValue() ?? '';
+        },
+        meta: {
+          align: col.align || 'left',
+          width: col.width,
+          className: col.className,
+          headerClassName: col.headerClassName,
+          sortKey: col.sortKey || columnId,
+        },
+      } as ColumnDef<T, any>;
+    });
+  }, [columns, onSort]);
+
+  // Instantiate TanStack React Table
+  const table = useReactTable({
+    data,
+    columns: tanstackColumns,
+    state: {
+      sorting: internalSorting,
+      rowSelection,
+    },
+    enableRowSelection: selectable,
+    onRowSelectionChange: setRowSelection,
+    onSortingChange: (updater) => {
+      const nextSorting = typeof updater === 'function' ? updater(internalSorting) : updater;
+      setInternalSorting(nextSorting);
+      if (onSort && nextSorting.length > 0) {
+        onSort(nextSorting[0].id);
+      }
+    },
+    getCoreRowModel: getCoreRowModel(),
+    getSortedRowModel: getSortedRowModel(),
+    getPaginationRowModel: getPaginationRowModel(),
+    getFilteredRowModel: getFilteredRowModel(),
+    manualPagination: true,
+    pageCount: pagination?.totalPages || 1,
+  });
+
+  const getAlignClass = (align?: string) => {
     if (align === 'center') return 'text-center';
     if (align === 'right') return 'text-right';
     return 'text-left';
   };
 
-  const paddingClass = compact ? 'px-3 py-2.5' : 'px-4 py-3.5';
+  // Pagination Item Range calculation
+  const currentPage = pagination?.currentPage || 1;
+  const pageSize = pagination?.pageSize || 10;
+  const totalItems = pagination?.totalItems ?? data.length;
+  const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
+  const endItem = Math.min(currentPage * pageSize, totalItems);
 
   return (
-    <div className={`w-full bg-white dark:bg-slate-900 rounded-xl border border-slate-200/80 dark:border-slate-800 shadow-2xs overflow-hidden transition-colors ${className}`}>
-      {/* Table Title if provided */}
-      {title && (
-        <div className="px-5 py-4 border-b border-slate-100 dark:border-slate-800">
-          <h3 className="text-sm font-bold text-slate-900 dark:text-slate-100 tracking-tight">{title}</h3>
+    <div className={`w-full bg-white dark:bg-zinc-950 rounded-lg border border-slate-200 dark:border-zinc-800/90 shadow-2xs overflow-hidden transition-colors ${className}`}>
+      {/* Integrated Toolbar or Title Header */}
+      {toolbar ? (
+        <div className="w-full">{toolbar}</div>
+      ) : title ? (
+        <div className="px-4 py-3.5 border-b border-slate-200 dark:border-zinc-800/90 bg-white dark:bg-zinc-950 flex items-center justify-between">
+          <h3 className="text-xs font-semibold text-slate-800 dark:text-zinc-200 tracking-tight">{title}</h3>
+          {totalItems > 0 && (
+            <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-normal">
+              {totalItems} mục
+            </span>
+          )}
         </div>
-      )}
+      ) : null}
 
       {/* Main Table Content */}
-      <div className="overflow-x-auto">
-        <table className="w-full text-left text-xs text-slate-700 dark:text-slate-200 border-collapse">
-          {/* Header */}
+      <div className="overflow-x-auto w-full">
+        <table className="w-full text-left border-collapse">
+          {/* Header via TanStack Table */}
           <thead
-            className={`bg-slate-50/80 dark:bg-slate-800/70 border-b border-slate-200 dark:border-slate-800 text-slate-800 dark:text-slate-200 font-bold text-xs select-none ${
+            className={`bg-slate-50/70 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800/90 text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider select-none ${
               stickyHeader ? 'sticky top-0 z-10' : ''
             }`}
           >
-            <tr>
-              {/* Select All Checkbox */}
-              {selectable && (
-                <th className="px-3 py-3 w-10 text-center">
-                  <input
-                    type="checkbox"
-                    checked={isAllSelected}
-                    ref={(el) => {
-                      if (el) el.indeterminate = isSomeSelected;
-                    }}
-                    onChange={handleSelectAll}
-                    className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
-                  />
-                </th>
-              )}
-
-              {/* Column Headers */}
-              {columns.map((col, idx) => {
-                const alignClass = getAlignClass(col.align);
-                const isSorted = sortConfig && (sortConfig.key === col.sortKey || sortConfig.key === String(col.accessor));
-                const isSortable = col.sortable && Boolean(onSort);
-
-                return (
-                  <th
-                    key={col.id || idx}
-                    style={{ width: col.width }}
-                    className={`${paddingClass} ${alignClass} ${col.headerClassName || ''} ${col.className || ''} ${
-                      isSortable ? 'cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors' : ''
-                    }`}
-                    onClick={() => {
-                      if (isSortable && onSort) {
-                        onSort(col.sortKey || String(col.accessor));
-                      }
-                    }}
-                  >
-                    <div
-                      className={`inline-flex items-center gap-1.5 ${
-                        col.align === 'right' ? 'justify-end' : col.align === 'center' ? 'justify-center' : 'justify-start'
-                      }`}
-                    >
-                      <span>{col.header}</span>
-                      {isSortable && (
-                        <span className="text-slate-400 dark:text-slate-500">
-                          {isSorted ? (
-                            sortConfig.order === 'asc' ? (
-                              <ArrowUp className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 font-bold" />
-                            ) : (
-                              <ArrowDown className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400 font-bold" />
-                            )
-                          ) : (
-                            <ArrowUpDown className="w-3 h-3 opacity-40" />
-                          )}
-                        </span>
-                      )}
-                    </div>
+            {table.getHeaderGroups().map((headerGroup) => (
+              <tr key={headerGroup.id}>
+                {/* Select All Checkbox */}
+                {selectable && (
+                  <th className="w-10 px-3 py-3 text-center">
+                    <input
+                      type="checkbox"
+                      checked={isAllSelected}
+                      ref={(el) => {
+                        if (el) el.indeterminate = isSomeSelected;
+                      }}
+                      onChange={handleSelectAll}
+                      className="w-3.5 h-3.5 rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-0 cursor-pointer"
+                    />
                   </th>
-                );
-              })}
-            </tr>
+                )}
+
+                {/* Headers */}
+                {headerGroup.headers.map((header) => {
+                  const meta: any = header.column.columnDef.meta || {};
+                  const alignClass = getAlignClass(meta.align);
+                  const isSortable = header.column.getCanSort();
+                  const isSorted = header.column.getIsSorted();
+
+                  return (
+                    <th
+                      key={header.id}
+                      style={{ width: meta.width }}
+                      className={`px-4 py-2.5 ${alignClass} ${meta.headerClassName || ''} ${meta.className || ''} ${
+                        isSortable ? 'cursor-pointer hover:text-slate-800 dark:hover:text-zinc-200 transition-colors' : ''
+                      }`}
+                      onClick={() => {
+                        if (isSortable) {
+                          if (onSort) {
+                            onSort(meta.sortKey || header.id);
+                          } else {
+                            header.column.toggleSorting();
+                          }
+                        }
+                      }}
+                    >
+                      <div
+                        className={`inline-flex items-center gap-1.5 ${
+                          meta.align === 'right' ? 'justify-end' : meta.align === 'center' ? 'justify-center' : 'justify-start'
+                        }`}
+                      >
+                        <span>
+                          {header.isPlaceholder
+                            ? null
+                            : flexRender(header.column.columnDef.header, header.getContext())}
+                        </span>
+                        {isSortable && (
+                          <span className="text-slate-400 dark:text-zinc-500">
+                            {isSorted === 'asc' ? (
+                              <ArrowUp className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                            ) : isSorted === 'desc' ? (
+                              <ArrowDown className="w-3 h-3 text-blue-600 dark:text-blue-400" />
+                            ) : (
+                              <ArrowUpDown className="w-2.5 h-2.5 opacity-40 hover:opacity-100" />
+                            )}
+                          </span>
+                        )}
+                      </div>
+                    </th>
+                  );
+                })}
+              </tr>
+            ))}
           </thead>
 
-          {/* Body */}
-          <tbody className="divide-y divide-slate-100 dark:divide-slate-800/70">
+          {/* Body via TanStack Table */}
+          <tbody className="divide-y divide-slate-100 dark:divide-zinc-900 text-xs">
             {isLoading ? (
               <TableSkeleton
                 columnsCount={columns.length}
@@ -219,7 +339,7 @@ export function CustomTable<T>({
               />
             ) : data.length === 0 ? (
               <tr>
-                <td colSpan={selectable ? columns.length + 1 : columns.length}>
+                <td colSpan={selectable ? columns.length + 1 : columns.length} className="py-8">
                   <TableEmptyState
                     title={emptyState?.title}
                     description={emptyState?.description || emptyText}
@@ -230,56 +350,50 @@ export function CustomTable<T>({
                 </td>
               </tr>
             ) : (
-              data.map((item, rowIdx) => {
-                const key = keyExtractor(item, rowIdx);
+              table.getRowModel().rows.map((row, rowIdx) => {
+                const key = keyExtractor(row.original, rowIdx);
                 const isSelected = selectable && selectedIds.includes(key);
                 const isClickable = Boolean(onRowClick);
 
-                // Alternating zebra row background like in sample image
-                const isEvenRow = rowIdx % 2 === 1;
-                const rowBg = isSelected
-                  ? 'bg-blue-50/80 dark:bg-blue-950/50'
-                  : striped && isEvenRow
-                  ? 'bg-slate-50/60 dark:bg-slate-800/30'
-                  : 'bg-white dark:bg-slate-900';
-
                 return (
                   <tr
-                    key={key}
-                    onClick={() => onRowClick?.(item, rowIdx)}
-                    className={`${rowBg} transition-colors ${
-                      isClickable ? 'hover:bg-blue-50/50 dark:hover:bg-blue-950/30 cursor-pointer' : 'hover:bg-slate-100/50 dark:hover:bg-slate-800/50'
-                    }`}
+                    key={row.id || key}
+                    onClick={() => onRowClick?.(row.original, rowIdx)}
+                    className={`${
+                      isSelected
+                        ? 'bg-blue-50/40 dark:bg-blue-950/20'
+                        : striped && rowIdx % 2 === 1
+                        ? 'bg-slate-50/30 dark:bg-zinc-900/20'
+                        : 'bg-white dark:bg-zinc-950'
+                    } ${isClickable ? 'hover:bg-slate-50/60 dark:hover:bg-zinc-900/50 cursor-pointer' : 'hover:bg-slate-50/60 dark:hover:bg-zinc-900/50'} transition-colors`}
                   >
                     {/* Row Checkbox */}
                     {selectable && (
                       <td
-                        className="px-3 py-3 w-10 text-center"
+                        className="w-10 px-3 py-3 text-center"
                         onClick={(e) => handleSelectRow(key, e)}
                       >
                         <input
                           type="checkbox"
                           checked={isSelected}
                           onChange={() => {}}
-                          className="w-3.5 h-3.5 rounded border-slate-300 dark:border-slate-600 text-blue-600 focus:ring-blue-500 cursor-pointer accent-blue-600"
+                          className="w-3.5 h-3.5 rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-0 cursor-pointer"
                         />
                       </td>
                     )}
 
                     {/* Row Cells */}
-                    {columns.map((col, colIdx) => {
-                      const alignClass = getAlignClass(col.align);
+                    {row.getVisibleCells().map((cell) => {
+                      const meta: any = cell.column.columnDef.meta || {};
+                      const alignClass = getAlignClass(meta.align);
+                      const paddingClass = compact ? 'px-3 py-2' : 'px-4 py-3';
 
                       return (
                         <td
-                          key={col.id || colIdx}
-                          className={`${paddingClass} ${alignClass} ${col.className || ''}`}
+                          key={cell.id}
+                          className={`${alignClass} ${paddingClass} text-slate-700 dark:text-zinc-300 ${meta.className || ''}`}
                         >
-                          {col.render
-                            ? col.render(item, rowIdx)
-                            : col.accessor
-                            ? String(item[col.accessor] ?? '')
-                            : null}
+                          {flexRender(cell.column.columnDef.cell, cell.getContext())}
                         </td>
                       );
                     })}
@@ -291,103 +405,64 @@ export function CustomTable<T>({
         </table>
       </div>
 
-      {/* Exact Pagination Bar matching the sample image */}
+      {/* Enterprise SaaS Minimalist Pagination Bar: "1–10 trong 128 | 10 / trang | ‹ ›" */}
       {pagination && (
-        <div className="px-5 py-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-wrap items-center justify-between gap-4 text-xs select-none transition-colors">
-          {/* Left Controls: Prev, Page buttons, Next, Đi đến trang [ ] [->] */}
-          <div className="flex items-center gap-2 flex-wrap">
-            {/* Prev Page Button */}
-            <button
-              type="button"
-              disabled={pagination.currentPage <= 1}
-              onClick={() => pagination.onPageChange(pagination.currentPage - 1)}
-              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
-            >
-              <ChevronLeft className="w-4 h-4" />
-            </button>
-
-            {/* Page Numbers */}
-            {Array.from({ length: pagination.totalPages }, (_, i) => i + 1)
-              .filter((p) => {
-                // Show first, last, and pages around current page
-                return (
-                  p === 1 ||
-                  p === pagination.totalPages ||
-                  Math.abs(p - pagination.currentPage) <= 1
-                );
-              })
-              .map((p, idx, arr) => {
-                const prev = arr[idx - 1];
-                const showEllipsis = prev && p - prev > 1;
-                const isActive = p === pagination.currentPage;
-
-                return (
-                  <React.Fragment key={p}>
-                    {showEllipsis && <span className="px-1 text-slate-400">...</span>}
-                    <button
-                      type="button"
-                      onClick={() => pagination.onPageChange(p)}
-                      className={`w-8 h-8 rounded-lg font-semibold text-xs flex items-center justify-center transition-all cursor-pointer ${
-                        isActive
-                          ? 'bg-blue-600 text-white shadow-2xs shadow-blue-500/30'
-                          : 'bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300'
-                      }`}
-                    >
-                      {p}
-                    </button>
-                  </React.Fragment>
-                );
-              })}
-
-            {/* Next Page Button */}
-            <button
-              type="button"
-              disabled={pagination.currentPage >= pagination.totalPages}
-              onClick={() => pagination.onPageChange(pagination.currentPage + 1)}
-              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 flex items-center justify-center disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer transition-colors"
-            >
-              <ChevronRight className="w-4 h-4" />
-            </button>
-
-            {/* Jump to Page Form */}
-            <form onSubmit={handleJumpPage} className="flex items-center gap-1.5 ml-2">
-              <span className="text-slate-500 dark:text-slate-400 text-xs">Đi đến trang</span>
-              <input
-                type="number"
-                min={1}
-                max={pagination.totalPages}
-                value={jumpPageInput}
-                onChange={(e) => setJumpPageInput(e.target.value)}
-                className="w-12 h-8 px-2 text-center bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-600"
-              />
-              <button
-                type="submit"
-                className="w-8 h-8 rounded-lg bg-blue-600 hover:bg-blue-700 text-white flex items-center justify-center shadow-2xs shadow-blue-500/20 cursor-pointer transition-colors"
-                title="Chuyển đến trang"
-              >
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
-            </form>
+        <div className="px-4 py-2.5 border-t border-slate-200 dark:border-zinc-800/90 bg-white dark:bg-zinc-950 flex flex-wrap items-center justify-between gap-3 text-xs select-none transition-colors">
+          {/* Left: 1–10 trong 128 */}
+          <div className="text-slate-500 dark:text-zinc-400 font-normal">
+            {totalItems > 0 ? (
+              <span>
+                <strong className="font-semibold text-slate-700 dark:text-zinc-300">{startItem}–{endItem}</strong> trong <strong className="font-semibold text-slate-700 dark:text-zinc-300">{totalItems}</strong>
+              </span>
+            ) : (
+              <span>0 mục</span>
+            )}
           </div>
 
-          {/* Right Controls: Hiển thị [ 20 v ] hàng */}
-          {pagination.onPageSizeChange && (
-            <div className="flex items-center gap-1.5 text-slate-600 dark:text-slate-400 text-xs">
-              <span>Hiển thị</span>
-              <select
-                value={pagination.pageSize || 20}
-                onChange={(e) => pagination.onPageSizeChange?.(Number(e.target.value))}
-                className="h-8 px-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-medium text-slate-800 dark:text-slate-100 focus:outline-none focus:border-blue-600 cursor-pointer shadow-2xs"
+          {/* Right: Page Size & Minimal ‹ › Navigation */}
+          <div className="flex items-center gap-3">
+            {/* Page Size Select */}
+            {pagination.onPageSizeChange && (
+              <div className="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400">
+                <select
+                  value={pageSize}
+                  onChange={(e) => pagination.onPageSizeChange?.(Number(e.target.value))}
+                  className="px-2 py-1 bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer"
+                >
+                  {(pagination.pageSizeOptions || [10, 20, 50, 100]).map((opt) => (
+                    <option key={opt} value={opt}>
+                      {opt} / trang
+                    </option>
+                  ))}
+                </select>
+              </div>
+            )}
+
+            {/* Prev / Next ‹ › Buttons */}
+            <div className="flex items-center gap-1">
+              <span className="text-[11px] text-slate-400 dark:text-zinc-500 mr-1 hidden sm:inline">
+                {currentPage} / {pagination.totalPages || 1}
+              </span>
+              <button
+                type="button"
+                disabled={currentPage <= 1}
+                onClick={() => pagination.onPageChange(currentPage - 1)}
+                className="w-7 h-7 flex items-center justify-center rounded border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                title="Trang trước"
               >
-                {(pagination.pageSizeOptions || [10, 20, 50, 100]).map((opt) => (
-                  <option key={opt} value={opt}>
-                    {opt}
-                  </option>
-                ))}
-              </select>
-              <span>hàng</span>
+                <ChevronLeft className="w-3.5 h-3.5" />
+              </button>
+              <button
+                type="button"
+                disabled={currentPage >= pagination.totalPages}
+                onClick={() => pagination.onPageChange(currentPage + 1)}
+                className="w-7 h-7 flex items-center justify-center rounded border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
+                title="Trang sau"
+              >
+                <ChevronRight className="w-3.5 h-3.5" />
+              </button>
             </div>
-          )}
+          </div>
         </div>
       )}
     </div>
@@ -397,4 +472,6 @@ export function CustomTable<T>({
 export { TableToolbar } from './TableToolbar';
 export { TableSkeleton } from './TableSkeleton';
 export { TableEmptyState } from './TableEmptyState';
+export { TableRowActions } from './TableRowActions';
+export { StatusBadge } from './StatusBadge';
 export default CustomTable;

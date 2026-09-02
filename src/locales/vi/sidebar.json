@@ -1,0 +1,48 @@
+{
+  "groups": {
+    "operations": "VẬN HÀNH & DỮ LIỆU",
+    "collaboration": "CỘNG TÁC",
+    "admin": "QUẢN TRỊ HỆ THỐNG"
+  },
+  "items": {
+    "dashboard": "Dashboard",
+    "dataRepo": "Kho dữ liệu",
+    "projects": "Dự án",
+    "tasks": "Công việc",
+    "reports": "Báo cáo",
+    "meetings": "Phòng họp",
+    "calendar": "Lịch",
+    "adminOverview": "Tổng quan",
+    "adminUsers": "Người dùng",
+    "adminDepartments": "Phòng ban",
+    "adminRoles": "Vai trò & Quyền",
+    "adminPolicies": "Chính sách dữ liệu",
+    "adminLogs": "Nhật ký hoạt động",
+    "adminConfig": "Cấu hình hệ thống"
+  },
+  "chatMode": {
+    "goToDashboard": "Dashboard Quản Lý",
+    "newChat": "Đoạn chat mới",
+    "searchChat": "Tìm đoạn chat...",
+    "filterTooltip": "Bộ lọc tìm kiếm lịch sử chat",
+    "filters": {
+      "projects": "Dự án",
+      "reports": "Báo cáo",
+      "meetings": "Phòng họp"
+    },
+    "history": {
+      "today": "Hôm nay",
+      "previous": "Trước đó"
+    }
+  },
+  "navMode": {
+    "openAiChat": "Mở Trợ lý Chat AI"
+  },
+  "user": {
+    "logout": "Đăng xuất",
+    "profile": "Thông tin tài khoản"
+  },
+  "collapse": "Thu gọn menu",
+  "expand": "Mở rộng menu"
+}
+

@@ -1,0 +1,48 @@
+{
+  "groups": {
+    "operations": "OPERATIONS & DATA",
+    "collaboration": "COLLABORATION",
+    "admin": "SYSTEM ADMINISTRATION"
+  },
+  "items": {
+    "dashboard": "Dashboard",
+    "dataRepo": "Data Repository",
+    "projects": "Projects",
+    "tasks": "Tasks",
+    "reports": "Reports",
+    "meetings": "Meetings",
+    "calendar": "Calendar",
+    "adminOverview": "Overview",
+    "adminUsers": "Users",
+    "adminDepartments": "Departments",
+    "adminRoles": "Roles & Permissions",
+    "adminPolicies": "Data Policies",
+    "adminLogs": "Activity Logs",
+    "adminConfig": "System Config"
+  },
+  "chatMode": {
+    "goToDashboard": "Executive Dashboard",
+    "newChat": "New Chat",
+    "searchChat": "Search conversations...",
+    "filterTooltip": "Chat history search filter",
+    "filters": {
+      "projects": "Projects",
+      "reports": "Reports",
+      "meetings": "Meetings"
+    },
+    "history": {
+      "today": "Today",
+      "previous": "Previous"
+    }
+  },
+  "navMode": {
+    "openAiChat": "Open AI Chat Assistant"
+  },
+  "user": {
+    "logout": "Sign Out",
+    "profile": "User Profile"
+  },
+  "collapse": "Collapse menu",
+  "expand": "Expand menu"
+}
+

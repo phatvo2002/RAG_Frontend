@@ -1,102 +1,157 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useApp } from '@/context/AppContext';
-import { NavModule } from '@/types';
-import { Pin, Bell, RefreshCw, MoreHorizontal, ChevronDown, Sun, Moon } from 'lucide-react';
+import { useNavigate } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
+import {
+  ChevronDown,
+  Search,
+  Bell,
+  HelpCircle,
+  Sun,
+  Moon,
+  LogOut,
+  User as UserIcon,
+} from 'lucide-react';
+import { LanguageSwitcher } from '@/components/languageSwitcher';
 
-interface HeaderProps {
-  title?: string;
-  subTitle?: string;
-}
+export const Header: React.FC = () => {
+  const { currentUser, logout, isDark, toggleTheme, showToast } = useApp();
+  const navigate = useNavigate();
+  const { t } = useTranslation(['header', 'common']);
+  const [globalSearch, setGlobalSearch] = useState('');
 
-export const Header: React.FC<HeaderProps> = ({ title, subTitle }) => {
-  const { activeModule, showToast, isDark, toggleTheme } = useApp();
-
-  const moduleTitles: Record<NavModule, { title: string; sub?: string }> = {
-    chat: { title: 'Trợ lý AI NEXORA', sub: 'Trợ lý thông minh hỗ trợ công việc' },
-    dashboard: { title: 'Dashboard Quản Lý', sub: 'Trung tâm điều hành tổng quan và phân hệ quản lý' },
-    'data-repo': { title: 'Kho dữ liệu', sub: 'Quản lý tài liệu và thư mục doanh nghiệp' },
-    meetings: { title: 'Phòng họp', sub: 'Lịch họp và biên bản tự động' },
-    projects: { title: 'Dự án', sub: 'Quản lý tiến độ và thành viên dự án' },
-    tasks: { title: 'Công việc', sub: 'Bảng theo dõi công việc Kanban' },
-    calendar: { title: 'Lịch', sub: 'Lịch biểu làm việc và sự kiện' },
-    reports: { title: 'Báo cáo', sub: 'Thống kê hiệu suất và báo cáo tổng hợp' },
-    admin: { title: 'Quản trị', sub: 'Cấu hình hệ thống và phân quyền' },
-  };
-
-  const currentInfo = moduleTitles[activeModule] || { title: title || 'NEXORA AI', sub: subTitle || '' };
+  const displayName = currentUser?.name || currentUser?.displayName || currentUser?.userName || 'Admin';
+  const roleName = currentUser?.roles?.[0]?.roleName || currentUser?.role || 'SuperAdmin';
+  const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
-    <header className="h-14 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800/80 px-6 flex items-center justify-between shrink-0 select-none transition-colors">
-      {/* Title & Subtitle or Breadcrumb */}
+    <header className="h-14 bg-white dark:bg-[#090e1a] border-b border-slate-200 dark:border-[#172033] px-4 md:px-6 flex items-center justify-between shrink-0 select-none transition-colors">
+      
+      {/* 1. Left: Workspace Switcher Dropdown matching 01-executive-dashboard.png */}
       <div className="flex items-center gap-3">
-        {activeModule === 'chat' ? (
-          <div className="flex items-center gap-2">
-            <span className="font-bold text-slate-900 dark:text-slate-100 text-base">{currentInfo.title}</span>
-            <ChevronDown className="w-4 h-4 text-slate-400 dark:text-slate-500 cursor-pointer hover:text-slate-600 dark:hover:text-slate-300" />
+        <div className="cursor-pointer group">
+          <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-zinc-100 text-xs hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+            <span>NEXORA Workbench</span>
+            <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-zinc-200 transition-transform" />
           </div>
-        ) : (
-          <div>
-            <h1 className="text-base font-bold text-slate-900 dark:text-slate-100 leading-none">
-              {title || currentInfo.title}
-            </h1>
-            {currentInfo.sub && (
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-normal mt-0.5">
-                {subTitle || currentInfo.sub}
-              </p>
-            )}
-          </div>
-        )}
+          <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-normal">
+            Công ty Cổ phần Nexora
+          </p>
+        </div>
       </div>
 
-      {/* Right Controls */}
-      <div className="flex items-center gap-1.5">
-        {/* Dark / Light Theme Toggle Button */}
+      {/* 2. Center: Global Search Bar with ⌘ K matching 01-executive-dashboard.png */}
+      <div className="flex-1 max-w-md mx-6 hidden sm:block">
+        <div className="relative flex items-center">
+          <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
+          <input
+            type="text"
+            placeholder="Tìm kiếm hoặc gõ lệnh..."
+            value={globalSearch}
+            onChange={(e) => setGlobalSearch(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && globalSearch.trim()) {
+                showToast(`Tìm kiếm: "${globalSearch}"`, 'info');
+              }
+            }}
+            className="w-full pl-8 pr-12 py-1.5 bg-slate-50/80 dark:bg-[#121929] border border-slate-200 dark:border-[#1d293d] rounded-lg text-xs text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 transition-colors shadow-2xs"
+          />
+          <kbd className="absolute right-2.5 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-slate-400 dark:text-zinc-500 bg-white dark:bg-[#182238] border border-slate-200 dark:border-zinc-700 rounded shadow-2xs">
+            ⌘ K
+          </kbd>
+        </div>
+      </div>
+
+      {/* 3. Right: Notifications (bell badge 3), Help, Profile Avatar */}
+      <div className="flex items-center gap-3">
+        {/* Language Switcher */}
+        <LanguageSwitcher />
+
+        {/* Theme Toggle */}
         <button
           onClick={toggleTheme}
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
-          title={isDark ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối'}
+          className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded-lg hover:bg-slate-100 dark:hover:bg-[#121929] transition-colors cursor-pointer"
+          title={isDark ? 'Giao diện sáng' : 'Giao diện tối'}
         >
-          {isDark ? (
-            <Sun className="w-4 h-4 text-amber-400 hover:rotate-45 transition-transform" />
-          ) : (
-            <Moon className="w-4 h-4 text-slate-600 hover:-rotate-12 transition-transform" />
-          )}
+          {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
         </button>
 
+        {/* Notifications with red count 3 */}
+        <div className="relative">
+          <button
+            onClick={() => showToast('Bạn có 3 thông báo mới chưa đọc', 'info')}
+            className="p-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-100 rounded-lg hover:bg-slate-100 dark:hover:bg-[#121929] transition-colors cursor-pointer relative"
+            title="Thông báo"
+          >
+            <Bell className="w-4 h-4" />
+            <span className="w-4 h-4 rounded-full bg-rose-500 text-white font-bold text-[9px] flex items-center justify-center absolute -top-0.5 -right-0.5 shadow-xs">
+              3
+            </span>
+          </button>
+        </div>
+
+        {/* Help Icon */}
         <button
-          onClick={() => showToast('Đã ghim phiên làm việc hiện tại', 'success')}
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
-          title="Ghim phiên làm việc"
+          onClick={() => showToast('Mở tài liệu hướng dẫn sử dụng NEXORA AI', 'info')}
+          className="p-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-100 rounded-lg hover:bg-slate-100 dark:hover:bg-[#121929] transition-colors cursor-pointer"
+          title="Trợ giúp"
         >
-          <Pin className="w-4 h-4" />
+          <HelpCircle className="w-4 h-4" />
         </button>
 
-        <button
-          onClick={() => showToast('Đang làm mới dữ liệu...', 'info')}
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
-          title="Làm mới"
-        >
-          <RefreshCw className="w-4 h-4" />
-        </button>
+        {/* Profile Avatar & Info Dropdown */}
+        <div className="dropdown dropdown-end">
+          <div
+            tabIndex={0}
+            role="button"
+            className="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#121929] transition-colors"
+          >
+            <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+              {initials}
+            </div>
+            <div className="text-left hidden md:block">
+              <span className="font-semibold text-xs text-slate-900 dark:text-zinc-100 block leading-tight">
+                {displayName}
+              </span>
+              <span className="text-[10px] text-slate-400 dark:text-zinc-500 block leading-none">
+                {roleName}
+              </span>
+            </div>
+          </div>
 
-        <button
-          onClick={() => showToast('Không có thông báo mới', 'info')}
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors relative cursor-pointer"
-          title="Thông báo"
-        >
-          <Bell className="w-4 h-4" />
-          <span className="w-2 h-2 rounded-full bg-blue-600 absolute top-1.5 right-1.5" />
-        </button>
+          <ul
+            tabIndex={0}
+            className="dropdown-content z-30 menu p-1.5 shadow-lg bg-white dark:bg-[#0c1220] border border-slate-200 dark:border-[#1d293d] rounded-xl w-48 text-xs text-slate-700 dark:text-zinc-200 mt-1 space-y-0.5"
+          >
+            <li className="px-2.5 py-1.5 border-b border-slate-100 dark:border-zinc-800 font-medium">
+              <span className="text-slate-400 block text-[10px] uppercase font-bold">Tài khoản</span>
+              <span className="font-bold text-slate-900 dark:text-zinc-100">{displayName}</span>
+            </li>
+            <li>
+              <button
+                onClick={() => navigate({ to: '/admin/users' as any })}
+                className="flex items-center gap-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer"
+              >
+                <UserIcon className="w-3.5 h-3.5" />
+                <span>Quản lý tài khoản</span>
+              </button>
+            </li>
+            <li>
+              <button
+                onClick={() => logout()}
+                className="flex items-center gap-2 py-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer font-semibold"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>Đăng xuất</span>
+              </button>
+            </li>
+          </ul>
+        </div>
 
-        <button
-          onClick={() => showToast('Menu tùy chọn', 'info')}
-          className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition-colors cursor-pointer"
-          title="Tùy chọn khác"
-        >
-          <MoreHorizontal className="w-4 h-4" />
-        </button>
       </div>
+
     </header>
   );
 };
+
 export default Header;

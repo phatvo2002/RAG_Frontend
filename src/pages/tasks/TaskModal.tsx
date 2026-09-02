@@ -1,7 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
+import { useForm } from '@tanstack/react-form';
 import { Modal } from '@/components/disclosure';
 import { useApp } from '@/context/AppContext';
-import { TaskPriority, TaskStatus } from '@/types';
+import { TaskPriority, TaskStatus, taskYupSchema, TaskFormData } from '@/types';
+import { AlertCircle } from 'lucide-react';
 
 interface TaskModalProps {
   isOpen: boolean;
@@ -9,131 +11,259 @@ interface TaskModalProps {
 }
 
 export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose }) => {
-  const { addTask, projects, users } = useApp();
-  const [title, setTitle] = useState('');
-  const [assignee, setAssignee] = useState(users[0]?.name || 'Đức Huy');
-  const [project, setProject] = useState(projects[0]?.name || 'NEXORA Platform');
-  const [priority, setPriority] = useState<TaskPriority>('Cao');
-  const [status, setStatus] = useState<TaskStatus>('Cần làm');
-  const [deadline, setDeadline] = useState('2024-05-25');
+  const { addTask, projects, users, showToast } = useApp();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title) return;
+  const form = useForm({
+    defaultValues: {
+      title: '',
+      assignee: users[0]?.name || 'Đức Huy',
+      project: projects[0]?.name || 'NEXORA Platform',
+      priority: 'Cao' as TaskPriority,
+      status: 'Cần làm' as TaskStatus,
+      deadline: '2024-05-25',
+    } as TaskFormData,
+    validators: {
+      onSubmit: ({ value }) => {
+        try {
+          taskYupSchema.validateSync(value, { abortEarly: false });
+          return undefined;
+        } catch (err: any) {
+          return err.message || 'Dữ liệu công việc không hợp lệ';
+        }
+      },
+    },
+    onSubmit: async ({ value }) => {
+      addTask({
+        title: value.title,
+        assignee: value.assignee,
+        project: value.project,
+        priority: value.priority as TaskPriority,
+        status: value.status as TaskStatus,
+        deadline: value.deadline,
+      });
 
-    addTask({
-      title,
-      assignee,
-      project,
-      priority,
-      status,
-      deadline
-    });
+      showToast(`Đã tạo công việc "${value.title}" thành công!`, 'success');
+      form.reset();
+      onClose();
+    },
+  });
 
-    setTitle('');
-    onClose();
-  };
+  useEffect(() => {
+    if (isOpen) {
+      form.reset();
+      if (users[0]?.name) form.setFieldValue('assignee', users[0].name);
+      if (projects[0]?.name) form.setFieldValue('project', projects[0].name);
+    }
+  }, [isOpen, users, projects]);
+
+  if (!isOpen) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Tạo công việc mới">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Tên công việc <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="Ví dụ: Kiểm thử hiệu năng API RAG với 1000 concurrent users"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-          />
-        </div>
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+        className="space-y-4 text-xs"
+      >
+        <form.Field
+          name="title"
+          validators={{
+            onChange: ({ value }) => (!value?.trim() ? 'Tên công việc không được để trống' : undefined),
+          }}
+        >
+          {(field) => {
+            const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+            const hasError = Boolean(errorMessage);
+
+            return (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  Tên công việc <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="Ví dụ: Kiểm thử hiệu năng API RAG với 1000 concurrent users"
+                  className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                    hasError
+                      ? 'border-rose-400 focus:border-rose-600 focus:bg-rose-50/10'
+                      : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+                  }`}
+                />
+                {hasError && (
+                  <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </p>
+                )}
+              </div>
+            );
+          }}
+        </form.Field>
 
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Dự án liên quan</label>
-            <select
-              value={project}
-              onChange={(e) => setProject(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.name}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
+          <form.Field
+            name="project"
+            validators={{
+              onChange: ({ value }) => (!value ? 'Vui lòng chọn dự án' : undefined),
+            }}
+          >
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Người thực hiện</label>
-            <select
-              value={assignee}
-              onChange={(e) => setAssignee(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-            >
-              {users.map((u) => (
-                <option key={u.id} value={u.name}>
-                  {u.name}
-                </option>
-              ))}
-            </select>
-          </div>
+              return (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Dự án liên quan <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 cursor-pointer ${
+                      hasError
+                        ? 'border-rose-400 focus:border-rose-600'
+                        : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+                    }`}
+                  >
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.name}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
+
+          <form.Field
+            name="assignee"
+            validators={{
+              onChange: ({ value }) => (!value ? 'Vui lòng chọn người thực hiện' : undefined),
+            }}
+          >
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
+
+              return (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Người thực hiện <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 cursor-pointer ${
+                      hasError
+                        ? 'border-rose-400 focus:border-rose-600'
+                        : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+                    }`}
+                  >
+                    {users.map((u) => (
+                      <option key={u.id} value={u.name}>
+                        {u.name}
+                      </option>
+                    ))}
+                  </select>
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
         </div>
 
         <div className="grid grid-cols-3 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Mức độ ưu tiên</label>
-            <select
-              value={priority}
-              onChange={(e) => setPriority(e.target.value as TaskPriority)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-            >
-              <option value="Khẩn cấp">Khẩn cấp</option>
-              <option value="Cao">Cao</option>
-              <option value="Trung bình">Trung bình</option>
-              <option value="Thấp">Thấp</option>
-            </select>
-          </div>
+          <form.Field name="priority">
+            {(field) => (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Mức độ ưu tiên</label>
+                <select
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value as TaskPriority)}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 cursor-pointer"
+                >
+                  <option value="Khẩn cấp">Khẩn cấp</option>
+                  <option value="Cao">Cao</option>
+                  <option value="Trung bình">Trung bình</option>
+                  <option value="Thấp">Thấp</option>
+                </select>
+              </div>
+            )}
+          </form.Field>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Trạng thái</label>
-            <select
-              value={status}
-              onChange={(e) => setStatus(e.target.value as TaskStatus)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-            >
-              <option value="Cần làm">Cần làm</option>
-              <option value="Đang làm">Đang làm</option>
-              <option value="Review">Review</option>
-              <option value="Đã hoàn thành">Đã hoàn thành</option>
-            </select>
-          </div>
+          <form.Field name="status">
+            {(field) => (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Trạng thái</label>
+                <select
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value as any)}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 cursor-pointer"
+                >
+                  <option value="Cần làm">Cần làm</option>
+                  <option value="Đang thực hiện">Đang thực hiện</option>
+                  <option value="Đang đánh giá">Đang đánh giá</option>
+                  <option value="Hoàn thành">Hoàn thành</option>
+                </select>
+              </div>
+            )}
+          </form.Field>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Hạn chót</label>
-            <input
-              type="date"
-              value={deadline}
-              onChange={(e) => setDeadline(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-            />
-          </div>
+          <form.Field name="deadline">
+            {(field) => (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Hạn hoàn thành</label>
+                <input
+                  type="date"
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+                />
+              </div>
+            )}
+          </form.Field>
         </div>
 
-        <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+        <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-medium hover:bg-slate-50 cursor-pointer"
+            className="px-3.5 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
           >
             Hủy
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-medium shadow-xs cursor-pointer"
+            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
           >
             Tạo công việc
           </button>
@@ -142,5 +272,5 @@ export const TaskModal: React.FC<TaskModalProps> = ({ isOpen, onClose }) => {
     </Modal>
   );
 };
-export default TaskModal;
 
+export default TaskModal;

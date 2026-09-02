@@ -1,0 +1,63 @@
+{
+  "appName": "NEXORA AI",
+  "appSubtitle": "Trợ lý AI nội bộ",
+  "actions": {
+    "save": "Lưu thay đổi",
+    "cancel": "Hủy",
+    "create": "Tạo mới",
+    "edit": "Chỉnh sửa",
+    "delete": "Xóa",
+    "refresh": "Làm mới",
+    "search": "Tìm kiếm",
+    "filter": "Bộ lọc",
+    "export": "Xuất dữ liệu",
+    "import": "Nhập dữ liệu",
+    "confirm": "Xác nhận",
+    "close": "Đóng",
+    "lock": "Khóa tài khoản",
+    "unlock": "Kích hoạt lại",
+    "resetPassword": "Đặt lại mật khẩu",
+    "pin": "Ghim phiên làm việc",
+    "viewAll": "Xem tất cả",
+    "options": "Tùy chọn khác"
+  },
+  "status": {
+    "active": "Đang hoạt động",
+    "inactive": "Không hoạt động",
+    "locked": "Bị khóa",
+    "inProgress": "Đang triển khai",
+    "completed": "Đã hoàn thành",
+    "delayed": "Chậm tiến độ",
+    "pending": "Chờ xử lý",
+    "review": "Đang review",
+    "urgent": "Khẩn cấp",
+    "high": "Cao",
+    "medium": "Trung bình",
+    "low": "Thấp"
+  },
+  "roles": {
+    "admin": "Quản trị viên",
+    "departmentHead": "Trưởng phòng",
+    "projectLead": "Trưởng dự án",
+    "employee": "Nhân viên"
+  },
+  "language": {
+    "en": "English",
+    "vi": "Tiếng Việt",
+    "switchLang": "Đổi ngôn ngữ"
+  },
+  "theme": {
+    "light": "Giao diện Sáng",
+    "dark": "Giao diện Tối",
+    "system": "Theo hệ thống",
+    "toggle": "Đổi giao diện Sáng / Tối"
+  },
+  "notifications": {
+    "noNew": "Không có thông báo mới",
+    "copied": "Đã sao chép vào bộ nhớ tạm",
+    "loginSuccess": "Đăng nhập thành công! Chào mừng trở lại",
+    "logoutSuccess": "Đã đăng xuất khỏi hệ thống",
+    "savedSuccess": "Đã lưu cấu hình thành công!"
+  }
+}
+

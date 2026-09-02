@@ -1,6 +1,9 @@
-import React, { useState } from 'react';
+import React, { useEffect } from 'react';
+import { useForm } from '@tanstack/react-form';
 import { Modal } from '@/components/disclosure';
 import { useApp } from '@/context/AppContext';
+import { meetingYupSchema, MeetingFormData } from '@/types';
+import { AlertCircle } from 'lucide-react';
 
 interface MeetingModalProps {
   isOpen: boolean;
@@ -8,138 +11,317 @@ interface MeetingModalProps {
 }
 
 export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose }) => {
-  const { addMeeting, projects } = useApp();
-  const [title, setTitle] = useState('');
-  const [date, setDate] = useState('2024-05-20');
-  const [time, setTime] = useState('09:00 - 10:00');
-  const [location, setLocation] = useState('Phòng họp A3');
-  const [organizer, setOrganizer] = useState('Anh Khoa');
-  const [project, setProject] = useState(projects[0]?.name || 'NEXORA Platform');
-  const [participantsCount, setParticipantsCount] = useState(5);
+  const { addMeeting, projects, showToast } = useApp();
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!title) return;
+  const form = useForm({
+    defaultValues: {
+      title: '',
+      date: '2024-05-20',
+      time: '09:00 - 10:00',
+      location: 'Phòng họp A3',
+      organizer: 'Anh Khoa',
+      project: projects[0]?.name || 'NEXORA Platform',
+      participantsCount: 5,
+    } as MeetingFormData,
+    validators: {
+      onSubmit: ({ value }) => {
+        try {
+          meetingYupSchema.validateSync(value, { abortEarly: false });
+          return undefined;
+        } catch (err: any) {
+          return err.message || 'Dữ liệu cuộc họp không hợp lệ';
+        }
+      },
+    },
+    onSubmit: async ({ value }) => {
+      addMeeting({
+        title: value.title,
+        date: value.date,
+        time: value.time,
+        location: value.location || '',
+        organizer: value.organizer,
+        project: value.project,
+        status: 'Sắp diễn ra',
+        participantsCount: Number(value.participantsCount) || 1,
+        hasTranscript: false,
+        hasSummary: false,
+      });
 
-    addMeeting({
-      title,
-      date,
-      time,
-      location,
-      organizer,
-      project,
-      status: 'Sắp diễn ra',
-      participantsCount,
-      hasTranscript: false,
-      hasSummary: false
-    });
+      showToast(`Đã lên lịch cuộc họp "${value.title}" thành công!`, 'success');
+      form.reset();
+      onClose();
+    },
+  });
 
-    setTitle('');
-    onClose();
-  };
+  useEffect(() => {
+    if (isOpen) {
+      form.reset();
+      if (projects[0]?.name) form.setFieldValue('project', projects[0].name);
+    }
+  }, [isOpen, projects]);
+
+  if (!isOpen) return null;
 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title="Tạo cuộc họp mới">
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-xs font-semibold text-slate-700 mb-1">
-            Tên cuộc họp <span className="text-rose-500">*</span>
-          </label>
-          <input
-            type="text"
-            required
-            placeholder="Ví dụ: Họp Sprint Review tuần 20"
-            value={title}
-            onChange={(e) => setTitle(e.target.value)}
-            className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-          />
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+        className="space-y-4 text-xs"
+      >
+        <form.Field
+          name="title"
+          validators={{
+            onChange: ({ value }) => (!value?.trim() ? 'Tên cuộc họp không được để trống' : undefined),
+          }}
+        >
+          {(field) => {
+            const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+            const hasError = Boolean(errorMessage);
+
+            return (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  Tên cuộc họp <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="Ví dụ: Họp Sprint Review tuần 20"
+                  className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                    hasError
+                      ? 'border-rose-400 focus:border-rose-600 focus:bg-rose-50/10'
+                      : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+                  }`}
+                />
+                {hasError && (
+                  <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </p>
+                )}
+              </div>
+            );
+          }}
+        </form.Field>
+
+        <div className="grid grid-cols-2 gap-3">
+          <form.Field
+            name="date"
+            validators={{
+              onChange: ({ value }) => (!value ? 'Vui lòng chọn ngày họp' : undefined),
+            }}
+          >
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
+
+              return (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Ngày họp <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="date"
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 cursor-pointer ${
+                      hasError
+                        ? 'border-rose-400 focus:border-rose-600'
+                        : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+                    }`}
+                  />
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
+
+          <form.Field
+            name="time"
+            validators={{
+              onChange: ({ value }) => (!value?.trim() ? 'Vui lòng nhập khung giờ' : undefined),
+            }}
+          >
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
+
+              return (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Khung giờ <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="09:00 - 10:00"
+                    className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 ${
+                      hasError
+                        ? 'border-rose-400 focus:border-rose-600'
+                        : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+                    }`}
+                  />
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Ngày họp</label>
-            <input
-              type="date"
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-            />
-          </div>
+          <form.Field name="location">
+            {(field) => (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Địa điểm / Link họp</label>
+                <input
+                  type="text"
+                  name={field.name}
+                  value={field.state.value || ''}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(e.target.value)}
+                  placeholder="Phòng họp A3 hoặc Link Teams"
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+                />
+              </div>
+            )}
+          </form.Field>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Khung giờ</label>
-            <input
-              type="text"
-              value={time}
-              onChange={(e) => setTime(e.target.value)}
-              placeholder="09:00 - 10:00"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-            />
-          </div>
+          <form.Field
+            name="project"
+            validators={{
+              onChange: ({ value }) => (!value ? 'Vui lòng chọn dự án' : undefined),
+            }}
+          >
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
+
+              return (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Dự án liên quan <span className="text-rose-500">*</span>
+                  </label>
+                  <select
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 cursor-pointer ${
+                      hasError
+                        ? 'border-rose-400 focus:border-rose-600'
+                        : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+                    }`}
+                  >
+                    {projects.map((p) => (
+                      <option key={p.id} value={p.name}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
         </div>
 
         <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Địa điểm / Link họp</label>
-            <input
-              type="text"
-              value={location}
-              onChange={(e) => setLocation(e.target.value)}
-              placeholder="Phòng họp A3 hoặc Link Teams"
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-            />
-          </div>
+          <form.Field
+            name="organizer"
+            validators={{
+              onChange: ({ value }) => (!value?.trim() ? 'Người chủ trì không được để trống' : undefined),
+            }}
+          >
+            {(field) => {
+              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const hasError = Boolean(errorMessage);
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Dự án liên quan</label>
-            <select
-              value={project}
-              onChange={(e) => setProject(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-            >
-              {projects.map((p) => (
-                <option key={p.id} value={p.name}>
-                  {p.name}
-                </option>
-              ))}
-            </select>
-          </div>
+              return (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                    Người chủ trì <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder="VD: Anh Khoa"
+                    className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 ${
+                      hasError
+                        ? 'border-rose-400 focus:border-rose-600'
+                        : 'border-slate-200 dark:border-zinc-700 focus:border-blue-600'
+                    }`}
+                  />
+                  {hasError && (
+                    <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                      <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                      <span>{errorMessage}</span>
+                    </p>
+                  )}
+                </div>
+              );
+            }}
+          </form.Field>
+
+          <form.Field name="participantsCount">
+            {(field) => (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Số người tham gia</label>
+                <input
+                  type="number"
+                  name={field.name}
+                  value={field.state.value}
+                  onBlur={field.handleBlur}
+                  onChange={(e) => field.handleChange(Number(e.target.value))}
+                  min={1}
+                  max={100}
+                  className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+                />
+              </div>
+            )}
+          </form.Field>
         </div>
 
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Người chủ trì</label>
-            <input
-              type="text"
-              value={organizer}
-              onChange={(e) => setOrganizer(e.target.value)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-semibold text-slate-700 mb-1">Số người tham dự</label>
-            <input
-              type="number"
-              min={1}
-              value={participantsCount}
-              onChange={(e) => setParticipantsCount(parseInt(e.target.value) || 1)}
-              className="w-full px-3 py-2 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50"
-            />
-          </div>
-        </div>
-
-        <div className="flex justify-end gap-2 pt-4 border-t border-slate-100">
+        <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
           <button
             type="button"
             onClick={onClose}
-            className="px-4 py-2 border border-slate-200 text-slate-600 rounded-xl text-xs font-medium hover:bg-slate-50 cursor-pointer"
+            className="px-3.5 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
           >
             Hủy
           </button>
           <button
             type="submit"
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-medium shadow-xs cursor-pointer"
+            className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
           >
             Tạo cuộc họp
           </button>
@@ -148,5 +330,5 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose }) =
     </Modal>
   );
 };
-export default MeetingModal;
 
+export default MeetingModal;

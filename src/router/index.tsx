@@ -8,6 +8,7 @@ import {
 } from '@tanstack/react-router';
 import { AppProvider } from '@/context/AppContext';
 import { AppLayout } from '@/components/layout';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { ChatPage } from '@/pages/chat/ChatPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { DataRepoPage } from '@/pages/data-repo/DataRepoPage';
@@ -44,7 +45,7 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: () => <Navigate to="/chat" />,
+  component: () => <Navigate to="/admin/users" />,
 });
 
 const chatRoute = createRoute({
@@ -53,91 +54,148 @@ const chatRoute = createRoute({
   component: ChatPage,
 });
 
+// Các phân hệ đã hoàn thiện giao diện theo nexora-workbench-v3
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard',
-  component: DashboardPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <DashboardPage />
+    </PermissionGuard>
+  ),
 });
 
 const dataRepoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/data-repo',
-  component: DataRepoPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <DataRepoPage />
+    </PermissionGuard>
+  ),
 });
 
 const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/projects',
-  component: ProjectsPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <ProjectsPage />
+    </PermissionGuard>
+  ),
 });
 
 const tasksRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tasks',
-  component: TasksPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <TasksPage />
+    </PermissionGuard>
+  ),
 });
 
 const meetingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/meetings',
-  component: MeetingsPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <MeetingsPage />
+    </PermissionGuard>
+  ),
 });
 
 const calendarRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/calendar',
-  component: CalendarPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <CalendarPage />
+    </PermissionGuard>
+  ),
 });
 
 const reportsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/reports',
-  component: ReportsPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <ReportsPage />
+    </PermissionGuard>
+  ),
 });
 
 // ============================================================================
-// ADMIN ROUTES (Độc lập cho từng phân hệ, không dùng tab bar)
+// ADMIN ROUTES (Được bảo vệ bằng PermissionGuard theo từng phân hệ)
 // ============================================================================
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin',
-  component: AdminPage,
+  component: () => (
+    <PermissionGuard module="all" isImplemented={true}>
+      <AdminPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminUsersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/users',
-  component: UsersPage,
+  component: () => (
+    <PermissionGuard module="user" isImplemented={true}>
+      <UsersPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminDepartmentsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/departments',
-  component: DepartmentsPage,
+  component: () => (
+    <PermissionGuard module="department" isImplemented={true}>
+      <DepartmentsPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminRolesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/roles',
-  component: RolesPage,
+  component: () => (
+    <PermissionGuard module={['role', 'roles', 'authorization']} isImplemented={true}>
+      <RolesPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminPoliciesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/policies',
-  component: PoliciesPage,
+  component: () => (
+    <PermissionGuard isImplemented={false}>
+      <PoliciesPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminLogsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/logs',
-  component: LogsPage,
+  component: () => (
+    <PermissionGuard module={['activitylog', 'activity_log', 'log', 'logs', 'audit']} isImplemented={true}>
+      <LogsPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminConfigRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/config',
-  component: ConfigPage,
+  component: () => (
+    <PermissionGuard isImplemented={false}>
+      <ConfigPage />
+    </PermissionGuard>
+  ),
 });
 
 const loginRoute = createRoute({

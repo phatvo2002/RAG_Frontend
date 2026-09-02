@@ -1,5 +1,3 @@
-import { z } from 'zod';
-
 export type NavModule =
   | 'chat'
   | 'dashboard'
@@ -11,32 +9,57 @@ export type NavModule =
   | 'reports'
   | 'admin';
 
-export type UserRole = 'Quản trị viên' | 'Trưởng phòng' | 'Trưởng dự án' | 'Nhân viên';
-export type UserStatus = 'Đang hoạt động' | 'Tạm khóa' | 'Bị khóa';
+export type UserRole = 'SupperAdmin' | 'Admin' | 'Quản trị viên' | 'Trưởng phòng' | 'Trưởng dự án' | 'Nhân viên';
+export type UserStatus = 'Active' | 'Inactive' | 'Đang hoạt động' | 'Tạm khóa' | 'Bị khóa';
+
+export interface UserRoleInfo {
+  roleId: string;
+  roleName: string;
+  status?: string;
+  validFrom?: string | null;
+  expiresAt?: string | null;
+}
 
 export interface User {
   id: string;
+  userId?: string;
   name: string;
+  displayName?: string;
+  fullName?: string;
+  userName?: string;
   email: string;
-  role: UserRole | string;
-  status: UserStatus | string;
-  department: string;
-  avatar?: string;
+  phoneNumber?: string;
   phone?: string;
+  isActive?: boolean;
+  role: UserRole | string;
+  roleId?: string;
+  roles?: UserRoleInfo[];
+  status: UserStatus | string;
+  department?: string;
+  departmentId?: string;
+  preferredLanguage?: string;
+  timeZone?: string | null;
+  avatar?: string;
+  apiFunctions?: any[];
 }
 
 export interface Department {
-  id: string;
+  id: string; // Mapped from departmentId
+  departmentId?: string;
+  parentDepartmentId?: string | null;
+  code: string;
   name: string;
-  code?: string;
+  managerUserId?: string | null;
+  status: string; // 'Active' | 'Inactive' | 'Archived' | 'Locked'
   parentDepartment?: string;
-  phone?: string;
-  address?: string;
+  parentDepartmentName?: string;
   head?: string;
   manager?: string;
-  memberCount: number;
+  managerName?: string;
+  phone?: string;
+  address?: string;
+  memberCount?: number;
   description?: string;
-  status?: string;
 }
 
 export interface RolePermission {
@@ -249,10 +272,7 @@ export interface ChatMessage {
   isThinking?: boolean;
 }
 
-export const loginSchema = z.object({
-  email: z.string().min(1, 'Vui lòng nhập email hoặc tên đăng nhập'),
-  password: z.string().min(6, 'Mật khẩu phải có ít nhất 6 ký tự'),
-});
+export * from './yupSchemas';
+export * from '@/constants/validationMessages';
 
-export type LoginFormData = z.infer<typeof loginSchema>;
-export type LoginCredentials = LoginFormData & { username?: string };
+
