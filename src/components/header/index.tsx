@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
@@ -19,6 +19,22 @@ export const Header: React.FC = () => {
   const navigate = useNavigate();
   const { t } = useTranslation(['header', 'common']);
   const [globalSearch, setGlobalSearch] = useState('');
+  const [isProfileOpen, setIsProfileOpen] = useState(false);
+  const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+        setIsProfileOpen(false);
+      }
+    };
+    if (isProfileOpen) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [isProfileOpen]);
 
   const displayName = currentUser?.name || currentUser?.displayName || currentUser?.userName || 'Admin';
   const roleName = currentUser?.roles?.[0]?.roleName || currentUser?.role || 'SuperAdmin';
@@ -62,21 +78,22 @@ export const Header: React.FC = () => {
         </div>
       </div>
 
-      {/* 3. Right: Notifications (bell badge 3), Help, Profile Avatar */}
-      <div className="flex items-center gap-3">
+      {/* 3. Right: Status Icons & Profile Avatar matching 01-executive-dashboard.png */}
+      <div className="flex items-center gap-2 md:gap-3">
+        
         {/* Language Switcher */}
         <LanguageSwitcher />
 
-        {/* Theme Toggle */}
+        {/* Theme Toggle Button */}
         <button
           onClick={toggleTheme}
-          className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded-lg hover:bg-slate-100 dark:hover:bg-[#121929] transition-colors cursor-pointer"
-          title={isDark ? 'Giao diện sáng' : 'Giao diện tối'}
+          className="p-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-100 rounded-lg hover:bg-slate-100 dark:hover:bg-[#121929] transition-colors cursor-pointer"
+          title={isDark ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối'}
         >
           {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
         </button>
 
-        {/* Notifications with red count 3 */}
+        {/* Notification Bell with Badge 3 */}
         <div className="relative">
           <button
             onClick={() => showToast('Bạn có 3 thông báo mới chưa đọc', 'info')}
@@ -100,10 +117,10 @@ export const Header: React.FC = () => {
         </button>
 
         {/* Profile Avatar & Info Dropdown */}
-        <div className="dropdown dropdown-end">
-          <div
-            tabIndex={0}
-            role="button"
+        <div ref={profileDropdownRef} className="relative">
+          <button
+            type="button"
+            onClick={() => setIsProfileOpen((prev) => !prev)}
             className="flex items-center gap-2 cursor-pointer p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-[#121929] transition-colors"
           >
             <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
@@ -117,35 +134,38 @@ export const Header: React.FC = () => {
                 {roleName}
               </span>
             </div>
-          </div>
+          </button>
 
-          <ul
-            tabIndex={0}
-            className="dropdown-content z-30 menu p-1.5 shadow-lg bg-white dark:bg-[#0c1220] border border-slate-200 dark:border-[#1d293d] rounded-xl w-48 text-xs text-slate-700 dark:text-zinc-200 mt-1 space-y-0.5"
-          >
-            <li className="px-2.5 py-1.5 border-b border-slate-100 dark:border-zinc-800 font-medium">
-              <span className="text-slate-400 block text-[10px] uppercase font-bold">Tài khoản</span>
-              <span className="font-bold text-slate-900 dark:text-zinc-100">{displayName}</span>
-            </li>
-            <li>
+          {isProfileOpen && (
+            <div className="absolute right-0 top-full mt-1.5 z-50 p-1.5 shadow-xl bg-white dark:bg-[#0c1220] border border-slate-200 dark:border-[#1d293d] rounded-xl w-48 text-xs text-slate-700 dark:text-zinc-200 space-y-0.5 animate-in fade-in-50 zoom-in-95 duration-100">
+              <div className="px-2.5 py-1.5 border-b border-slate-100 dark:border-zinc-800 font-medium">
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">Tài khoản</span>
+                <span className="font-bold text-slate-900 dark:text-zinc-100">{displayName}</span>
+              </div>
               <button
-                onClick={() => navigate({ to: '/admin/users' as any })}
-                className="flex items-center gap-2 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer"
+                type="button"
+                onClick={() => {
+                  setIsProfileOpen(false);
+                  navigate({ to: '/admin/users' as any });
+                }}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors text-left"
               >
-                <UserIcon className="w-3.5 h-3.5" />
+                <UserIcon className="w-3.5 h-3.5 text-slate-500" />
                 <span>Quản lý tài khoản</span>
               </button>
-            </li>
-            <li>
               <button
-                onClick={() => logout()}
-                className="flex items-center gap-2 py-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer font-semibold"
+                type="button"
+                onClick={() => {
+                  setIsProfileOpen(false);
+                  logout();
+                }}
+                className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer font-semibold transition-colors text-left"
               >
                 <LogOut className="w-3.5 h-3.5" />
                 <span>Đăng xuất</span>
               </button>
-            </li>
-          </ul>
+            </div>
+          )}
         </div>
 
       </div>
