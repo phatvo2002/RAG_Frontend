@@ -19,6 +19,7 @@ export interface ActivityLogMetadata {
 export interface ActivityLogItem {
   id: string;
   actorUserId?: string | null;
+  actorUserName?: string;
   actorName?: string;
   actorEmail?: string;
   apiFunctionId?: string | null;
@@ -78,8 +79,9 @@ export function normalizeActivityLog(data: any): ActivityLogItem {
   return {
     id: String(id),
     actorUserId: raw.actorUserId || raw.userId || null,
-    actorName: raw.actorName || raw.userName || raw.actor || undefined,
-    actorEmail: raw.actorEmail || raw.email || undefined,
+    actorUserName: raw.actorUserName || raw.userName || raw.actorEmail || undefined,
+    actorName: raw.actorName || raw.userName || raw.actorUserName || raw.actor || undefined,
+    actorEmail: raw.actorEmail || raw.email || (raw.actorUserName && raw.actorUserName.includes('@') ? raw.actorUserName : undefined),
     apiFunctionId: raw.apiFunctionId || null,
     apiFunctionName: raw.apiFunctionName || undefined,
     module: raw.module || 'HTTP',

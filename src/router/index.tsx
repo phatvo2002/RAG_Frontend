@@ -54,12 +54,12 @@ const chatRoute = createRoute({
   component: ChatPage,
 });
 
-// Các phân hệ chưa có Backend API -> Tự động chuyển hướng / hiển thị 404
+// Các phân hệ đã hoàn thiện giao diện theo nexora-workbench-v3
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard',
   component: () => (
-    <PermissionGuard isImplemented={false}>
+    <PermissionGuard isImplemented={true}>
       <DashboardPage />
     </PermissionGuard>
   ),
@@ -69,7 +69,7 @@ const dataRepoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/data-repo',
   component: () => (
-    <PermissionGuard isImplemented={false}>
+    <PermissionGuard isImplemented={true}>
       <DataRepoPage />
     </PermissionGuard>
   ),
@@ -79,7 +79,7 @@ const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/projects',
   component: () => (
-    <PermissionGuard isImplemented={false}>
+    <PermissionGuard isImplemented={true}>
       <ProjectsPage />
     </PermissionGuard>
   ),
@@ -89,7 +89,7 @@ const tasksRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tasks',
   component: () => (
-    <PermissionGuard isImplemented={false}>
+    <PermissionGuard isImplemented={true}>
       <TasksPage />
     </PermissionGuard>
   ),
@@ -99,7 +99,7 @@ const meetingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/meetings',
   component: () => (
-    <PermissionGuard isImplemented={false}>
+    <PermissionGuard isImplemented={true}>
       <MeetingsPage />
     </PermissionGuard>
   ),
@@ -109,7 +109,7 @@ const calendarRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/calendar',
   component: () => (
-    <PermissionGuard isImplemented={false}>
+    <PermissionGuard isImplemented={true}>
       <CalendarPage />
     </PermissionGuard>
   ),
@@ -119,7 +119,7 @@ const reportsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/reports',
   component: () => (
-    <PermissionGuard isImplemented={false}>
+    <PermissionGuard isImplemented={true}>
       <ReportsPage />
     </PermissionGuard>
   ),
