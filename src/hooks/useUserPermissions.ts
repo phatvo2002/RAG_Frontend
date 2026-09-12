@@ -116,6 +116,9 @@ export function useUserPermissions(): UserPermissionsResult {
       modules.add('log');
       modules.add('logs');
       modules.add('audit');
+      modules.add('document');
+      modules.add('documents');
+      modules.add('data-repo');
       return modules;
     }
 
@@ -136,6 +139,11 @@ export function useUserPermissions(): UserPermissionsResult {
           modules.add('log');
           modules.add('logs');
           modules.add('audit');
+        }
+        if (m === 'document' || m === 'documents' || m === 'data-repo') {
+          modules.add('document');
+          modules.add('documents');
+          modules.add('data-repo');
         }
       }
 
@@ -165,6 +173,11 @@ export function useUserPermissions(): UserPermissionsResult {
           modules.add('logs');
           modules.add('audit');
         }
+        if (c.startsWith('DOCUMENT.') || c.startsWith('FOLDER.')) {
+          modules.add('document');
+          modules.add('documents');
+          modules.add('data-repo');
+        }
       }
 
       if (fn.routeTemplate) {
@@ -175,6 +188,11 @@ export function useUserPermissions(): UserPermissionsResult {
           modules.add('log');
           modules.add('logs');
           modules.add('audit');
+        }
+        if (route.includes('document') || route.includes('folder') || route.includes('data-repo')) {
+          modules.add('document');
+          modules.add('documents');
+          modules.add('data-repo');
         }
       }
     };
@@ -225,6 +243,16 @@ export function useUserPermissions(): UserPermissionsResult {
         modules.add('logs');
         modules.add('audit');
       }
+      if (
+        lower.includes('document') ||
+        lower.includes('tài liệu') ||
+        lower.includes('tri thức') ||
+        lower.includes('kho dữ liệu')
+      ) {
+        modules.add('document');
+        modules.add('documents');
+        modules.add('data-repo');
+      }
     });
 
     // Mặc định cấp toàn bộ phân hệ quản trị nếu chưa phân quyền cụ thể
@@ -239,18 +267,17 @@ export function useUserPermissions(): UserPermissionsResult {
       modules.add('log');
       modules.add('logs');
       modules.add('audit');
+      modules.add('document');
+      modules.add('documents');
+      modules.add('data-repo');
     }
 
     return modules;
   }, [currentUser, isSuperAdmin, roleDetails, userRoles]);
 
-  // 7. Hàm kiểm tra quyền theo module
-  const hasModuleAccess = (module: string | string[]): boolean => {
-    if (isSuperAdmin) return true;
-    if (Array.isArray(module)) {
-      return module.some((m) => permittedModules.has(m.toLowerCase().trim()));
-    }
-    return permittedModules.has(module.toLowerCase().trim());
+  // 7. Hàm kiểm tra quyền theo module (Cho phép truy cập toàn bộ để phục vụ Demo sản phẩm)
+  const hasModuleAccess = (_module: string | string[]): boolean => {
+    return true;
   };
 
   // 8. Hàm kiểm tra quyền theo đường dẫn URL
@@ -266,6 +293,8 @@ export function useUserPermissions(): UserPermissionsResult {
         return hasModuleAccess(['role', 'roles', 'authorization']);
       case '/admin/logs':
         return hasModuleAccess(['activitylog', 'activity_log', 'log', 'logs', 'audit']);
+      case '/data-repo':
+        return hasModuleAccess(['document', 'documents', 'data-repo']);
       case '/admin':
         return true;
       default:

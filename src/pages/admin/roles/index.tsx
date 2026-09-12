@@ -10,7 +10,7 @@ import {
 } from '@/api/roles.api';
 import { RoleDetailModal } from './RoleDetailModal';
 import { ConfirmModal } from '@/components/disclosure';
-import { TableRowActions } from '@/components/customTable';
+import { CustomTable, TableRowActions } from '@/components/customTable';
 import {
   Shield,
   Plus,
@@ -49,6 +49,7 @@ export const RolesPage: React.FC = () => {
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [selectedRoleForDetail, setSelectedRoleForDetail] = useState<RoleItem | null>(null);
   const [roleToToggle, setRoleToToggle] = useState<RoleItem | null>(null);
+  const [activeRoleDetail, setActiveRoleDetail] = useState<EnrichedRole | null>(null);
 
   // Search, Filter & Selection State
   const [search, setSearch] = useState('');
@@ -168,6 +169,17 @@ export const RolesPage: React.FC = () => {
     });
   }, [roles]);
 
+  const metrics = useMemo(() => {
+    const systemRoles = enrichedRoles.filter((role) => role.scope === 'Toàn hệ thống').length;
+    const assignedUsers = enrichedRoles.reduce((sum, role) => sum + role.userCount, 0);
+    return {
+      total: enrichedRoles.length,
+      assignedUsers,
+      systemRoles,
+      customRoles: Math.max(enrichedRoles.length - systemRoles, 0),
+    };
+  }, [enrichedRoles]);
+
   // Filtered Roles
   const filteredRoles = useMemo(() => {
     return enrichedRoles.filter((r) => {
@@ -221,20 +233,44 @@ export const RolesPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
+    <div className="nexora-page flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
       <Header />
 
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 w-full space-y-4">
+      <div className="flex-1 flex overflow-hidden w-full">
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 w-full space-y-4 min-w-0">
         
         {/* Top Page Header Bar matching 10.Màn hình nhóm quyền.png */}
         <div className="flex items-center justify-between gap-4 flex-wrap">
           <div className="space-y-1">
             <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
-              Vai trò & Quyền
+              Nhóm quyền
             </h1>
             <p className="text-xs text-slate-500 dark:text-zinc-400">
-              Kiểm soát quyền truy cập và phạm vi thao tác trong hệ thống
+              Quản lý vai trò, phạm vi truy cập và quyền thao tác trong hệ thống.
             </p>
+          </div>
+
+          <div className="flex items-center gap-4 text-xs font-semibold text-slate-800 dark:text-zinc-200 pt-0.5">
+            <span><strong>{metrics.total}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">nhóm quyền</span></span>
+            <span className="text-slate-300 dark:text-zinc-700">|</span>
+            <span><strong>{metrics.assignedUsers}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">người dùng được gán</span></span>
+            <span className="text-slate-300 dark:text-zinc-700">|</span>
+            <span><strong>{metrics.systemRoles}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">quyền hệ thống</span></span>
+            <span className="text-slate-300 dark:text-zinc-700">|</span>
+            <span><strong>{metrics.customRoles}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">quyền tùy chỉnh</span></span>
+          </div>
+
+          <div className="flex items-center gap-6 border-b border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+            <button type="button" className="relative -mb-px min-h-10 px-1 text-blue-600 dark:text-blue-400 cursor-default">
+              Nhóm quyền
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />
+            </button>
+            <button type="button" onClick={() => showToast('Mở ma trận quyền', 'info')} className="min-h-10 px-1 hover:text-slate-800 dark:hover:text-zinc-200 transition-colors cursor-pointer">
+              Ma trận quyền
+            </button>
+            <button type="button" onClick={() => showToast('Mở lịch sử thay đổi quyền', 'info')} className="min-h-10 px-1 hover:text-slate-800 dark:hover:text-zinc-200 transition-colors cursor-pointer">
+              Lịch sử thay đổi
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -352,7 +388,7 @@ export const RolesPage: React.FC = () => {
         )}
 
         {/* Roles Table matching 10.Màn hình nhóm quyền.png */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-2xs">
+        <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse text-xs">
               <thead>
@@ -400,7 +436,7 @@ export const RolesPage: React.FC = () => {
                       <tr
                         key={role.id}
                         className={`hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors ${
-                          isSelected ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
+                          isSelected || activeRoleDetail?.id === role.id ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
                         }`}
                       >
                         {/* Checkbox Column */}
@@ -466,6 +502,11 @@ export const RolesPage: React.FC = () => {
                           <TableRowActions
                             align="right"
                             items={[
+                              {
+                                label: 'Xem chi tiết',
+                                icon: <Shield className="w-3.5 h-3.5" />,
+                                onClick: () => setActiveRoleDetail(role),
+                              },
                               {
                                 label: 'Phân quyền chi tiết',
                                 icon: <Shield className="w-3.5 h-3.5" />,
@@ -541,8 +582,78 @@ export const RolesPage: React.FC = () => {
             </div>
           </div>
 
-        </div>
+        </CustomTable>
 
+      </div>
+
+      {activeRoleDetail && (
+        <aside className="hidden lg:flex w-80 xl:w-96 bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 flex-col h-full shrink-0 shadow-sm overflow-y-auto">
+          <div className="p-5 space-y-5">
+            <div className="flex items-center justify-between gap-3">
+              <h2 className="text-lg font-bold text-slate-900 dark:text-zinc-100">Chi tiết nhóm quyền</h2>
+              <button
+                type="button"
+                onClick={() => setActiveRoleDetail(null)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-zinc-100 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                aria-label="Đóng chi tiết nhóm quyền"
+              >
+                <span className="text-xl leading-none">×</span>
+              </button>
+            </div>
+
+            <div className="flex items-center gap-3">
+              <div className={`w-12 h-12 rounded-full ${activeRoleDetail.iconBg} text-white flex items-center justify-center shrink-0 shadow-sm`}>
+                <activeRoleDetail.icon className="w-6 h-6" />
+              </div>
+              <div className="min-w-0">
+                <h3 className="font-bold text-base text-slate-900 dark:text-zinc-100 truncate">{activeRoleDetail.name}</h3>
+                <p className="font-mono text-xs text-slate-500 dark:text-zinc-400 truncate">{activeRoleDetail.code}</p>
+                <p className="mt-1 flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400">
+                  <span className={`w-1.5 h-1.5 rounded-full ${activeRoleDetail.isActive ? 'bg-emerald-500' : 'bg-slate-400'}`} />
+                  {activeRoleDetail.statusText}
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-6 border-b border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+              <span className="relative -mb-px min-h-10 px-1 flex items-center text-blue-600 dark:text-blue-400">
+                Tổng quan
+                <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />
+              </span>
+              <span className="min-h-10 px-1 flex items-center">Người dùng</span>
+              <span className="min-h-10 px-1 flex items-center">Lịch sử</span>
+            </div>
+
+            <dl className="space-y-3 text-xs">
+              <div className="flex items-center justify-between gap-4"><dt className="text-slate-500 dark:text-zinc-400">Phạm vi</dt><dd className="font-semibold text-slate-900 dark:text-zinc-100 text-right">{activeRoleDetail.scope}</dd></div>
+              <div className="flex items-center justify-between gap-4"><dt className="text-slate-500 dark:text-zinc-400">Người dùng</dt><dd className="font-semibold text-slate-900 dark:text-zinc-100">{activeRoleDetail.userCount}</dd></div>
+              <div className="flex items-center justify-between gap-4"><dt className="text-slate-500 dark:text-zinc-400">Cập nhật</dt><dd className="font-semibold text-slate-900 dark:text-zinc-100 text-right">{activeRoleDetail.updatedAt}</dd></div>
+            </dl>
+
+            <div className="rounded-lg border border-blue-100 dark:border-blue-900/50 bg-blue-50/60 dark:bg-blue-950/20 p-3 text-xs text-blue-800 dark:text-blue-300">
+              Quyền thao tác của nhóm được quản lý trong màn hình cấu hình chi tiết.
+            </div>
+
+            <div className="flex items-center gap-2 pt-1">
+              <button
+                type="button"
+                onClick={() => handleOpenConfigureRole(activeRoleDetail.raw)}
+                className="flex-1 px-3 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+                Chỉnh sửa quyền
+              </button>
+              <button
+                type="button"
+                onClick={() => handleToggleStatus(activeRoleDetail.raw)}
+                className="px-3 py-2 border border-slate-200 dark:border-zinc-700 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-800 rounded-lg text-xs font-semibold transition-colors cursor-pointer"
+              >
+                {activeRoleDetail.isActive ? 'Tạm khóa' : 'Kích hoạt'}
+              </button>
+            </div>
+          </div>
+        </aside>
+      )}
       </div>
 
       {/* Modal Cấu hình chi tiết vai trò & Phân quyền */}

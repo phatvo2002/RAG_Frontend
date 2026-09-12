@@ -5,6 +5,7 @@ import { useUsersQuery } from '@/api/users.api';
 import { useDepartmentsQuery } from '@/api/departments.api';
 import { useRolesQuery } from '@/api/roles.api';
 import { useNavigate } from '@tanstack/react-router';
+import { CustomTable } from '@/components/customTable';
 import {
   Users,
   Building2,
@@ -94,7 +95,7 @@ export const OverviewPage: React.FC = () => {
   ];
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
+    <div className="nexora-page flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
       <Header />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 w-full">
@@ -240,6 +241,7 @@ export const OverviewPage: React.FC = () => {
               </div>
 
               {/* Tasks Table */}
+              <CustomTable<any> columns={[]} data={[]} className="border-0 shadow-none rounded-none">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
@@ -307,6 +309,7 @@ export const OverviewPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              </CustomTable>
             </div>
 
             {/* Section: Tổng quan tiến độ dự án (Gantt timeline) */}

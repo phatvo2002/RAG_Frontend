@@ -25,7 +25,7 @@ export const CalendarPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-black transition-colors">
+    <div className="nexora-page flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-black transition-colors">
       <Header />
 
       <div className="flex-1 flex overflow-hidden">

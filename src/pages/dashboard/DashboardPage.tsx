@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
 import { useNavigate } from '@tanstack/react-router';
+import { CustomTable } from '@/components/customTable';
 import {
   FolderKanban,
   CheckSquare,
@@ -167,7 +168,7 @@ export const DashboardPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
+    <div className="nexora-page flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
       <Header />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 w-full">
@@ -314,6 +315,7 @@ export const DashboardPage: React.FC = () => {
               </div>
 
               {/* Tasks Table */}
+              <CustomTable<any> columns={[]} data={[]} className="border-0 shadow-none rounded-none">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs border-collapse">
                   <thead className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
@@ -390,6 +392,7 @@ export const DashboardPage: React.FC = () => {
                   </tbody>
                 </table>
               </div>
+              </CustomTable>
 
               {/* Table Pagination */}
               <div className="px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">

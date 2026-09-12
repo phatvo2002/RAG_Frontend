@@ -4,6 +4,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { useTranslation } from 'react-i18next';
 import {
   ChevronDown,
+  Menu,
   Search,
   Bell,
   HelpCircle,
@@ -15,7 +16,7 @@ import {
 import { LanguageSwitcher } from '@/components/languageSwitcher';
 
 export const Header: React.FC = () => {
-  const { currentUser, logout, isDark, toggleTheme, showToast } = useApp();
+  const { currentUser, logout, isDark, toggleTheme, showToast, isMobileSidebarOpen, toggleMobileSidebar } = useApp();
   const navigate = useNavigate();
   const { t } = useTranslation(['header', 'common']);
   const [globalSearch, setGlobalSearch] = useState('');
@@ -41,12 +42,22 @@ export const Header: React.FC = () => {
   const initials = displayName.slice(0, 2).toUpperCase();
 
   return (
-    <header className="h-14 bg-white dark:bg-[#090e1a] border-b border-slate-200 dark:border-[#172033] px-4 md:px-6 flex items-center justify-between shrink-0 select-none transition-colors">
-      
+    <header className="h-[60px] bg-white dark:bg-[#090e1a] border-b border-[var(--nexora-border)] dark:border-[#172033] px-3 sm:px-4 lg:px-6 flex items-center justify-between shrink-0 select-none transition-colors">
+
       {/* 1. Left: Workspace Switcher Dropdown matching 01-executive-dashboard.png */}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-2.5 min-w-0">
+        <button
+          type="button"
+          onClick={toggleMobileSidebar}
+          className="lg:hidden p-2 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-[#121929] transition-colors cursor-pointer"
+          title={isMobileSidebarOpen ? 'Đóng menu' : 'Mở menu'}
+          aria-label={isMobileSidebarOpen ? 'Đóng menu' : 'Mở menu'}
+          aria-expanded={isMobileSidebarOpen}
+        >
+          <Menu className="w-[18px] h-[18px]" />
+        </button>
         <div className="cursor-pointer group">
-          <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-zinc-100 text-xs hover:text-blue-600 dark:hover:text-blue-400 transition-colors">
+          <div className="flex items-center gap-1.5 font-bold text-slate-900 dark:text-zinc-100 text-xs hover:text-blue-600 dark:hover:text-blue-400 transition-colors whitespace-nowrap">
             <span>NEXORA Workbench</span>
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-zinc-200 transition-transform" />
           </div>
@@ -57,7 +68,7 @@ export const Header: React.FC = () => {
       </div>
 
       {/* 2. Center: Global Search Bar with ⌘ K matching 01-executive-dashboard.png */}
-      <div className="flex-1 max-w-md mx-6 hidden sm:block">
+      <div className="flex-1 max-w-lg mx-4 lg:mx-8 hidden sm:block">
         <div className="relative flex items-center">
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
           <input
@@ -70,7 +81,7 @@ export const Header: React.FC = () => {
                 showToast(`Tìm kiếm: "${globalSearch}"`, 'info');
               }
             }}
-            className="w-full pl-8 pr-12 py-1.5 bg-slate-50/80 dark:bg-[#121929] border border-slate-200 dark:border-[#1d293d] rounded-lg text-xs text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 transition-colors shadow-2xs"
+            className="w-full pl-8 pr-12 py-2 bg-[var(--nexora-surface-muted)] dark:bg-[#121929] border border-[var(--nexora-border)] dark:border-[#1d293d] rounded-lg text-xs text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 transition-colors shadow-sm"
           />
           <kbd className="absolute right-2.5 px-1.5 py-0.5 text-[10px] font-mono font-semibold text-slate-400 dark:text-zinc-500 bg-white dark:bg-[#182238] border border-slate-200 dark:border-zinc-700 rounded shadow-2xs">
             ⌘ K
@@ -79,8 +90,8 @@ export const Header: React.FC = () => {
       </div>
 
       {/* 3. Right: Status Icons & Profile Avatar matching 01-executive-dashboard.png */}
-      <div className="flex items-center gap-2 md:gap-3">
-        
+      <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 shrink-0">
+
         {/* Language Switcher */}
         <LanguageSwitcher />
 
@@ -96,6 +107,7 @@ export const Header: React.FC = () => {
         {/* Notification Bell with Badge 3 */}
         <div className="relative">
           <button
+            type="button"
             onClick={() => showToast('Bạn có 3 thông báo mới chưa đọc', 'info')}
             className="p-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-100 rounded-lg hover:bg-slate-100 dark:hover:bg-[#121929] transition-colors cursor-pointer relative"
             title="Thông báo"

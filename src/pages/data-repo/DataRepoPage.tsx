@@ -2,6 +2,7 @@ import React, { useState, useMemo } from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
 import { UploadModal } from './UploadModal';
+import { CustomTable } from '@/components/customTable';
 import {
   Upload,
   FolderPlus,
@@ -40,6 +41,13 @@ interface KnowledgeDocItem {
   updatedAt: string;
   indexStatus: 'indexed' | 'processing' | 'needs_check';
   accessScope: 'Nội bộ' | 'Hạn chế' | 'Phòng ban';
+  isStarred?: boolean;
+}
+
+interface KnowledgeFolderItem {
+  name: string;
+  count: number;
+  group: 'mine' | 'system';
   isStarred?: boolean;
 }
 
@@ -158,9 +166,25 @@ const mockKnowledgeDocs: KnowledgeDocItem[] = [
   },
 ];
 
+const knowledgeFolders: KnowledgeFolderItem[] = [
+  { name: 'Dự án ERP Nexora', count: 128, group: 'mine', isStarred: true },
+  { name: 'Phòng PMO', count: 86, group: 'mine' },
+  { name: 'Phòng Kế toán', count: 64, group: 'mine', isStarred: true },
+  { name: 'Phòng Nhân sự', count: 52, group: 'mine' },
+  { name: 'Phòng Kinh doanh', count: 71, group: 'mine' },
+  { name: 'Phòng IT', count: 43, group: 'mine' },
+  { name: 'Chính sách & Quy định', count: 112, group: 'system' },
+  { name: 'Quy trình & Hướng dẫn', count: 218, group: 'system' },
+  { name: 'Biểu mẫu & Mẫu', count: 156, group: 'system' },
+  { name: 'Tài liệu đào tạo', count: 98, group: 'system' },
+  { name: 'Báo cáo & Phân tích', count: 204, group: 'system' },
+  { name: 'Khác', count: 16, group: 'system' },
+];
+
 export const DataRepoPage: React.FC = () => {
   const { showToast } = useApp();
   const [selectedFolder, setSelectedFolder] = useState('all');
+  const [repositoryView, setRepositoryView] = useState<'folders' | 'documents'>('folders');
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [deptFilter, setDeptFilter] = useState('all');
@@ -182,10 +206,47 @@ export const DataRepoPage: React.FC = () => {
       const matchType = typeFilter === 'all' || d.type === typeFilter;
       const matchDept = deptFilter === 'all' || d.department === deptFilter;
       const matchIndex = indexFilter === 'all' || d.indexStatus === indexFilter;
+      const matchFolder =
+        selectedFolder === 'all' ||
+        (selectedFolder === 'starred' ? d.isStarred :
+          selectedFolder === 'recent' ? true : d.folder === selectedFolder);
 
-      return matchSearch && matchType && matchDept && matchIndex;
+      return matchSearch && matchType && matchDept && matchIndex && matchFolder;
+    }).sort((a, b) => {
+      if (selectedFolder === 'recent') return b.updatedAt.localeCompare(a.updatedAt);
+      return 0;
     });
-  }, [search, typeFilter, deptFilter, indexFilter]);
+  }, [search, typeFilter, deptFilter, indexFilter, selectedFolder]);
+
+  const folderRows = useMemo(() => knowledgeFolders.map((folder) => {
+    const folderDocs = mockKnowledgeDocs.filter((doc) => doc.folder === folder.name);
+    const latestDoc = [...folderDocs].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
+    const hasProcessing = folderDocs.some((doc) => doc.indexStatus === 'processing');
+    const hasCheck = folderDocs.some((doc) => doc.indexStatus === 'needs_check');
+
+    return {
+      ...folder,
+      documentCount: folder.count,
+      size: '—',
+      manager: latestDoc?.department || '—',
+      updatedAt: latestDoc?.updatedAt || '—',
+      status: hasCheck ? 'needs_check' : hasProcessing ? 'processing' : 'indexed',
+    };
+  }), []);
+
+  const filteredFolderRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return folderRows.filter((folder) => !q || folder.name.toLowerCase().includes(q));
+  }, [folderRows, search]);
+
+  const isFolderView = repositoryView === 'folders';
+  const activeFolder = knowledgeFolders.find((folder) => folder.name === selectedFolder);
+
+  const openFolder = (folderName: string) => {
+    setSelectedFolder(folderName);
+    setRepositoryView('documents');
+    setSelectedDocIds([]);
+  };
 
   const getDocTypeBadge = (type: string) => {
     switch (type) {
@@ -246,19 +307,41 @@ export const DataRepoPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
+    <div className="nexora-page flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
       
       {/* Global Header */}
       <Header />
 
-      {/* Page Title & Actions Bar matching 03-knowledge-repository.png */}
+      {/* Page Title & Actions Bar matching 02/03-knowledge-repository.png */}
       <div className="px-4 py-3 bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-4 flex-wrap shrink-0">
         <div className="space-y-0.5">
+          <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-zinc-500">
+            <span>Trang chủ</span>
+            <ChevronRight className="w-3 h-3" />
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedFolder('all');
+                setRepositoryView('folders');
+              }}
+              className={`cursor-pointer hover:text-blue-600 transition-colors ${isFolderView ? 'text-slate-700 dark:text-zinc-300 font-semibold' : ''}`}
+            >
+              Kho tri thức RAG
+            </button>
+            {!isFolderView && activeFolder && (
+              <>
+                <ChevronRight className="w-3 h-3" />
+                <span className="text-slate-700 dark:text-zinc-300 font-semibold truncate max-w-[220px]">{activeFolder.name}</span>
+              </>
+            )}
+          </div>
           <h1 className="text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
-            Kho tri thức RAG
+            {isFolderView ? 'Kho tri thức RAG' : activeFolder?.name || 'Tất cả tài liệu'}
           </h1>
           <p className="text-xs text-slate-500 dark:text-zinc-400">
-            Quản lý tài liệu, quyền truy cập và trạng thái lập chỉ mục
+            {isFolderView
+              ? 'Quản lý thư mục, tài liệu, quyền truy cập và trạng thái lập chỉ mục'
+              : `${activeFolder?.count || filteredDocs.length} tài liệu • Quản lý bởi ${activeFolder ? 'phòng ban' : 'Nexora'}`}
           </p>
         </div>
 
@@ -287,7 +370,7 @@ export const DataRepoPage: React.FC = () => {
         {/* ==================================================================== */}
         {/* 1. LEFT COLUMN: Cây Thư Mục (Folder Tree) 240px */}
         {/* ==================================================================== */}
-        <aside className="w-60 border-r border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full shrink-0 overflow-y-auto p-4 space-y-4 text-xs select-none">
+        <aside className="hidden" aria-hidden="true">
           
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -311,7 +394,10 @@ export const DataRepoPage: React.FC = () => {
           {/* Root Links */}
           <div className="space-y-1">
             <div
-              onClick={() => setSelectedFolder('all')}
+              onClick={() => {
+                setSelectedFolder('all');
+                setRepositoryView('folders');
+              }}
               className={`p-2 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${
                 selectedFolder === 'all'
                   ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
@@ -326,8 +412,15 @@ export const DataRepoPage: React.FC = () => {
             </div>
 
             <div
-              onClick={() => setSelectedFolder('starred')}
-              className="p-2 rounded-lg flex items-center justify-between text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 cursor-pointer"
+              onClick={() => {
+                setSelectedFolder('starred');
+                setRepositoryView('documents');
+              }}
+              className={`p-2 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${
+                selectedFolder === 'starred' && !isFolderView
+                  ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
+                  : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
+              }`}
             >
               <div className="flex items-center gap-2">
                 <Star className="w-4 h-4 text-amber-500 fill-amber-500/20" />
@@ -337,8 +430,15 @@ export const DataRepoPage: React.FC = () => {
             </div>
 
             <div
-              onClick={() => setSelectedFolder('recent')}
-              className="p-2 rounded-lg flex items-center justify-between text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900 cursor-pointer"
+              onClick={() => {
+                setSelectedFolder('recent');
+                setRepositoryView('documents');
+              }}
+              className={`p-2 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${
+                selectedFolder === 'recent' && !isFolderView
+                  ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
+                  : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
+              }`}
             >
               <div className="flex items-center gap-2">
                 <Clock className="w-4 h-4 text-slate-400" />
@@ -365,7 +465,7 @@ export const DataRepoPage: React.FC = () => {
               ].map((f) => (
                 <div
                   key={f.name}
-                  onClick={() => setSelectedFolder(f.name)}
+                  onClick={() => openFolder(f.name)}
                   className={`px-2 py-1.5 rounded-lg flex items-center justify-between text-xs cursor-pointer ${
                     selectedFolder === f.name
                       ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
@@ -399,7 +499,7 @@ export const DataRepoPage: React.FC = () => {
               ].map((f) => (
                 <div
                   key={f.name}
-                  onClick={() => setSelectedFolder(f.name)}
+                  onClick={() => openFolder(f.name)}
                   className={`px-2 py-1.5 rounded-lg flex items-center justify-between text-xs cursor-pointer ${
                     selectedFolder === f.name
                       ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
@@ -422,22 +522,75 @@ export const DataRepoPage: React.FC = () => {
         {/* 2. MIDDLE COLUMN: Bảng Tài Liệu RAG */}
         {/* ==================================================================== */}
         <main className="flex-1 overflow-y-auto p-4 md:p-5 space-y-3.5 min-w-0">
+
+          {/* Repository views matching 02/03-knowledge-repository.png */}
+          <div className="flex items-center gap-6 border-b border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedFolder('all');
+                setRepositoryView('documents');
+              }}
+              className={`relative -mb-px min-h-10 px-1 transition-colors cursor-pointer ${
+                !isFolderView && selectedFolder === 'all' ? 'text-blue-600 dark:text-blue-400' : 'hover:text-slate-800 dark:hover:text-zinc-200'
+              }`}
+            >
+              Tất cả tài liệu
+              {!isFolderView && selectedFolder === 'all' && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedFolder('all');
+                setRepositoryView('folders');
+              }}
+              className={`relative -mb-px min-h-10 px-1 transition-colors cursor-pointer ${
+                isFolderView ? 'text-blue-600 dark:text-blue-400' : 'hover:text-slate-800 dark:hover:text-zinc-200'
+              }`}
+            >
+              Theo thư mục
+              {isFolderView && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />}
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedFolder('all');
+                setRepositoryView('documents');
+                setIndexFilter('processing');
+              }}
+              className="relative -mb-px min-h-10 px-1 hover:text-slate-800 dark:hover:text-zinc-200 transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+              Cần xử lý
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedFolder('starred');
+                setRepositoryView('documents');
+              }}
+              className="relative -mb-px min-h-10 px-1 hover:text-slate-800 dark:hover:text-zinc-200 transition-colors cursor-pointer flex items-center gap-1.5"
+            >
+              <Star className="w-3.5 h-3.5 text-amber-500" />
+              Đã lưu
+            </button>
+          </div>
           
-          {/* Toolbar Filters matching 03-knowledge-repository.png */}
+          {/* Toolbar Filters matching 02/03-knowledge-repository.png */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2 flex-1 min-w-[240px]">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Tìm tài liệu, nội dung hoặc người cập nhật..."
+                  placeholder={isFolderView ? 'Tìm kiếm thư mục...' : 'Tìm tài liệu, nội dung hoặc người cập nhật...'}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs"
                 />
               </div>
 
-              <select
+              {!isFolderView && <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
@@ -446,7 +599,7 @@ export const DataRepoPage: React.FC = () => {
                 <option value="pdf">PDF</option>
                 <option value="docx">DOCX</option>
                 <option value="xlsx">XLSX</option>
-              </select>
+              </select>}
 
               <select
                 value={deptFilter}
@@ -462,7 +615,7 @@ export const DataRepoPage: React.FC = () => {
                 <option value="Nhân sự">Nhân sự</option>
               </select>
 
-              <select
+              {!isFolderView && <select
                 value={indexFilter}
                 onChange={(e) => setIndexFilter(e.target.value)}
                 className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
@@ -471,7 +624,23 @@ export const DataRepoPage: React.FC = () => {
                 <option value="indexed">Đã lập chỉ mục</option>
                 <option value="processing">Đang xử lý</option>
                 <option value="needs_check">Cần kiểm tra</option>
-              </select>
+              </select>}
+
+              {isFolderView && (
+                <>
+                  <select className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs">
+                    <option>Quyền truy cập</option>
+                    <option>Phòng ban</option>
+                    <option>Nội bộ</option>
+                    <option>Hạn chế</option>
+                  </select>
+                  <select className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs">
+                    <option>Cập nhật gần nhất</option>
+                    <option>Tên thư mục</option>
+                    <option>Số tài liệu</option>
+                  </select>
+                </>
+              )}
 
               <button
                 onClick={() => showToast('Mở bộ lọc nâng cao', 'info')}
@@ -483,8 +652,89 @@ export const DataRepoPage: React.FC = () => {
             </div>
           </div>
 
-          {/* Document Table Card */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-2xs overflow-hidden">
+          {/* Folder-first / document detail table cards matching 02/03 */}
+          {isFolderView ? (
+          <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
+            <div className="px-4 py-2.5 bg-slate-50/60 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
+              <span>Hiển thị 1–{filteredFolderRows.length} trong {knowledgeFolders.length}</span>
+              <button
+                type="button"
+                onClick={() => showToast('Chọn cột hiển thị thư mục', 'info')}
+                className="px-2.5 py-1.5 border border-slate-200 dark:border-zinc-800 rounded-md bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 flex items-center gap-1.5 hover:border-blue-400 transition-colors cursor-pointer"
+              >
+                <Grid className="w-3.5 h-3.5" />
+                <span>Cột hiển thị</span>
+              </button>
+            </div>
+
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[860px] text-left text-xs border-collapse">
+                <thead className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
+                  <tr>
+                    <th className="w-10 px-4 py-3 text-center"><input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700" /></th>
+                    <th className="px-3 py-3">TÊN THƯ MỤC <span className="text-blue-600">↑</span></th>
+                    <th className="px-3 py-3">SỐ TÀI LIỆU</th>
+                    <th className="px-3 py-3">DUNG LƯỢNG</th>
+                    <th className="px-3 py-3">ĐƠN VỊ QUẢN LÝ</th>
+                    <th className="px-3 py-3">CẬP NHẬT GẦN NHẤT ↓</th>
+                    <th className="px-3 py-3">TÌNH TRẠNG CHỈ MỤC</th>
+                    <th className="px-3 py-3">QUYỀN TRUY CẬP</th>
+                    <th className="w-10 px-4 py-3 text-right" />
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+                  {filteredFolderRows.map((folder) => (
+                    <tr
+                      key={folder.name}
+                      onDoubleClick={() => openFolder(folder.name)}
+                      className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
+                    >
+                      <td className="px-4 py-3 text-center"><input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" /></td>
+                      <td className="px-3 py-3">
+                        <button
+                          type="button"
+                          onClick={() => openFolder(folder.name)}
+                          className="flex items-center gap-2.5 text-left font-semibold text-slate-900 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
+                        >
+                          <Folder className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                          <span>{folder.name}</span>
+                          {folder.isStarred && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}
+                        </button>
+                      </td>
+                      <td className="px-3 py-3 text-slate-600 dark:text-zinc-400 font-medium">{folder.documentCount}</td>
+                      <td className="px-3 py-3 text-slate-600 dark:text-zinc-400">{folder.size}</td>
+                      <td className="px-3 py-3">
+                        <span className="inline-flex items-center gap-2 text-slate-700 dark:text-zinc-300">
+                          <span className="w-6 h-6 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px] font-bold">{folder.manager === '—' ? '—' : folder.manager.slice(0, 2).toUpperCase()}</span>
+                          {folder.manager}
+                        </span>
+                      </td>
+                      <td className="px-3 py-3 text-slate-500 dark:text-zinc-400 font-mono text-[11px]">{folder.updatedAt}</td>
+                      <td className="px-3 py-3">{getIndexStatusBadge(folder.status)}</td>
+                      <td className="px-3 py-3">{getAccessBadge('Phòng ban')}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          type="button"
+                          onClick={() => openFolder(folder.name)}
+                          className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded cursor-pointer"
+                          title={`Mở thư mục ${folder.name}`}
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            <div className="px-4 py-3 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
+              <span>Hiển thị 1–{filteredFolderRows.length} trong {knowledgeFolders.length}</span>
+              <div className="flex items-center gap-2"><span>Số dòng mỗi trang</span><span className="px-2 py-1 border border-slate-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900">25⌄</span><button className="p-1 border border-slate-200 dark:border-zinc-800 rounded opacity-40" disabled><ChevronLeft className="w-3.5 h-3.5" /></button><span className="px-2 py-1 rounded bg-blue-600 text-white">1</span><button className="p-1 border border-slate-200 dark:border-zinc-800 rounded"><ChevronRight className="w-3.5 h-3.5" /></button></div>
+            </div>
+          </CustomTable>
+          ) : (
+          <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
             
             {/* Table Header Info Row */}
             <div className="px-4 py-2.5 bg-slate-50/60 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
@@ -602,14 +852,15 @@ export const DataRepoPage: React.FC = () => {
               </div>
             </div>
 
-          </div>
+          </CustomTable>
+          )}
 
         </main>
 
         {/* ==================================================================== */}
         {/* 3. RIGHT COLUMN: Sức Khỏe Kho Tri Thức 300px */}
         {/* ==================================================================== */}
-        <aside className="w-72 border-l border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full shrink-0 overflow-y-auto p-4 space-y-5 text-xs">
+        <aside className="hidden" aria-hidden="true">
           
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -747,6 +998,90 @@ export const DataRepoPage: React.FC = () => {
             </button>
           </div>
 
+        </aside>
+
+        {/* ==================================================================== */}
+        {/* 4. RIGHT COLUMN: Hoạt động matching 02/03-knowledge-repository.png */}
+        {/* ==================================================================== */}
+        <aside className="w-72 xl:w-80 border-l border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full shrink-0 overflow-y-auto p-4 space-y-4 text-xs">
+          <div className="flex items-center justify-between">
+            <h3 className="font-bold text-base text-slate-900 dark:text-zinc-100">Hoạt động</h3>
+            <button
+              type="button"
+              onClick={() => showToast('Đóng bảng hoạt động', 'info')}
+              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 rounded cursor-pointer"
+              aria-label="Đóng bảng hoạt động"
+            >
+              <span className="text-lg leading-none">×</span>
+            </button>
+          </div>
+
+          <div className="flex items-center gap-6 border-b border-slate-200 dark:border-zinc-800 text-xs font-semibold">
+            <button type="button" className="relative -mb-px min-h-9 text-blue-600 dark:text-blue-400 cursor-default">
+              Vấn đề lập chỉ mục
+              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />
+            </button>
+            <button
+              type="button"
+              onClick={() => showToast('Hiển thị tài liệu tải lên gần đây', 'info')}
+              className="min-h-9 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 cursor-pointer"
+            >
+              Tải lên gần đây
+            </button>
+          </div>
+
+          <div className="divide-y divide-slate-200 dark:divide-zinc-800">
+            {[
+              { tone: 'error', title: 'Không trích xuất được nội dung', file: 'Mẫu hợp đồng dịch vụ.docx', detail: 'Lỗi định dạng tệp', date: '03/09/2026 15:18' },
+              { tone: 'warning', title: 'Vượt quá giới hạn kích thước', file: 'Tài liệu hướng dẫn.pptx', detail: 'Tệp 120 MB (giới hạn 100 MB)', date: '01/09/2026 14:32' },
+              { tone: 'warning', title: 'Không hỗ trợ định dạng tệp', file: 'Dữ liệu khoa học.rar', detail: 'Định dạng .rar chưa được hỗ trợ', date: '30/08/2026 09:15' },
+              { tone: 'error', title: 'Lỗi xử lý văn bản', file: 'Báo cáo tài chính 2023.pdf', detail: 'Không đọc được nội dung', date: '28/08/2026 11:03' },
+            ].map((issue) => (
+              <div key={`${issue.title}-${issue.file}`} className="py-3 flex items-start gap-2.5">
+                <span className={`w-5 h-5 rounded-full shrink-0 flex items-center justify-center text-white font-bold ${issue.tone === 'error' ? 'bg-rose-500' : 'bg-amber-500'}`}>
+                  {issue.tone === 'error' ? '×' : '!'}
+                </span>
+                <div className="min-w-0 space-y-0.5">
+                  <p className="font-bold text-slate-800 dark:text-zinc-200 leading-snug">{issue.title}</p>
+                  <p className="text-slate-600 dark:text-zinc-400 truncate">{issue.file}</p>
+                  <p className="text-slate-400 dark:text-zinc-500">{issue.detail}</p>
+                  <p className="text-slate-400 dark:text-zinc-500">{issue.date}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 space-y-2">
+            <div className="flex items-center justify-between">
+              <h4 className="font-bold text-sm text-slate-900 dark:text-zinc-100">Tải lên gần đây</h4>
+              <button
+                type="button"
+                onClick={() => showToast('Mở toàn bộ tài liệu gần đây', 'info')}
+                className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+              >
+                Xem tất cả
+              </button>
+            </div>
+            <div className="space-y-2">
+              {mockKnowledgeDocs.slice(0, 4).map((doc) => (
+                <div key={doc.id} className="flex items-center gap-2 p-2 bg-slate-50/70 dark:bg-zinc-900 rounded-lg">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold text-slate-800 dark:text-zinc-200 truncate">{doc.name}</p>
+                    <span className="text-[10px] text-slate-400">{doc.updatedAt} • {doc.department}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => showToast('Mở toàn bộ hoạt động kho tri thức', 'info')}
+            className="pt-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+          >
+            Xem tất cả hoạt động <span className="ml-1">→</span>
+          </button>
         </aside>
 
       </div>

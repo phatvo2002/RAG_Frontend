@@ -1,0 +1,10 @@
+[
+  {
+    "date": "2026-09-12",
+    "macrostructure": "Workbench",
+    "theme": "Nexora Cobalt",
+    "enrichment": "none",
+    "scope": "app",
+    "brief": "Rebuild NEXORA Workbench UI from nexora-workbench-v3 without changing business behavior"
+  }
+]

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
 import { ProjectModal } from './ProjectModal';
+import { CustomTable } from '@/components/customTable';
 import { useNavigate } from '@tanstack/react-router';
 import {
   Plus,
@@ -147,7 +148,7 @@ export const ProjectsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
+    <div className="nexora-page flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
       
       {/* Global Header */}
       <Header />
@@ -280,7 +281,7 @@ export const ProjectsPage: React.FC = () => {
           </div>
 
           {/* Grouped Project Table Card matching 04-project-task-workbench.png */}
-          <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-2xs overflow-hidden">
+          <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs border-collapse">
                 <thead className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
@@ -426,7 +427,7 @@ export const ProjectsPage: React.FC = () => {
                 </div>
               </div>
             </div>
-          </div>
+          </CustomTable>
 
           {/* Section: Mốc thời gian tổng quan matching 04-project-task-workbench.png */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 shadow-2xs space-y-4">

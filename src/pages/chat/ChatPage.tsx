@@ -68,7 +68,7 @@ export const ChatPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-[#0d131f] text-slate-100 overflow-hidden select-none">
+    <div className="nexora-chat flex-1 flex flex-col h-full bg-[#0d131f] text-slate-100 overflow-hidden select-none">
       
       {/* 3-Column Standalone Workspace matching 02-ai-assistant-standalone.png */}
       <div className="flex-1 flex overflow-hidden">
@@ -76,7 +76,7 @@ export const ChatPage: React.FC = () => {
         {/* ==================================================================== */}
         {/* 1. LEFT COLUMN: Chat History Sidebar (260px) */}
         {/* ==================================================================== */}
-        <aside className="w-64 bg-[#090d16] border-r border-slate-800/80 flex flex-col h-full shrink-0">
+        <aside className="hidden md:flex w-64 bg-[#090d16] border-r border-slate-800/80 flex-col h-full shrink-0">
           
           {/* Header Action: Dashboard Switcher */}
           <div className="p-3.5 space-y-2.5 border-b border-slate-800/80">
@@ -182,24 +182,24 @@ export const ChatPage: React.FC = () => {
         {/* ==================================================================== */}
         {/* 2. MIDDLE COLUMN: Main Chat Messages & Floating Input */}
         {/* ==================================================================== */}
-        <main className="flex-1 flex flex-col h-full bg-[#0a0e17] overflow-hidden min-w-0">
+        <main className="flex-1 flex flex-col h-full min-w-0 bg-[#0a0e17] overflow-hidden">
           
           {/* Header Bar */}
-          <div className="h-14 px-5 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-[#0c121d]">
-            <div className="flex items-center gap-3">
-              <h2 className="font-bold text-sm text-slate-100 flex items-center gap-2">
+          <div className="h-14 px-3 sm:px-5 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-[#0c121d]">
+            <div className="flex items-center gap-3 min-w-0">
+              <h2 className="font-bold text-sm text-slate-100 flex items-center gap-2 truncate">
                 <span>Trợ lý AI NEXORA</span>
               </h2>
               <button
                 onClick={() => navigate({ to: '/dashboard' as any })}
-                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md text-xs font-medium flex items-center gap-1.5 cursor-pointer"
+                className="hidden lg:flex px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md text-xs font-medium items-center gap-1.5 cursor-pointer shrink-0"
               >
                 <LayoutDashboard className="w-3 h-3 text-blue-400" />
                 <span>Vào Dashboard Quản lý</span>
               </button>
             </div>
 
-            <div className="flex items-center gap-3 text-xs">
+            <div className="hidden sm:flex items-center gap-3 text-xs shrink-0">
               <span className="text-slate-400">VN</span>
               <span className="text-slate-400">☀</span>
               <span className="text-slate-400">🔔 3</span>
@@ -213,7 +213,7 @@ export const ChatPage: React.FC = () => {
           </div>
 
           {/* Messages Scroll Area */}
-          <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-4xl w-full mx-auto">
+          <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-6 max-w-4xl w-full mx-auto">
             
             {/* User Message Bubble */}
             <div className="bg-[#121927] border border-slate-800 rounded-2xl p-4 space-y-1.5 shadow-xs">
@@ -388,7 +388,7 @@ export const ChatPage: React.FC = () => {
           </div>
 
           {/* Floating Input Box Bar matching 02-ai-assistant-standalone.png */}
-          <div className="p-4 bg-[#0c121d] border-t border-slate-800/80 shrink-0">
+          <div className="p-2 sm:p-4 bg-[#0c121d] border-t border-slate-800/80 shrink-0">
             <div className="max-w-4xl mx-auto space-y-2">
               <div className="bg-[#151e2e] border border-slate-700/80 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-lg">
                 <textarea
@@ -405,7 +405,7 @@ export const ChatPage: React.FC = () => {
                     className="px-2.5 py-1.5 text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer"
                   >
                     <Paperclip className="w-3.5 h-3.5" />
-                    <span>Đính kèm</span>
+                    <span className="hidden sm:inline">Đính kèm</span>
                   </button>
                   <button
                     onClick={handleSendMessage}
@@ -430,7 +430,7 @@ export const ChatPage: React.FC = () => {
         {/* ==================================================================== */}
         {/* 3. RIGHT COLUMN: Ngữ Cảnh & Nguồn (320px) */}
         {/* ==================================================================== */}
-        <aside className="w-80 bg-[#090d16] border-l border-slate-800/80 flex flex-col h-full shrink-0 overflow-y-auto text-xs p-5 space-y-6">
+        <aside className="hidden xl:flex w-80 bg-[#090d16] border-l border-slate-800/80 flex-col h-full shrink-0 overflow-y-auto text-xs p-5 space-y-6">
           
           {/* Header */}
           <div className="space-y-3">

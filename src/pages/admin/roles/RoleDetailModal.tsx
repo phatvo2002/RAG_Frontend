@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { Modal, ConfirmModal } from '@/components/disclosure';
+import { CustomTable } from '@/components/customTable';
 import { useApp } from '@/context/AppContext';
 import {
   RoleItem,
@@ -1055,7 +1056,8 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
             </div>
 
             {/* Table */}
-            <div className="overflow-x-auto bg-white dark:bg-zinc-900">
+            <CustomTable<any> columns={[]} data={[]} className="rounded-none border-0 shadow-none bg-white dark:bg-zinc-900">
+            <div className="overflow-x-auto">
               <table className="table table-sm table-zebra w-full text-xs">
                 <thead>
                   <tr className="bg-slate-100/80 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-300 text-[11px]">
@@ -1210,6 +1212,7 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
                 </select>
               </div>
             </div>
+            </CustomTable>
           </div>
 
           {/* ========================================================================= */}

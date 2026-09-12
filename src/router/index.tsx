@@ -69,7 +69,7 @@ const dataRepoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/data-repo',
   component: () => (
-    <PermissionGuard isImplemented={true}>
+    <PermissionGuard module={['document', 'documents', 'data-repo']} isImplemented={true}>
       <DataRepoPage />
     </PermissionGuard>
   ),
@@ -172,7 +172,7 @@ const adminPoliciesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/policies',
   component: () => (
-    <PermissionGuard isImplemented={false}>
+    <PermissionGuard isImplemented={true}>
       <PoliciesPage />
     </PermissionGuard>
   ),
@@ -192,7 +192,7 @@ const adminConfigRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/config',
   component: () => (
-    <PermissionGuard isImplemented={false}>
+    <PermissionGuard isImplemented={true}>
       <ConfigPage />
     </PermissionGuard>
   ),

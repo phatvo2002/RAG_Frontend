@@ -13,7 +13,7 @@ import { useRolesQuery } from '@/api/roles.api';
 import { useDepartmentsQuery } from '@/api/departments.api';
 import { UserModal } from './UserModal';
 import { ResetPasswordModal } from './ResetPasswordModal';
-import { TableRowActions } from '@/components/customTable';
+import { CustomTable, TableRowActions } from '@/components/customTable';
 import {
   Plus,
   Edit2,
@@ -136,6 +136,8 @@ export const UsersPage: React.FC = () => {
     if (statusFilter !== 'all') {
       list = list.filter((u) => {
         const isActive = u.isActive !== undefined ? u.isActive : (u.status === 'Active' || u.status === 'Đang hoạt động');
+        const isPending = /pending|chờ/i.test(String(u.status || ''));
+        if (statusFilter === 'pending') return isPending;
         if (statusFilter === 'active' || statusFilter === 'Đang hoạt động' || statusFilter === 'Active') return isActive;
         if (statusFilter === 'inactive' || statusFilter === 'Bị khóa' || statusFilter === 'Inactive') return !isActive;
         return true;
@@ -156,11 +158,14 @@ export const UsersPage: React.FC = () => {
   const metrics = useMemo(() => {
     const total = users.length;
     const active = users.filter((u) => (u.isActive !== undefined ? u.isActive : u.status === 'Active' || u.status === 'Đang hoạt động')).length;
-    const totalRoles = roles.length || 2;
-    const totalDepartments = departments.length || 1;
+    const locked = users.filter((u) => {
+      const isActive = u.isActive !== undefined ? u.isActive : u.status === 'Active' || u.status === 'Đang hoạt động';
+      return !isActive;
+    }).length;
+    const pending = users.filter((u) => /pending|chờ|pending/i.test(String(u.status || ''))).length;
 
-    return { total, active, roles: totalRoles, departments: totalDepartments };
-  }, [users, roles, departments]);
+    return { total, active, locked, pending };
+  }, [users]);
 
   // Handlers
   const handleOpenAddUser = () => {
@@ -251,7 +256,7 @@ export const UsersPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
+    <div className="nexora-page flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
       <Header />
 
       <div className="flex-1 flex overflow-hidden w-full">
@@ -262,13 +267,33 @@ export const UsersPage: React.FC = () => {
         <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-4 min-w-0">
           
           {/* Page Title & Subtitle matching 08.Màn hình người dùng.png */}
-          <div className="space-y-1">
-            <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
-              Quản lý Người dùng
-            </h1>
-            <p className="text-xs text-slate-500 dark:text-zinc-400">
-              Danh sách tài khoản, phân quyền và trạng thái người dùng trong hệ thống
-            </p>
+          <div className="flex items-start justify-between gap-4 flex-wrap">
+            <div className="space-y-1">
+              <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+                Người dùng
+              </h1>
+              <p className="text-xs text-slate-500 dark:text-zinc-400">
+                Quản lý tài khoản, vai trò và trạng thái truy cập hệ thống.
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                type="button"
+                onClick={handleOpenAddUser}
+                className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
+              >
+                <Plus className="w-3.5 h-3.5" />
+                <span>Thêm người dùng</span>
+              </button>
+              <button
+                type="button"
+                onClick={handleExportCsv}
+                className="px-3.5 py-2 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+              >
+                <Download className="w-3.5 h-3.5" />
+                <span>Xuất dữ liệu</span>
+              </button>
+            </div>
           </div>
 
           {/* Top Metrics Pills Row matching 08.Màn hình người dùng.png */}
@@ -282,12 +307,38 @@ export const UsersPage: React.FC = () => {
             </span>
             <span className="text-slate-300 dark:text-zinc-700">|</span>
             <span>
-              <strong>{metrics.roles}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">vai trò</span>
+              <strong>{metrics.locked}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">tạm khóa</span>
             </span>
             <span className="text-slate-300 dark:text-zinc-700">|</span>
             <span>
-              <strong>{metrics.departments}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">phòng ban</span>
+              <strong>{metrics.pending}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">đang chờ</span>
             </span>
+          </div>
+
+          <div className="flex items-center gap-6 border-b border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+            {[
+              { value: 'all', label: 'Tất cả người dùng' },
+              { value: 'pending', label: 'Đang chờ' },
+              { value: 'inactive', label: 'Tạm khóa' },
+            ].map((tab) => {
+              const isActive = statusFilter === tab.value;
+              return (
+                <button
+                  key={tab.value}
+                  type="button"
+                  onClick={() => {
+                    setStatusFilter(tab.value);
+                    setCurrentPage(1);
+                  }}
+                  className={`relative -mb-px min-h-10 px-1 transition-colors cursor-pointer ${
+                    isActive ? 'text-blue-600 dark:text-blue-400' : 'hover:text-slate-800 dark:hover:text-zinc-200'
+                  }`}
+                >
+                  {tab.label}
+                  {isActive && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />}
+                </button>
+              );
+            })}
           </div>
 
           {/* Filter & Actions Bar matching 08.Màn hình người dùng.png */}
@@ -359,27 +410,9 @@ export const UsersPage: React.FC = () => {
                 >
                   <option value="all">Trạng thái</option>
                   <option value="active">Hoạt động</option>
+                  <option value="pending">Đang chờ</option>
                   <option value="inactive">Tạm khóa</option>
                 </select>
-              </div>
-
-              {/* Right Action Buttons */}
-              <div className="flex items-center gap-2 shrink-0">
-                <button
-                  onClick={handleExportCsv}
-                  className="px-3.5 py-2 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
-                >
-                  <Download className="w-3.5 h-3.5" />
-                  <span>Xuất dữ liệu</span>
-                </button>
-
-                <button
-                  onClick={handleOpenAddUser}
-                  className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                >
-                  <Plus className="w-3.5 h-3.5" />
-                  <span>Thêm người dùng</span>
-                </button>
               </div>
 
             </div>
@@ -403,7 +436,7 @@ export const UsersPage: React.FC = () => {
           )}
 
           {/* Users Table matching 08.Màn hình người dùng.png */}
-          <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-2xs">
+          <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
@@ -600,7 +633,7 @@ export const UsersPage: React.FC = () => {
               </div>
             </div>
 
-          </div>
+          </CustomTable>
 
         </div>
 
@@ -608,7 +641,7 @@ export const UsersPage: React.FC = () => {
         {/* 2. RIGHT COLUMN: Side Drawer Chi tiết người dùng matching 08.png */}
         {/* ==================================================================== */}
         {activeUserDetail && (
-          <aside className="w-80 lg:w-96 bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 flex flex-col h-full shrink-0 shadow-sm transition-all duration-200 overflow-y-auto">
+          <aside className="hidden lg:flex w-80 xl:w-96 bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 flex-col h-full shrink-0 shadow-sm transition-all duration-200 overflow-y-auto">
             
             {/* Drawer Header */}
             <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between shrink-0">

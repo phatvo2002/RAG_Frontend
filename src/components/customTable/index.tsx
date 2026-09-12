@@ -47,6 +47,12 @@ export interface PaginationConfig {
 export interface CustomTableProps<T> {
   title?: string;
   toolbar?: React.ReactNode;
+  /**
+   * Presentation-only content slot for legacy tables that still own their
+   * markup and business callbacks. The shared container remains responsible
+   * for the table surface without replacing the existing table engine.
+   */
+  children?: React.ReactNode;
   columns: (ColumnDef<T, any> | Column<T>)[];
   data: T[];
   keyExtractor?: (item: T, index: number) => string | number;
@@ -86,6 +92,7 @@ export interface CustomTableProps<T> {
 export function CustomTable<T extends object>({
   title,
   toolbar,
+  children,
   columns,
   data,
   keyExtractor = (_, idx) => idx,
@@ -233,9 +240,14 @@ export function CustomTable<T extends object>({
   const totalItems = pagination?.totalItems ?? data.length;
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
+  const containerClassName = `nexora-table w-full bg-white dark:bg-zinc-950 rounded-sm border border-slate-200 dark:border-zinc-800/90 shadow-2xs overflow-hidden transition-colors ${className}`;
+
+  if (children) {
+    return <div className={containerClassName}>{children}</div>;
+  }
 
   return (
-    <div className={`w-full bg-white dark:bg-zinc-950 rounded-lg border border-slate-200 dark:border-zinc-800/90 shadow-2xs overflow-hidden transition-colors ${className}`}>
+    <div className={containerClassName}>
       {/* Integrated Toolbar or Title Header */}
       {toolbar ? (
         <div className="w-full">{toolbar}</div>

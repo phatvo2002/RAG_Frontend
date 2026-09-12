@@ -39,7 +39,7 @@ export const Button: React.FC<ButtonProps> = ({
 
   return (
     <button
-      className={`btn cursor-pointer font-semibold transition-all ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
+      className={`nexora-button btn cursor-pointer font-semibold transition-all ${variantClasses[variant]} ${sizeClasses[size]} ${className}`}
       disabled={disabled || isLoading}
       {...props}
     >
@@ -89,7 +89,7 @@ export const Badge: React.FC<BadgeProps> = ({
 
   return (
     <span
-      className={`badge font-semibold ${variantClasses[variant]} ${sizeClasses[size]} ${
+      className={`nexora-badge badge font-semibold ${variantClasses[variant]} ${sizeClasses[size]} ${
         outline ? 'badge-outline' : ''
       } ${className}`}
     >

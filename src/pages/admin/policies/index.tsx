@@ -10,7 +10,7 @@ export const PoliciesPage: React.FC = () => {
   const { t } = useTranslation(['admin', 'common']);
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-black overflow-hidden transition-colors">
+    <div className="nexora-page flex-1 flex flex-col h-full bg-slate-50 dark:bg-black overflow-hidden transition-colors">
       <Header />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 w-full">

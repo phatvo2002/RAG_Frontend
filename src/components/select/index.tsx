@@ -24,7 +24,7 @@ export const Select: React.FC<SelectProps> = ({
       {label && <label className="block text-xs font-semibold text-slate-700">{label}</label>}
       <div className="relative flex items-center">
         <select
-          className={`w-full appearance-none pl-3.5 pr-9 py-2.5 bg-slate-50/50 border rounded-xl text-xs text-slate-800 focus:outline-none transition-all cursor-pointer ${
+          className={`nexora-control w-full appearance-none pl-3.5 pr-9 py-2.5 bg-slate-50/50 border rounded-xl text-xs text-slate-800 focus:outline-none transition-all cursor-pointer ${
             error
               ? 'border-rose-300 focus:border-rose-500 focus:bg-rose-50/20'
               : 'border-slate-200 focus:border-blue-600 focus:bg-white'
@@ -44,4 +44,3 @@ export const Select: React.FC<SelectProps> = ({
   );
 };
 export default Select;
-

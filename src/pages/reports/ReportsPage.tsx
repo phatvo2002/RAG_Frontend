@@ -61,7 +61,7 @@ export const ReportsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-black transition-colors">
+    <div className="nexora-page flex-1 flex flex-col h-full overflow-hidden bg-slate-50 dark:bg-black transition-colors">
       <Header />
 
       <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 w-full">

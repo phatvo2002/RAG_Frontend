@@ -54,6 +54,9 @@ interface AppContextType {
   isSidebarOpen: boolean;
   setIsSidebarOpen: (open: boolean) => void;
   toggleSidebar: () => void;
+  isMobileSidebarOpen: boolean;
+  setIsMobileSidebarOpen: (open: boolean) => void;
+  toggleMobileSidebar: () => void;
 
   activeModule: NavModule;
   setActiveModule: (module: NavModule) => void;
@@ -147,6 +150,14 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       localStorage.setItem('nexora_sidebar_open', String(next));
       return next;
     });
+  };
+
+  // Mobile navigation drawer state is presentation-only and is intentionally
+  // not persisted with the desktop sidebar preference.
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const toggleMobileSidebar = () => {
+    setIsMobileSidebarOpen((prev) => !prev);
   };
 
   // Theme Management
@@ -461,6 +472,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         isSidebarOpen,
         setIsSidebarOpen,
         toggleSidebar,
+        isMobileSidebarOpen,
+        setIsMobileSidebarOpen,
+        toggleMobileSidebar,
         activeModule,
         setActiveModule,
         activeAdminTab: activeAdminTabState,

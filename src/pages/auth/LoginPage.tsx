@@ -62,7 +62,7 @@ export const LoginPage: React.FC = () => {
   const isSubmitting = loginMutation.isPending;
 
   return (
-    <div className="min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-[#ebf3ff] via-[#f7faff] to-[#e4efff] dark:from-[#0a0f1d] dark:via-[#070b14] dark:to-[#04060b] relative overflow-hidden transition-colors selection:bg-blue-500 selection:text-white">
+    <div className="nexora-login min-h-screen w-full flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-[#ebf3ff] via-[#f7faff] to-[#e4efff] dark:from-[#0a0f1d] dark:via-[#070b14] dark:to-[#04060b] relative overflow-hidden transition-colors selection:bg-blue-500 selection:text-white">
       {/* Dynamic Background Light Waves & Ambient Particles */}
       <div className="absolute inset-0 pointer-events-none overflow-hidden">
         {/* Subtle radial ambient glows */}

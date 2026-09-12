@@ -12,7 +12,7 @@ export const App: React.FC = () => {
     <QueryClientProvider client={queryClient}>
       <RouterProvider router={router} />
       <ReactQueryDevtools initialIsOpen={false} />
-      <TanStackRouterDevtools router={router} initialIsOpen={false} />
+      <TanStackRouterDevtools router={router} position="bottom-right" initialIsOpen={false} />
     </QueryClientProvider>
   );
 };

@@ -8,7 +8,7 @@ import {
 } from '@/api/activity-logs.api';
 import { useUsersQuery } from '@/api/users.api';
 import { LogDetailModal } from './LogDetailModal';
-import { TableRowActions } from '@/components/customTable';
+import { CustomTable, TableRowActions } from '@/components/customTable';
 import {
   Search,
   Calendar,
@@ -487,7 +487,7 @@ export const LogsPage: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
+    <div className="nexora-page flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
       <Header />
 
       <div className="flex-1 flex overflow-hidden w-full">
@@ -674,7 +674,7 @@ export const LogsPage: React.FC = () => {
           )}
 
           {/* Main Activity Log Table matching 11.png */}
-          <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl overflow-hidden shadow-2xs">
+          <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
             <div className="overflow-x-auto">
               <table className="w-full text-left border-collapse text-xs">
                 <thead>
@@ -934,7 +934,7 @@ export const LogsPage: React.FC = () => {
               </div>
             </div>
 
-          </div>
+          </CustomTable>
 
         </div>
 

@@ -59,8 +59,8 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   const placeholderText = searchPlaceholder || t('table:searchPlaceholder', { defaultValue: 'Tìm kiếm...' });
 
   const containerClasses = isIntegratedHeader
-    ? `p-3.5 border-b border-slate-200 dark:border-zinc-800/90 bg-white dark:bg-zinc-950 flex flex-wrap items-center justify-between gap-3 ${className}`
-    : `p-3.5 bg-white dark:bg-zinc-950 rounded-lg border border-slate-200 dark:border-zinc-800/90 shadow-2xs flex flex-wrap items-center justify-between gap-3 ${className}`;
+    ? `nexora-toolbar p-3.5 border-b border-slate-200 dark:border-zinc-800/90 bg-white dark:bg-zinc-950 flex flex-wrap items-center justify-between gap-3 ${className}`
+    : `nexora-toolbar p-3.5 bg-white dark:bg-zinc-950 rounded-lg border border-slate-200 dark:border-zinc-800/90 shadow-2xs flex flex-wrap items-center justify-between gap-3 ${className}`;
 
   return (
     <div className="space-y-2 w-full">
