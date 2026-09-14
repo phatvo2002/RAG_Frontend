@@ -20,6 +20,19 @@ export interface UserRoleInfo {
   expiresAt?: string | null;
 }
 
+export interface AllowMenuTreeItem {
+  functionId: string;
+  functionCode: string;
+  functionName: string;
+  description?: string | null;
+  url?: string | null;
+  apiEndpoint?: string | null;
+  parentCode?: string | null;
+  order?: number;
+  isMobile?: boolean;
+  childFunctions?: AllowMenuTreeItem[];
+}
+
 export interface User {
   id: string;
   userId?: string;
@@ -34,6 +47,7 @@ export interface User {
   role: UserRole | string;
   roleId?: string;
   roles?: UserRoleInfo[];
+  isSuperAdmin?: boolean;
   status: UserStatus | string;
   department?: string;
   departmentId?: string;
@@ -41,6 +55,7 @@ export interface User {
   timeZone?: string | null;
   avatar?: string;
   apiFunctions?: any[];
+  allowMenuTree?: AllowMenuTreeItem[];
 }
 
 export interface Department {
@@ -140,6 +155,8 @@ export interface LoginResponseData {
   role?: string;
   name?: string;
   fullName?: string;
+  isSuperAdmin?: boolean;
+  allowMenuTree?: AllowMenuTreeItem[];
 }
 
 export interface ProjectItem {

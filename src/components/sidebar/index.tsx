@@ -52,7 +52,7 @@ export const Sidebar: React.FC = () => {
     isMobileSidebarOpen,
     setIsMobileSidebarOpen,
   } = useApp();
-  const { hasModuleAccess, isSuperAdmin } = useUserPermissions();
+  const { hasModuleAccess, isSuperAdmin, isLoading } = useUserPermissions();
   const navigate = useNavigate();
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
@@ -76,6 +76,23 @@ export const Sidebar: React.FC = () => {
     }));
   };
 
+  const defaultHomePath = useMemo(() => {
+    if (isSuperAdmin || hasModuleAccess(['user', 'users'])) return '/admin/users';
+    if (hasModuleAccess('dashboard')) return '/dashboard';
+    if (hasModuleAccess(['chat', 'ai'])) return '/chat';
+    if (hasModuleAccess(['document', 'documents', 'data-repo'])) return '/data-repo';
+    if (hasModuleAccess(['project', 'projects', 'proj'])) return '/projects';
+    if (hasModuleAccess(['task', 'tasks'])) return '/tasks';
+    if (hasModuleAccess([
+      'department', 'departments', 'dept',
+      'role', 'roles', 'authorization', 'permission', 'permissions',
+      'activitylog', 'activity_log', 'log', 'logs', 'audit',
+      'policy', 'policies',
+      'config', 'configuration', 'system',
+    ])) return '/admin';
+    return '/chat';
+  }, [hasModuleAccess, isSuperAdmin]);
+
   // 1. Root Item: Tổng quan
   const rootOverviewItem: MenuItem = useMemo(() => ({
     id: 'overview',
@@ -98,6 +115,7 @@ export const Sidebar: React.FC = () => {
           label: 'Dashboard Tổng quan',
           path: '/dashboard',
           icon: LayoutDashboard,
+          module: 'dashboard',
           isImplemented: true,
         },
         {
@@ -113,6 +131,7 @@ export const Sidebar: React.FC = () => {
           label: 'Dự án',
           path: '/projects',
           icon: Folder,
+          module: ['project', 'projects', 'proj'],
           isImplemented: true,
         },
         {
@@ -120,6 +139,7 @@ export const Sidebar: React.FC = () => {
           label: 'Công việc',
           path: '/tasks',
           icon: LayoutGrid,
+          module: ['task', 'tasks'],
           isImplemented: true,
         },
         {
@@ -127,6 +147,7 @@ export const Sidebar: React.FC = () => {
           label: 'Báo cáo',
           path: '/reports',
           icon: FileBarChart,
+          module: ['report', 'reports', 'rep'],
           isImplemented: true,
         },
       ],
@@ -141,6 +162,7 @@ export const Sidebar: React.FC = () => {
           label: 'Lịch',
           path: '/calendar',
           icon: Calendar,
+          module: ['calendar', 'cal'],
           isImplemented: true,
         },
         {
@@ -148,6 +170,7 @@ export const Sidebar: React.FC = () => {
           label: 'Cuộc họp',
           path: '/meetings',
           icon: CalendarClock,
+          module: ['meeting', 'meetings', 'meet'],
           isImplemented: true,
         },
       ],
@@ -194,6 +217,7 @@ export const Sidebar: React.FC = () => {
           label: 'Chính sách dữ liệu',
           path: '/admin/policies',
           icon: Shield,
+          module: ['policy', 'policies'],
           isImplemented: true,
         },
         {
@@ -201,6 +225,7 @@ export const Sidebar: React.FC = () => {
           label: 'Cấu hình hệ thống',
           path: '/admin/config',
           icon: Settings,
+          module: ['config', 'configuration', 'system'],
           isImplemented: true,
         },
       ],
@@ -208,11 +233,24 @@ export const Sidebar: React.FC = () => {
   ], []);
 
   // Helper kiểm tra quyền của một item
-  const isItemVisible = (_item: MenuItem): boolean => {
-    return true;
+  const isItemVisible = (item: MenuItem): boolean => {
+    if (isLoading || !item.isImplemented) return false;
+    if (isSuperAdmin) return true;
+    if (item.path === '/admin') {
+      return hasModuleAccess([
+        'user', 'users',
+        'department', 'departments', 'dept',
+        'role', 'roles', 'authorization', 'permission', 'permissions',
+        'activitylog', 'activity_log', 'log', 'logs', 'audit',
+        'policy', 'policies',
+        'config', 'configuration', 'system',
+      ]);
+    }
+    return hasModuleAccess(item.module);
   };
 
   const isRootOverviewVisible = isItemVisible(rootOverviewItem);
+  const isChatVisible = !isLoading && (isSuperAdmin || hasModuleAccess(['chat', 'ai']));
 
   const visibleGroups = useMemo(() => {
     return menuGroups
@@ -224,7 +262,7 @@ export const Sidebar: React.FC = () => {
         };
       })
       .filter((group) => group.items.length > 0);
-  }, [menuGroups, isSuperAdmin, hasModuleAccess]);
+  }, [menuGroups, isLoading, isSuperAdmin, hasModuleAccess]);
 
   const isPathActive = (path: string) => currentPath === path || currentPath.startsWith(`${path}/`);
   const isRootOverviewActive = currentPath === rootOverviewItem.path;
@@ -263,7 +301,7 @@ export const Sidebar: React.FC = () => {
         <div className="h-16 px-2 border-b border-[#1a2a43] flex items-center justify-center shrink-0">
           <button
             type="button"
-            onClick={() => navigateTo('/admin/users')}
+            onClick={() => navigateTo(defaultHomePath)}
             className="w-9 h-9 rounded-xl bg-gradient-to-br from-[#1d7bff] to-[#1250d4] flex items-center justify-center text-white font-black text-sm shadow-lg shadow-blue-500/20 cursor-pointer hover:scale-[1.03] transition-transform"
             title="NEXORA AI"
             aria-label="Mở NEXORA AI"
@@ -273,15 +311,17 @@ export const Sidebar: React.FC = () => {
         </div>
 
         <div className="px-2 pt-3 pb-2 flex justify-center">
-          <button
-            type="button"
-            onClick={() => navigateTo('/chat')}
-            className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer group ${currentPath === '/chat' ? activeItemClass : inactiveItemClass}`}
-            title="Mở Trợ lý AI"
-            aria-label="Mở Trợ lý AI"
-          >
-            <MessageSquare className="w-[18px] h-[18px] text-blue-300 group-hover:scale-110 transition-transform" />
-          </button>
+          {isChatVisible && (
+            <button
+              type="button"
+              onClick={() => navigateTo('/chat')}
+              className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors cursor-pointer group ${currentPath === '/chat' ? activeItemClass : inactiveItemClass}`}
+              title="Mở Trợ lý AI"
+              aria-label="Mở Trợ lý AI"
+            >
+              <MessageSquare className="w-[18px] h-[18px] text-blue-300 group-hover:scale-110 transition-transform" />
+            </button>
+          )}
         </div>
 
         <nav aria-label="Điều hướng chính" className="flex-1 overflow-y-auto px-2 py-1 space-y-1.5 text-xs custom-scrollbar flex flex-col items-center">
@@ -328,7 +368,7 @@ export const Sidebar: React.FC = () => {
             type="button"
             className="w-9 h-9 rounded-full bg-[#1769ee] text-white text-xs font-bold flex items-center justify-center cursor-pointer shadow-sm"
             title={`${displayName} (${roleName})`}
-            onClick={() => navigateTo('/admin/users')}
+            onClick={() => navigateTo(defaultHomePath)}
             aria-label={`${displayName}, ${roleName}`}
           >
             {initials}
@@ -365,7 +405,7 @@ export const Sidebar: React.FC = () => {
       <div className="h-16 px-4 border-b border-[#1a2a43] flex items-center justify-between shrink-0">
         <button
           type="button"
-          onClick={() => navigateTo('/admin/users')}
+          onClick={() => navigateTo(defaultHomePath)}
           className="flex items-center gap-2.5 cursor-pointer group min-w-0 text-left"
           aria-label="Mở NEXORA AI"
         >
@@ -389,18 +429,20 @@ export const Sidebar: React.FC = () => {
       </div>
 
       <div className="px-3 pt-4 pb-2">
-        <button
-          type="button"
-          onClick={() => navigateTo('/chat')}
-          className={`w-full px-3 py-2.5 rounded-xl text-[13px] font-semibold flex items-center gap-2.5 transition-all cursor-pointer group border ${currentPath === '/chat' ? `${activeItemClass} border-blue-400/30` : 'text-slate-200 border-blue-400/15 bg-blue-500/[0.08] hover:bg-blue-500/[0.16] hover:border-blue-400/30'}`}
-          aria-current={currentPath === '/chat' ? 'page' : undefined}
-        >
-          <span className="w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
-            <Sparkles className="w-4 h-4 text-blue-200 group-hover:rotate-6 transition-transform" />
-          </span>
-          <span className="truncate">Mở Trợ lý AI</span>
-          <ChevronRight className="w-3.5 h-3.5 ml-auto text-blue-200/70 group-hover:translate-x-0.5 transition-transform" />
-        </button>
+        {isChatVisible && (
+          <button
+            type="button"
+            onClick={() => navigateTo('/chat')}
+            className={`w-full px-3 py-2.5 rounded-xl text-[13px] font-semibold flex items-center gap-2.5 transition-all cursor-pointer group border ${currentPath === '/chat' ? `${activeItemClass} border-blue-400/30` : 'text-slate-200 border-blue-400/15 bg-blue-500/[0.08] hover:bg-blue-500/[0.16] hover:border-blue-400/30'}`}
+            aria-current={currentPath === '/chat' ? 'page' : undefined}
+          >
+            <span className="w-7 h-7 rounded-lg bg-blue-500/20 flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-blue-200 group-hover:rotate-6 transition-transform" />
+            </span>
+            <span className="truncate">Mở Trợ lý AI</span>
+            <ChevronRight className="w-3.5 h-3.5 ml-auto text-blue-200/70 group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        )}
       </div>
 
       <nav aria-label="Điều hướng chính" className="flex-1 overflow-y-auto px-3 pb-3 space-y-1 text-[13px] custom-scrollbar">
@@ -472,7 +514,7 @@ export const Sidebar: React.FC = () => {
       <div className="p-3 border-t border-[#1a2a43]">
         <button
           type="button"
-          onClick={() => navigateTo('/admin/users')}
+          onClick={() => navigateTo(defaultHomePath)}
           className="w-full flex items-center justify-between p-2.5 rounded-xl hover:bg-white/[0.08] cursor-pointer transition-colors group text-left"
           aria-label={`Mở hồ sơ ${displayName}`}
         >

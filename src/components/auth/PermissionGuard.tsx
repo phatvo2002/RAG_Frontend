@@ -18,7 +18,11 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
   isImplemented = true,
   children,
 }) => {
-  const { hasModuleAccess, isSuperAdmin } = useUserPermissions();
+  const { hasModuleAccess, isSuperAdmin, isLoading } = useUserPermissions();
+
+  if (isLoading) {
+    return null;
+  }
 
   // 1. Nếu module chưa có API Backend -> Hiển thị 404
   if (!isImplemented) {
@@ -33,9 +37,14 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
   // 3. Nếu không yêu cầu phân hệ đặc biệt
   if (!module || module === 'all') {
     const hasAnyAdminAccess =
-      hasModuleAccess('user') ||
-      hasModuleAccess('department') ||
-      hasModuleAccess(['role', 'authorization']);
+      hasModuleAccess([
+        'user', 'users',
+        'department', 'departments', 'dept',
+        'role', 'roles', 'authorization', 'permission', 'permissions',
+        'activitylog', 'activity_log', 'log', 'logs', 'audit',
+        'policy', 'policies',
+        'config', 'configuration', 'system',
+      ]);
 
     if (!hasAnyAdminAccess) {
       return <NotFoundPage />;

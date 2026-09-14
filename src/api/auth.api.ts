@@ -74,6 +74,11 @@ export function normalizeUser(data: any): User {
     : Array.isArray(data.apiFunctions)
     ? data.apiFunctions
     : [];
+  const allowMenuTree = Array.isArray(userObj.allowMenuTree)
+    ? userObj.allowMenuTree
+    : Array.isArray(data.allowMenuTree)
+    ? data.allowMenuTree
+    : undefined;
 
   return {
     id: userId,
@@ -95,7 +100,9 @@ export function normalizeUser(data: any): User {
     preferredLanguage: userObj.preferredLanguage || userObj.preferred_language || 'vi',
     timeZone: userObj.timeZone || userObj.timezone || null,
     avatar: userObj.avatar || userObj.avatarUrl || userObj.avatar_url,
+    isSuperAdmin: userObj.isSuperAdmin === true || userObj.is_super_admin === true,
     apiFunctions: apiFunctions,
+    allowMenuTree,
   };
 }
 
@@ -138,7 +145,18 @@ export const authApi = {
 
     let user: User;
     if (authData.userId || authData.email || authData.user) {
-      user = normalizeUser(authData.user || authData);
+      const loginUser = normalizeUser(authData.user || authData);
+      try {
+        const currentUser = await this.getMe();
+        user = {
+          ...loginUser,
+          ...currentUser,
+          apiFunctions: currentUser.apiFunctions?.length ? currentUser.apiFunctions : loginUser.apiFunctions,
+          allowMenuTree: currentUser.allowMenuTree ?? loginUser.allowMenuTree,
+        };
+      } catch {
+        user = loginUser;
+      }
     } else {
       try {
         user = await this.getMe();
