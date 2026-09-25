@@ -1,21 +1,29 @@
 import React, { useState, useEffect } from 'react';
 import { useForm } from '@tanstack/react-form';
 import { Modal } from '@/components/disclosure';
-import { useApp } from '@/context/AppContext';
 import { uploadDocumentYupSchema, UploadDocumentFormData, validationMessages } from '@/types';
+import { FolderItem, useDocumentFoldersQuery } from '@/api/document-folders.api';
+import { DocumentUploadResponse, useUploadDocumentMutation } from '@/api/documents.api';
 import { Upload, FileText, X, AlertCircle, Sparkles, Database } from 'lucide-react';
 
 interface UploadModalProps {
   isOpen: boolean;
   onClose: () => void;
+  defaultFolderId?: string;
+  onUploaded?: (receipt: DocumentUploadResponse, file: File, folder: FolderItem, accessScope: string) => void;
 }
 
-export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => {
-  const { addDocument, currentUser, showToast } = useApp();
+const MAX_FILE_SIZE = 25 * 1024 * 1024;
+const SUPPORTED_EXTENSIONS = ['.pdf', '.txt', '.md', '.docx'];
+
+export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defaultFolderId, onUploaded }) => {
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
+  const [folderId, setFolderId] = useState(defaultFolderId || '');
   const [currentStep, setCurrentStep] = useState<number>(1);
   const [isProcessing, setIsProcessing] = useState<boolean>(false);
+  const { data: folders = [], isLoading: isFoldersLoading } = useDocumentFoldersQuery();
+  const uploadMutation = useUploadDocumentMutation();
 
   const form = useForm({
     defaultValues: {
@@ -37,40 +45,37 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
         return;
       }
 
+      if (!folderId) {
+        setFileError('Vui lòng chọn thư mục lưu tài liệu.');
+        return;
+      }
+
+      const selectedFolder = folders.find((folder) => folder.id === folderId);
+      if (!selectedFolder) {
+        setFileError('Thư mục đã chọn không còn tồn tại. Vui lòng chọn lại.');
+        return;
+      }
+
       setIsProcessing(true);
       setCurrentStep(3);
 
-      setTimeout(() => {
-        const ext = file.name.split('.').pop()?.toLowerCase() || 'pdf';
-        const docType = (['pdf', 'xlsx', 'docx', 'pptx'].includes(ext) ? ext : 'pdf') as any;
-
-        const now = new Date();
-        const dateStr = `${now.getDate().toString().padStart(2, '0')}/${(now.getMonth() + 1)
-          .toString()
-          .padStart(2, '0')}/${now.getFullYear()} ${now
-          .getHours()
-          .toString()
-          .padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-
-        addDocument({
-          name: file.name,
-          type: docType,
-          updatedBy: currentUser.name,
-          updatedAt: dateStr,
-          accessScope: value.accessScope,
-          size: `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
-        });
-
-        setCurrentStep(4);
+      try {
+        const receipt = await uploadMutation.mutateAsync({ folderId, file });
+        onUploaded?.(receipt, file, selectedFolder, value.accessScope);
+        setCurrentStep(3);
         setIsProcessing(false);
-        showToast(`Đã tải lên & Index Vector tài liệu "${file.name}" thành công!`, 'success');
+        setFileError(null);
 
-        setTimeout(() => {
+        window.setTimeout(() => {
           setFile(null);
           form.reset();
           onClose();
         }, 600);
-      }, 800);
+      } catch (error: any) {
+        setIsProcessing(false);
+        setCurrentStep(2);
+        setFileError(error?.message || 'Không thể tải tài liệu lên máy chủ.');
+      }
     },
   });
 
@@ -78,27 +83,52 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
     if (isOpen) {
       setFile(null);
       setFileError(null);
+      setFolderId(defaultFolderId || '');
       setCurrentStep(1);
       setIsProcessing(false);
       form.reset();
     }
-  }, [isOpen]);
+  }, [isOpen, defaultFolderId]);
+
+  const validateSelectedFile = (selectedFile: File): string | null => {
+    const extension = `.${selectedFile.name.split('.').pop()?.toLowerCase() || ''}`;
+    if (!SUPPORTED_EXTENSIONS.includes(extension)) {
+      return 'Chỉ hỗ trợ file PDF, TXT, MD hoặc DOCX.';
+    }
+    if (selectedFile.size <= 0 || selectedFile.size > MAX_FILE_SIZE) {
+      return 'Dung lượng file phải lớn hơn 0 và không vượt quá 25 MB.';
+    }
+    return null;
+  };
+
+  const selectFile = (selectedFile: File | null) => {
+    if (!selectedFile) {
+      setFile(null);
+      setFileError(null);
+      setCurrentStep(1);
+      return;
+    }
+
+    const validationError = validateSelectedFile(selectedFile);
+    if (validationError) {
+      setFile(null);
+      setFileError(validationError);
+      setCurrentStep(1);
+      return;
+    }
+
+    setFile(selectedFile);
+    setFileError(null);
+    setCurrentStep(2);
+  };
 
   const handleFileDrop = (e: React.DragEvent) => {
     e.preventDefault();
-    if (e.dataTransfer.files && e.dataTransfer.files[0]) {
-      setFile(e.dataTransfer.files[0]);
-      setFileError(null);
-      setCurrentStep(2);
-    }
+    selectFile(e.dataTransfer.files?.[0] || null);
   };
 
   const handleFileSelect = (selectedFile: File | null) => {
-    setFile(selectedFile);
-    if (selectedFile) {
-      setFileError(null);
-      setCurrentStep(2);
-    }
+    selectFile(selectedFile);
   };
 
   if (!isOpen) return null;
@@ -145,7 +175,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
             <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">
               Kéo thả tập tin vào đây hoặc <span className="text-blue-600 dark:text-blue-400 underline">chọn từ máy tính</span>
             </p>
-            <p className="text-[11px] text-slate-400 dark:text-zinc-500">Hỗ trợ PDF, XLSX, DOCX, PPTX (tối đa 50MB)</p>
+            <p className="text-[11px] text-slate-400 dark:text-zinc-500">Hỗ trợ PDF, TXT, MD, DOCX (tối đa 25MB)</p>
           </label>
         </div>
 
@@ -178,6 +208,26 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
           </div>
         )}
 
+        <div>
+          <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+            Thư mục lưu tài liệu <span className="text-rose-500">*</span>
+          </label>
+          <select
+            value={folderId}
+            onChange={(event) => {
+              setFolderId(event.target.value);
+              setFileError(null);
+            }}
+            disabled={isFoldersLoading || isProcessing}
+            className="select select-bordered select-sm w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+          >
+            <option value="">{isFoldersLoading ? 'Đang tải thư mục...' : 'Chọn thư mục'}</option>
+            {folders.map((folder) => (
+              <option key={folder.id} value={folder.id}>{folder.name}</option>
+            ))}
+          </select>
+        </div>
+
         {/* Form Field: accessScope */}
         <form.Field name="accessScope">
           {(field) => (
@@ -209,7 +259,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
                 <Sparkles className="w-3.5 h-3.5 animate-spin" />
                 Đang phân đoạn chunking & sinh Embedding Vector...
               </span>
-              <span className="font-mono text-[11px]">Milvus DB</span>
+              <span className="font-mono text-[11px]">Qdrant</span>
             </div>
             <progress className="progress progress-primary w-full h-1.5" />
           </div>
@@ -226,7 +276,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose }) => 
           </button>
           <button
             type="submit"
-            disabled={isProcessing || !file}
+            disabled={isProcessing || !file || !folderId || isFoldersLoading}
             className="btn btn-sm btn-primary text-white font-medium shadow-xs gap-1.5"
           >
             {isProcessing ? (

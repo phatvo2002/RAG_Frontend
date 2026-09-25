@@ -1,7 +1,12 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
 import { UploadModal } from './UploadModal';
+import { FolderModal } from './FolderModal';
+import { FolderDetailPanel } from './FolderDetailPanel';
+import { useDepartmentsQuery } from '@/api/departments.api';
+import { FolderItem, useDocumentFoldersQuery } from '@/api/document-folders.api';
+import { DocumentUploadResponse, useDocumentsQuery } from '@/api/documents.api';
 import { CustomTable } from '@/components/customTable';
 import {
   Upload,
@@ -31,158 +36,40 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 
-interface KnowledgeDocItem {
-  id: string;
-  name: string;
-  type: 'pdf' | 'docx' | 'xlsx' | 'pptx';
-  folder: string;
-  department: string;
-  size: string;
-  updatedAt: string;
-  indexStatus: 'indexed' | 'processing' | 'needs_check';
-  accessScope: 'Nội bộ' | 'Hạn chế' | 'Phòng ban';
-  isStarred?: boolean;
+interface FolderTreeNode extends FolderItem {
+  children: FolderTreeNode[];
 }
 
-interface KnowledgeFolderItem {
-  name: string;
-  count: number;
-  group: 'mine' | 'system';
-  isStarred?: boolean;
-}
+const buildFolderTree = (folders: FolderItem[]): FolderTreeNode[] => {
+  const byId = new Map(folders.map((folder) => [folder.id, folder]));
+  const childrenByParent = new Map<string, FolderItem[]>();
+  folders.forEach((folder) => {
+    if (!folder.parentFolderId || !byId.has(folder.parentFolderId)) return;
+    const children = childrenByParent.get(folder.parentFolderId) || [];
+    children.push(folder);
+    childrenByParent.set(folder.parentFolderId, children);
+  });
 
-const mockKnowledgeDocs: KnowledgeDocItem[] = [
-  {
-    id: 'kd-1',
-    name: 'Quy trình mua hàng 2024.pdf',
-    type: 'pdf',
-    folder: 'Quy trình & Hướng dẫn',
-    department: 'PMO',
-    size: '2.4 MB',
-    updatedAt: '28/05/2024 10:24',
-    indexStatus: 'indexed',
-    accessScope: 'Nội bộ',
-    isStarred: true,
-  },
-  {
-    id: 'kd-2',
-    name: 'Báo cáo tiến độ ERP — Tuần 21.docx',
-    type: 'docx',
-    folder: 'Báo cáo & Phân tích',
-    department: 'PMO',
-    size: '1.8 MB',
-    updatedAt: '28/05/2024 09:12',
-    indexStatus: 'indexed',
-    accessScope: 'Nội bộ',
-  },
-  {
-    id: 'kd-3',
-    name: 'Chính sách bảo mật dữ liệu.pdf',
-    type: 'pdf',
-    folder: 'Chính sách & Quy định',
-    department: 'IT',
-    size: '1.3 MB',
-    updatedAt: '27/05/2024 16:45',
-    indexStatus: 'indexed',
-    accessScope: 'Hạn chế',
-  },
-  {
-    id: 'kd-4',
-    name: 'Kế hoạch kiểm thử UAT.xlsx',
-    type: 'xlsx',
-    folder: 'Dự án ERP Nexora',
-    department: 'QA',
-    size: '2.1 MB',
-    updatedAt: '27/05/2024 11:00',
-    indexStatus: 'processing',
-    accessScope: 'Phòng ban',
-  },
-  {
-    id: 'kd-5',
-    name: 'Biên bản họp Ban Điều hành.docx',
-    type: 'docx',
-    folder: 'Biên bản họp',
-    department: 'Ban Điều hành',
-    size: '1.6 MB',
-    updatedAt: '26/05/2024 14:20',
-    indexStatus: 'needs_check',
-    accessScope: 'Nội bộ',
-    isStarred: true,
-  },
-  {
-    id: 'kd-6',
-    name: 'Hướng dẫn sử dụng phần mềm.pdf',
-    type: 'pdf',
-    folder: 'Tài liệu đào tạo',
-    department: 'IT',
-    size: '3.2 MB',
-    updatedAt: '26/05/2024 10:05',
-    indexStatus: 'indexed',
-    accessScope: 'Nội bộ',
-  },
-  {
-    id: 'kd-7',
-    name: 'Danh sách khách hàng Q2/2024.xlsx',
-    type: 'xlsx',
-    folder: 'Báo cáo & Phân tích',
-    department: 'Kinh doanh',
-    size: '1.1 MB',
-    updatedAt: '25/05/2024 17:30',
-    indexStatus: 'indexed',
-    accessScope: 'Phòng ban',
-  },
-  {
-    id: 'kd-8',
-    name: 'Mẫu hợp đồng dịch vụ.docx',
-    type: 'docx',
-    folder: 'Biểu mẫu & Mẫu',
-    department: 'Pháp chế',
-    size: '1.4 MB',
-    updatedAt: '24/05/2024 15:18',
-    indexStatus: 'processing',
-    accessScope: 'Hạn chế',
-  },
-  {
-    id: 'kd-9',
-    name: 'Quy định làm việc từ xa.pdf',
-    type: 'pdf',
-    folder: 'Chính sách & Quy định',
-    department: 'Nhân sự',
-    size: '912 KB',
-    updatedAt: '24/05/2024 09:45',
-    indexStatus: 'indexed',
-    accessScope: 'Nội bộ',
-  },
-  {
-    id: 'kd-10',
-    name: 'Kế hoạch đào tạo nhân sự 2024.docx',
-    type: 'docx',
-    folder: 'Tài liệu đào tạo',
-    department: 'Nhân sự',
-    size: '2.7 MB',
-    updatedAt: '23/05/2024 11:22',
-    indexStatus: 'indexed',
-    accessScope: 'Phòng ban',
-  },
-];
+  const visited = new Set<string>();
+  const buildNode = (folder: FolderItem, ancestors: Set<string>): FolderTreeNode => {
+    visited.add(folder.id);
+    const nextAncestors = new Set(ancestors).add(folder.id);
+    const children = (childrenByParent.get(folder.id) || [])
+      .filter((child) => !nextAncestors.has(child.id))
+      .map((child) => buildNode(child, nextAncestors));
+    return { ...folder, children };
+  };
 
-const knowledgeFolders: KnowledgeFolderItem[] = [
-  { name: 'Dự án ERP Nexora', count: 128, group: 'mine', isStarred: true },
-  { name: 'Phòng PMO', count: 86, group: 'mine' },
-  { name: 'Phòng Kế toán', count: 64, group: 'mine', isStarred: true },
-  { name: 'Phòng Nhân sự', count: 52, group: 'mine' },
-  { name: 'Phòng Kinh doanh', count: 71, group: 'mine' },
-  { name: 'Phòng IT', count: 43, group: 'mine' },
-  { name: 'Chính sách & Quy định', count: 112, group: 'system' },
-  { name: 'Quy trình & Hướng dẫn', count: 218, group: 'system' },
-  { name: 'Biểu mẫu & Mẫu', count: 156, group: 'system' },
-  { name: 'Tài liệu đào tạo', count: 98, group: 'system' },
-  { name: 'Báo cáo & Phân tích', count: 204, group: 'system' },
-  { name: 'Khác', count: 16, group: 'system' },
-];
+  const roots = folders.filter((folder) => !folder.parentFolderId || !byId.has(folder.parentFolderId));
+  const tree = roots.map((folder) => buildNode(folder, new Set<string>()));
+  folders.forEach((folder) => {
+    if (!visited.has(folder.id)) tree.push(buildNode(folder, new Set<string>()));
+  });
+  return tree;
+};
 
 export const DataRepoPage: React.FC = () => {
-  const { showToast } = useApp();
+  const { showToast, currentUser } = useApp();
   const [selectedFolder, setSelectedFolder] = useState('all');
   const [repositoryView, setRepositoryView] = useState<'folders' | 'documents'>('folders');
   const [search, setSearch] = useState('');
@@ -191,61 +78,86 @@ export const DataRepoPage: React.FC = () => {
   const [indexFilter, setIndexFilter] = useState('all');
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
+  const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
+  const [isActivityOpen, setIsActivityOpen] = useState(false);
+  const [detailFolderId, setDetailFolderId] = useState<string | null>(null);
+  const [folderDepartmentFilter, setFolderDepartmentFilter] = useState('all');
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+  const [documentPage, setDocumentPage] = useState(1);
+  const [documentPageSize, setDocumentPageSize] = useState(25);
 
-  // Filtered Docs
-  const filteredDocs = useMemo(() => {
-    return mockKnowledgeDocs.filter((d) => {
-      const q = search.toLowerCase();
-      const matchSearch =
-        !q ||
-        d.name.toLowerCase().includes(q) ||
-        d.folder.toLowerCase().includes(q) ||
-        d.department.toLowerCase().includes(q);
+  const { data: departments = [] } = useDepartmentsQuery();
+  const {
+    data: folders = [],
+    isLoading: isFoldersLoading,
+    isError: isFoldersError,
+    error: foldersError,
+    refetch: refetchFolders,
+  } = useDocumentFoldersQuery(folderDepartmentFilter === 'all' ? undefined : folderDepartmentFilter);
 
-      const matchType = typeFilter === 'all' || d.type === typeFilter;
-      const matchDept = deptFilter === 'all' || d.department === deptFilter;
-      const matchIndex = indexFilter === 'all' || d.indexStatus === indexFilter;
-      const matchFolder =
-        selectedFolder === 'all' ||
-        (selectedFolder === 'starred' ? d.isStarred :
-          selectedFolder === 'recent' ? true : d.folder === selectedFolder);
+  const activeFolder = folders.find((folder) => folder.id === selectedFolder);
+  const isFolderView = repositoryView === 'folders';
+  const folderTree = useMemo(() => buildFolderTree(folders), [folders]);
 
-      return matchSearch && matchType && matchDept && matchIndex && matchFolder;
-    }).sort((a, b) => {
-      if (selectedFolder === 'recent') return b.updatedAt.localeCompare(a.updatedAt);
-      return 0;
-    });
-  }, [search, typeFilter, deptFilter, indexFilter, selectedFolder]);
+  const documentQueryParams = useMemo(() => ({
+    folderId: selectedFolder,
+    page: documentPage,
+    pageSize: documentPageSize,
+    search,
+    fileType: typeFilter,
+    processingStatus: indexFilter === 'all' ? undefined : indexFilter,
+    departmentId: deptFilter === 'all' ? undefined : deptFilter,
+  }), [selectedFolder, documentPage, documentPageSize, search, typeFilter, indexFilter, deptFilter]);
 
-  const folderRows = useMemo(() => knowledgeFolders.map((folder) => {
-    const folderDocs = mockKnowledgeDocs.filter((doc) => doc.folder === folder.name);
-    const latestDoc = [...folderDocs].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))[0];
-    const hasProcessing = folderDocs.some((doc) => doc.indexStatus === 'processing');
-    const hasCheck = folderDocs.some((doc) => doc.indexStatus === 'needs_check');
+  const {
+    data: documentResult,
+    isLoading: isDocumentsLoading,
+    isFetching: isDocumentsFetching,
+    isError: isDocumentsError,
+    error: documentsError,
+    refetch: refetchDocuments,
+  } = useDocumentsQuery(documentQueryParams, !isFolderView && Boolean(activeFolder));
 
-    return {
-      ...folder,
-      documentCount: folder.count,
-      size: '—',
-      manager: latestDoc?.department || '—',
-      updatedAt: latestDoc?.updatedAt || '—',
-      status: hasCheck ? 'needs_check' : hasProcessing ? 'processing' : 'indexed',
-    };
-  }), []);
+  const documentItems = documentResult?.items ?? [];
+  const documentStart = documentResult && documentResult.totalCount > 0
+    ? (documentResult.page - 1) * documentResult.pageSize + 1
+    : 0;
+  const documentEnd = documentResult
+    ? Math.min(documentResult.page * documentResult.pageSize, documentResult.totalCount)
+    : 0;
+
+  useEffect(() => {
+    setDocumentPage(1);
+  }, [selectedFolder, search, typeFilter, deptFilter, indexFilter, documentPageSize]);
+
+  const handleUploaded = useCallback(
+    (_receipt: DocumentUploadResponse, file: File, folder: FolderItem, _accessScope: string) => {
+      setSelectedFolder(folder.id);
+      setRepositoryView('documents');
+      setDetailFolderId(null);
+      showToast(`Đã tải ${file.name} lên máy chủ. Tài liệu đang được Index RAG.`, 'success');
+    },
+    [showToast]
+  );
+
+  const folderRows = useMemo(() => folders.map((folder) => ({
+    ...folder,
+    documentCount: '—',
+    size: '—',
+    manager: '—',
+    updatedAt: '—',
+  })), [folders]);
 
   const filteredFolderRows = useMemo(() => {
     const q = search.trim().toLowerCase();
     return folderRows.filter((folder) => !q || folder.name.toLowerCase().includes(q));
   }, [folderRows, search]);
 
-  const isFolderView = repositoryView === 'folders';
-  const activeFolder = knowledgeFolders.find((folder) => folder.name === selectedFolder);
-
-  const openFolder = (folderName: string) => {
-    setSelectedFolder(folderName);
+  const openFolder = (folderId: string) => {
+    setSelectedFolder(folderId);
     setRepositoryView('documents');
     setSelectedDocIds([]);
+    setDetailFolderId(folderId);
   };
 
   const getDocTypeBadge = (type: string) => {
@@ -254,15 +166,23 @@ export const DataRepoPage: React.FC = () => {
         return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-rose-500/15 text-rose-600 dark:text-rose-400">PDF</span>;
       case 'docx':
         return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-500/15 text-blue-600 dark:text-blue-400">DOCX</span>;
-      case 'xlsx':
-        return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-emerald-500/15 text-emerald-600 dark:text-emerald-400">XLSX</span>;
+      case 'txt':
+        return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-500/15 text-slate-600 dark:text-zinc-400">TXT</span>;
+      case 'md':
+        return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-violet-500/15 text-violet-600 dark:text-violet-400">MD</span>;
       default:
         return <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-slate-500/15 text-slate-600">FILE</span>;
     }
   };
 
   const getIndexStatusBadge = (status: string) => {
-    switch (status) {
+    const normalizedStatus = status.toUpperCase() === 'READY'
+      ? 'indexed'
+      : status.toUpperCase() === 'FAILED'
+        ? 'needs_check'
+        : 'processing';
+
+    switch (normalizedStatus) {
       case 'indexed':
         return (
           <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
@@ -306,6 +226,17 @@ export const DataRepoPage: React.FC = () => {
     }
   };
 
+  const formatDocumentSize = (sizeBytes: number) => {
+    if (!sizeBytes) return '—';
+    if (sizeBytes < 1024 * 1024) return `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
+    return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
+  const formatDocumentDate = (value: string) => {
+    if (!value) return '—';
+    return new Date(value).toLocaleString('vi-VN');
+  };
+
   return (
     <div className="nexora-page flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
       
@@ -341,13 +272,13 @@ export const DataRepoPage: React.FC = () => {
           <p className="text-xs text-slate-500 dark:text-zinc-400">
             {isFolderView
               ? 'Quản lý thư mục, tài liệu, quyền truy cập và trạng thái lập chỉ mục'
-              : `${activeFolder?.count || filteredDocs.length} tài liệu • Quản lý bởi ${activeFolder ? 'phòng ban' : 'Nexora'}`}
+              : `${activeFolder ? (documentResult?.totalCount ?? 0) : 0} tài liệu • Quản lý bởi ${activeFolder ? 'phòng ban' : 'Nexora'}`}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
-            onClick={() => showToast('Tạo thư mục mới', 'info')}
+            onClick={() => setIsFolderModalOpen(true)}
             className="px-3 py-1.5 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
           >
             <FolderPlus className="w-3.5 h-3.5" />
@@ -370,152 +301,42 @@ export const DataRepoPage: React.FC = () => {
         {/* ==================================================================== */}
         {/* 1. LEFT COLUMN: Cây Thư Mục (Folder Tree) 240px */}
         {/* ==================================================================== */}
-        <aside className="hidden" aria-hidden="true">
-          
-          {/* Header */}
-          <div className="flex items-center justify-between">
-            <span className="font-bold text-xs text-slate-800 dark:text-zinc-200">Thư mục</span>
+        <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 lg:flex">
+          <div className="mb-3 flex items-center justify-between">
+            <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">Cây thư mục</span>
             <div className="flex items-center gap-1">
-              <button
-                onClick={() => showToast('Thêm thư mục', 'info')}
-                className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 rounded cursor-pointer"
-              >
-                <Plus className="w-3.5 h-3.5" />
-              </button>
-              <button
-                onClick={() => showToast('Làm mới danh sách thư mục', 'info')}
-                className="p-1 hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 rounded cursor-pointer"
-              >
-                <RefreshCw className="w-3 h-3" />
-              </button>
+              <button type="button" onClick={() => setIsFolderModalOpen(true)} className="btn btn-ghost btn-xs btn-square" title="Tạo folder"><Plus className="h-3.5 w-3.5" /></button>
+              <button type="button" onClick={() => refetchFolders()} className="btn btn-ghost btn-xs btn-square" title="Làm mới"><RefreshCw className={`h-3.5 w-3.5 ${isFoldersLoading ? 'animate-spin' : ''}`} /></button>
             </div>
           </div>
-
-          {/* Root Links */}
-          <div className="space-y-1">
-            <div
-              onClick={() => {
-                setSelectedFolder('all');
-                setRepositoryView('folders');
-              }}
-              className={`p-2 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${
-                selectedFolder === 'all'
-                  ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
-                  : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Folder className="w-4 h-4 fill-blue-500/20 text-blue-600 dark:text-blue-400" />
-                <span>Tất cả tài liệu</span>
-              </div>
-              <span className="text-[11px] font-mono font-medium">1.248</span>
-            </div>
-
-            <div
-              onClick={() => {
-                setSelectedFolder('starred');
-                setRepositoryView('documents');
-              }}
-              className={`p-2 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${
-                selectedFolder === 'starred' && !isFolderView
-                  ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
-                  : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Star className="w-4 h-4 text-amber-500 fill-amber-500/20" />
-                <span>Yêu thích</span>
-              </div>
-              <span className="text-[11px] font-mono text-slate-400">32</span>
-            </div>
-
-            <div
-              onClick={() => {
-                setSelectedFolder('recent');
-                setRepositoryView('documents');
-              }}
-              className={`p-2 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${
-                selectedFolder === 'recent' && !isFolderView
-                  ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
-                  : 'text-slate-700 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-900'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Clock className="w-4 h-4 text-slate-400" />
-                <span>Gần đây</span>
-              </div>
-              <span className="text-[11px] font-mono text-slate-400">28</span>
-            </div>
+          <button
+            type="button"
+            onClick={() => { setSelectedFolder('all'); setRepositoryView('folders'); setDetailFolderId(null); }}
+            className={`mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-left text-xs ${selectedFolder === 'all' && isFolderView ? 'bg-blue-50 font-semibold text-blue-600 dark:bg-blue-950/50 dark:text-blue-400' : 'text-slate-600 hover:bg-slate-50 dark:text-zinc-400 dark:hover:bg-zinc-900'}`}
+          >
+            <Folder className="h-4 w-4 text-blue-600" /> Tất cả folder
+            <span className="ml-auto font-mono text-[10px]">{folders.length}</span>
+          </button>
+          <div className="space-y-0.5">
+            {folderTree.map((node) => {
+              const renderNode = (item: FolderTreeNode, depth: number): React.ReactNode => (
+                <React.Fragment key={item.id}>
+                  <button
+                    type="button"
+                    onClick={() => openFolder(item.id)}
+                    className={`flex w-full items-center gap-1.5 rounded-lg py-1.5 pr-1 text-left text-xs ${selectedFolder === item.id ? 'bg-blue-50 font-semibold text-blue-600 dark:bg-blue-950/50 dark:text-blue-400' : 'text-slate-600 hover:bg-slate-50 dark:text-zinc-400 dark:hover:bg-zinc-900'}`}
+                    style={{ paddingLeft: `${8 + depth * 14}px` }}
+                  >
+                    <Folder className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                    <span className="truncate">{item.name}</span>
+                  </button>
+                  {item.children.map((child) => renderNode(child, depth + 1))}
+                </React.Fragment>
+              );
+              return renderNode(node, 0);
+            })}
+            {!isFoldersLoading && folderTree.length === 0 && <p className="px-2 py-4 text-center text-[11px] text-slate-400">Chưa có folder</p>}
           </div>
-
-          {/* Group: Thư mục của tôi */}
-          <div className="space-y-1 pt-2">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 px-1">
-              <span>Thư mục của tôi</span>
-              <span>0</span>
-            </div>
-            <div className="space-y-0.5">
-              {[
-                { name: 'Dự án ERP Nexora', count: 128 },
-                { name: 'Phòng PMO', count: 86 },
-                { name: 'Phòng Kế toán', count: 64 },
-                { name: 'Phòng Nhân sự', count: 52 },
-                { name: 'Phòng Kinh doanh', count: 71 },
-                { name: 'Phòng IT', count: 43 },
-              ].map((f) => (
-                <div
-                  key={f.name}
-                  onClick={() => openFolder(f.name)}
-                  className={`px-2 py-1.5 rounded-lg flex items-center justify-between text-xs cursor-pointer ${
-                    selectedFolder === f.name
-                      ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
-                      : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-900'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <Folder className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="truncate">{f.name}</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-400 shrink-0">{f.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Group: Thư mục hệ thống */}
-          <div className="space-y-1 pt-2">
-            <div className="flex items-center justify-between text-[11px] font-semibold text-slate-400 px-1">
-              <span>Thư mục hệ thống</span>
-              <span>0</span>
-            </div>
-            <div className="space-y-0.5">
-              {[
-                { name: 'Chính sách & Quy định', count: 112 },
-                { name: 'Quy trình & Hướng dẫn', count: 218 },
-                { name: 'Biểu mẫu & Mẫu', count: 156 },
-                { name: 'Tài liệu đào tạo', count: 98 },
-                { name: 'Báo cáo & Phân tích', count: 204 },
-                { name: 'Khác', count: 16 },
-              ].map((f) => (
-                <div
-                  key={f.name}
-                  onClick={() => openFolder(f.name)}
-                  className={`px-2 py-1.5 rounded-lg flex items-center justify-between text-xs cursor-pointer ${
-                    selectedFolder === f.name
-                      ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 font-semibold'
-                      : 'text-slate-600 dark:text-zinc-400 hover:bg-slate-50 dark:hover:bg-zinc-900'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 truncate">
-                    <Folder className="w-3.5 h-3.5 text-slate-400" />
-                    <span className="truncate">{f.name}</span>
-                  </div>
-                  <span className="text-[10px] font-mono text-slate-400 shrink-0">{f.count}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
         </aside>
 
         {/* ==================================================================== */}
@@ -598,22 +419,33 @@ export const DataRepoPage: React.FC = () => {
                 <option value="all">Loại tài liệu</option>
                 <option value="pdf">PDF</option>
                 <option value="docx">DOCX</option>
-                <option value="xlsx">XLSX</option>
+                <option value="txt">TXT</option>
+                <option value="md">MD</option>
               </select>}
 
-              <select
-                value={deptFilter}
-                onChange={(e) => setDeptFilter(e.target.value)}
-                className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
-              >
-                <option value="all">Phòng ban</option>
-                <option value="PMO">PMO</option>
-                <option value="IT">IT</option>
-                <option value="QA">QA</option>
-                <option value="Ban Điều hành">Ban Điều hành</option>
-                <option value="Kinh doanh">Kinh doanh</option>
-                <option value="Nhân sự">Nhân sự</option>
-              </select>
+              {isFolderView ? (
+                <select
+                  value={folderDepartmentFilter}
+                  onChange={(e) => setFolderDepartmentFilter(e.target.value)}
+                  className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
+                >
+                  <option value="all">Phòng ban</option>
+                  {departments.map((department) => (
+                    <option key={department.id} value={department.id}>{department.name}</option>
+                  ))}
+                </select>
+              ) : (
+                <select
+                  value={deptFilter}
+                  onChange={(e) => setDeptFilter(e.target.value)}
+                  className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
+                >
+                  <option value="all">Phòng ban</option>
+                  {departments.map((department) => (
+                    <option key={department.id} value={department.id}>{department.name}</option>
+                  ))}
+                </select>
+              )}
 
               {!isFolderView && <select
                 value={indexFilter}
@@ -621,9 +453,10 @@ export const DataRepoPage: React.FC = () => {
                 className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
               >
                 <option value="all">Trạng thái chỉ mục</option>
-                <option value="indexed">Đã lập chỉ mục</option>
-                <option value="processing">Đang xử lý</option>
-                <option value="needs_check">Cần kiểm tra</option>
+                <option value="READY">Đã lập chỉ mục</option>
+                <option value="PROCESSING">Đang xử lý</option>
+                <option value="QUEUED">Đang chờ xử lý</option>
+                <option value="FAILED">Cần kiểm tra</option>
               </select>}
 
               {isFolderView && (
@@ -656,7 +489,7 @@ export const DataRepoPage: React.FC = () => {
           {isFolderView ? (
           <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
             <div className="px-4 py-2.5 bg-slate-50/60 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
-              <span>Hiển thị 1–{filteredFolderRows.length} trong {knowledgeFolders.length}</span>
+              <span>{isFoldersLoading ? 'Đang tải folder...' : `Hiển thị 1–${filteredFolderRows.length} trong ${folders.length}`}</span>
               <button
                 type="button"
                 onClick={() => showToast('Chọn cột hiển thị thư mục', 'info')}
@@ -683,22 +516,33 @@ export const DataRepoPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
-                  {filteredFolderRows.map((folder) => (
+                  {isFoldersError ? (
+                    <tr>
+                      <td colSpan={9} className="py-10 text-center text-rose-600 dark:text-rose-400">
+                        <div className="mb-2 flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> Không thể tải danh sách folder.</div>
+                        <p className="mb-3 text-[11px] text-slate-400">{(foldersError as Error)?.message || 'Vui lòng kiểm tra kết nối API.'}</p>
+                        <button type="button" onClick={() => refetchFolders()} className="btn btn-xs btn-outline">Thử lại</button>
+                      </td>
+                    </tr>
+                  ) : isFoldersLoading ? (
+                    <tr><td colSpan={9} className="py-10 text-center text-slate-400"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin text-blue-500" />Đang tải danh sách folder...</td></tr>
+                  ) : filteredFolderRows.length === 0 ? (
+                    <tr><td colSpan={9} className="py-10 text-center text-slate-400">Không tìm thấy folder phù hợp.</td></tr>
+                  ) : filteredFolderRows.map((folder) => (
                     <tr
-                      key={folder.name}
-                      onDoubleClick={() => openFolder(folder.name)}
-                      className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
+                      key={folder.id}
+                      onClick={() => { setDetailFolderId(folder.id); openFolder(folder.id); }}
+                      className={`cursor-pointer transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 ${detailFolderId === folder.id ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}
                     >
                       <td className="px-4 py-3 text-center"><input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" /></td>
                       <td className="px-3 py-3">
                         <button
                           type="button"
-                          onClick={() => openFolder(folder.name)}
+                          onClick={(event) => { event.stopPropagation(); openFolder(folder.id); }}
                           className="flex items-center gap-2.5 text-left font-semibold text-slate-900 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
                         >
                           <Folder className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
                           <span>{folder.name}</span>
-                          {folder.isStarred && <Star className="w-3.5 h-3.5 text-amber-500 fill-amber-500 shrink-0" />}
                         </button>
                       </td>
                       <td className="px-3 py-3 text-slate-600 dark:text-zinc-400 font-medium">{folder.documentCount}</td>
@@ -710,12 +554,12 @@ export const DataRepoPage: React.FC = () => {
                         </span>
                       </td>
                       <td className="px-3 py-3 text-slate-500 dark:text-zinc-400 font-mono text-[11px]">{folder.updatedAt}</td>
-                      <td className="px-3 py-3">{getIndexStatusBadge(folder.status)}</td>
-                      <td className="px-3 py-3">{getAccessBadge('Phòng ban')}</td>
+                      <td className="px-3 py-3 text-slate-400 dark:text-zinc-500">—</td>
+                      <td className="px-3 py-3 text-slate-400 dark:text-zinc-500">—</td>
                       <td className="px-4 py-3 text-right">
                         <button
                           type="button"
-                          onClick={() => openFolder(folder.name)}
+                          onClick={(event) => { event.stopPropagation(); openFolder(folder.id); }}
                           className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded cursor-pointer"
                           title={`Mở thư mục ${folder.name}`}
                         >
@@ -729,7 +573,7 @@ export const DataRepoPage: React.FC = () => {
             </div>
 
             <div className="px-4 py-3 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-              <span>Hiển thị 1–{filteredFolderRows.length} trong {knowledgeFolders.length}</span>
+              <span>{isFoldersLoading ? 'Đang tải folder...' : `Hiển thị 1–${filteredFolderRows.length} trong ${folders.length}`}</span>
               <div className="flex items-center gap-2"><span>Số dòng mỗi trang</span><span className="px-2 py-1 border border-slate-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900">25⌄</span><button className="p-1 border border-slate-200 dark:border-zinc-800 rounded opacity-40" disabled><ChevronLeft className="w-3.5 h-3.5" /></button><span className="px-2 py-1 rounded bg-blue-600 text-white">1</span><button className="p-1 border border-slate-200 dark:border-zinc-800 rounded"><ChevronRight className="w-3.5 h-3.5" /></button></div>
             </div>
           </CustomTable>
@@ -738,7 +582,10 @@ export const DataRepoPage: React.FC = () => {
             
             {/* Table Header Info Row */}
             <div className="px-4 py-2.5 bg-slate-50/60 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
-              <span>Hiển thị 1–{filteredDocs.length} trong 1.248</span>
+              <span>
+                {isDocumentsLoading ? 'Đang tải tài liệu...' : `Hiển thị ${documentStart}–${documentEnd} trong ${documentResult?.totalCount ?? 0}`}
+                {isDocumentsFetching && !isDocumentsLoading ? ' · Đang cập nhật...' : ''}
+              </span>
               <div className="flex items-center gap-1">
                 <button
                   onClick={() => setViewMode('list')}
@@ -778,53 +625,57 @@ export const DataRepoPage: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
-                  {filteredDocs.map((doc) => (
-                    <tr key={doc.id} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
-                      <td className="px-4 py-3 text-center">
-                        <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" />
-                      </td>
-                      <td className="px-3 py-3 font-semibold text-slate-900 dark:text-zinc-100">
-                        <div className="flex items-center gap-2.5">
-                          {getDocTypeBadge(doc.type)}
-                          <span
-                            onClick={() => showToast(`Xem tài liệu ${doc.name}`, 'info')}
-                            className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors truncate max-w-[220px]"
-                          >
-                            {doc.name}
-                          </span>
-                          {doc.isStarred && (
-                            <Star className="w-3.5 h-3.5 text-amber-400 fill-amber-400 shrink-0" />
-                          )}
-                        </div>
-                      </td>
-                      <td className="px-3 py-3 text-slate-600 dark:text-zinc-400">
-                        {doc.folder}
-                      </td>
-                      <td className="px-3 py-3 text-slate-700 dark:text-zinc-300 font-medium">
-                        {doc.department}
-                      </td>
-                      <td className="px-3 py-3 font-mono text-slate-500 text-[11px]">
-                        {doc.size}
-                      </td>
-                      <td className="px-3 py-3 font-mono text-slate-500 text-[11px]">
-                        {doc.updatedAt}
-                      </td>
-                      <td className="px-3 py-3">
-                        {getIndexStatusBadge(doc.indexStatus)}
-                      </td>
-                      <td className="px-3 py-3">
-                        {getAccessBadge(doc.accessScope)}
-                      </td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => showToast(`Tùy chọn ${doc.name}`, 'info')}
-                          className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded cursor-pointer"
-                        >
-                          <MoreHorizontal className="w-4 h-4" />
-                        </button>
+                  {isDocumentsError ? (
+                    <tr>
+                      <td colSpan={9} className="py-10 text-center text-rose-600 dark:text-rose-400">
+                        <div className="mb-2 flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> Không thể tải danh sách tài liệu.</div>
+                        <p className="mb-3 text-[11px] text-slate-400">{(documentsError as Error)?.message || 'Vui lòng kiểm tra kết nối API.'}</p>
+                        <button type="button" onClick={() => refetchDocuments()} className="btn btn-xs btn-outline">Thử lại</button>
                       </td>
                     </tr>
-                  ))}
+                  ) : isDocumentsLoading ? (
+                    <tr><td colSpan={9} className="py-10 text-center text-slate-400"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin text-blue-500" />Đang tải danh sách tài liệu...</td></tr>
+                  ) : !activeFolder ? (
+                    <tr><td colSpan={9} className="py-10 text-center text-slate-400">Hãy chọn một folder để xem tài liệu.</td></tr>
+                  ) : documentItems.length === 0 ? (
+                    <tr><td colSpan={9} className="py-10 text-center text-slate-400">Folder này chưa có tài liệu phù hợp.</td></tr>
+                  ) : documentItems.map((doc) => {
+                    const documentName = doc.originalFileName || doc.title;
+                    const extension = documentName.split('.').pop()?.toLowerCase() || '';
+                    const departmentName = departments.find((department) => department.id === doc.departmentId)?.name || '—';
+                    return (
+                      <tr key={doc.documentId} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                        <td className="px-4 py-3 text-center">
+                          <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" />
+                        </td>
+                        <td className="px-3 py-3 font-semibold text-slate-900 dark:text-zinc-100">
+                          <div className="flex items-center gap-2.5">
+                            {getDocTypeBadge(extension)}
+                            <span
+                              onClick={() => showToast(`Xem tài liệu ${documentName}`, 'info')}
+                              className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors truncate max-w-[220px]"
+                            >
+                              {documentName}
+                            </span>
+                          </div>
+                        </td>
+                        <td className="px-3 py-3 text-slate-600 dark:text-zinc-400">{doc.folderName}</td>
+                        <td className="px-3 py-3 text-slate-700 dark:text-zinc-300 font-medium">{departmentName}</td>
+                        <td className="px-3 py-3 font-mono text-slate-500 text-[11px]">{formatDocumentSize(doc.sizeBytes)}</td>
+                        <td className="px-3 py-3 font-mono text-slate-500 text-[11px]">{formatDocumentDate(doc.updatedAt)}</td>
+                        <td className="px-3 py-3">{getIndexStatusBadge(doc.processingStatus)}</td>
+                        <td className="px-3 py-3 text-slate-400 dark:text-zinc-500">—</td>
+                        <td className="px-4 py-3 text-right">
+                          <button
+                            onClick={() => showToast(`Tùy chọn ${documentName}`, 'info')}
+                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded cursor-pointer"
+                          >
+                            <MoreHorizontal className="w-4 h-4" />
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -833,19 +684,33 @@ export const DataRepoPage: React.FC = () => {
             <div className="px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
               <div className="flex items-center gap-2">
                 <span>Số dòng mỗi trang</span>
-                <select className="px-2 py-1 border border-slate-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 text-xs">
+                <select
+                  value={documentPageSize}
+                  onChange={(event) => setDocumentPageSize(Number(event.target.value))}
+                  className="px-2 py-1 border border-slate-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 text-xs"
+                >
                   <option value="25">25</option>
                   <option value="50">50</option>
                   <option value="100">100</option>
                 </select>
               </div>
               <div className="flex items-center gap-3">
-                <span>1 / 50</span>
+                <span>{documentResult?.page ?? 1} / {documentResult?.totalPages ?? 0}</span>
                 <div className="flex items-center gap-1">
-                  <button className="p-1 border border-slate-200 dark:border-zinc-800 rounded hover:bg-slate-50 disabled:opacity-40" disabled>
+                  <button
+                    type="button"
+                    onClick={() => setDocumentPage((page) => Math.max(1, page - 1))}
+                    className="p-1 border border-slate-200 dark:border-zinc-800 rounded hover:bg-slate-50 disabled:opacity-40"
+                    disabled={!documentResult || documentResult.page <= 1 || isDocumentsFetching}
+                  >
                     <ChevronLeft className="w-3.5 h-3.5" />
                   </button>
-                  <button className="p-1 border border-slate-200 dark:border-zinc-800 rounded hover:bg-slate-50">
+                  <button
+                    type="button"
+                    onClick={() => setDocumentPage((page) => Math.min(documentResult?.totalPages ?? page, page + 1))}
+                    className="p-1 border border-slate-200 dark:border-zinc-800 rounded hover:bg-slate-50 disabled:opacity-40"
+                    disabled={!documentResult || documentResult.page >= documentResult.totalPages || isDocumentsFetching}
+                  >
                     <ChevronRight className="w-3.5 h-3.5" />
                   </button>
                 </div>
@@ -1003,12 +868,13 @@ export const DataRepoPage: React.FC = () => {
         {/* ==================================================================== */}
         {/* 4. RIGHT COLUMN: Hoạt động matching 02/03-knowledge-repository.png */}
         {/* ==================================================================== */}
+        {isActivityOpen ? (
         <aside className="w-72 xl:w-80 border-l border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full shrink-0 overflow-y-auto p-4 space-y-4 text-xs">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-base text-slate-900 dark:text-zinc-100">Hoạt động</h3>
             <button
               type="button"
-              onClick={() => showToast('Đóng bảng hoạt động', 'info')}
+              onClick={() => setIsActivityOpen(false)}
               className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 rounded cursor-pointer"
               aria-label="Đóng bảng hoạt động"
             >
@@ -1063,15 +929,19 @@ export const DataRepoPage: React.FC = () => {
               </button>
             </div>
             <div className="space-y-2">
-              {mockKnowledgeDocs.slice(0, 4).map((doc) => (
-                <div key={doc.id} className="flex items-center gap-2 p-2 bg-slate-50/70 dark:bg-zinc-900 rounded-lg">
+              {documentItems.slice(0, 4).map((doc) => {
+                const documentName = doc.originalFileName || doc.title;
+                return (
+                <div key={doc.documentId} className="flex items-center gap-2 p-2 bg-slate-50/70 dark:bg-zinc-900 rounded-lg">
                   <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                   <div className="min-w-0 flex-1">
-                    <p className="font-semibold text-slate-800 dark:text-zinc-200 truncate">{doc.name}</p>
-                    <span className="text-[10px] text-slate-400">{doc.updatedAt} • {doc.department}</span>
+                    <p className="font-semibold text-slate-800 dark:text-zinc-200 truncate">{documentName}</p>
+                    <span className="text-[10px] text-slate-400">{formatDocumentDate(doc.updatedAt)} • {doc.processingStatus}</span>
                   </div>
                 </div>
-              ))}
+                );
+              })}
+              {documentItems.length === 0 && <p className="py-3 text-xs text-slate-400">Chưa có tài liệu trong folder hiện tại.</p>}
             </div>
           </div>
 
@@ -1083,11 +953,50 @@ export const DataRepoPage: React.FC = () => {
             Xem tất cả hoạt động <span className="ml-1">→</span>
           </button>
         </aside>
+        ) : (
+          <aside className="flex w-10 shrink-0 items-start justify-center border-l border-slate-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950">
+            <button
+              type="button"
+              onClick={() => setIsActivityOpen(true)}
+              className="btn btn-ghost btn-sm btn-square text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200"
+              aria-label="Mở bảng hoạt động"
+              title="Mở bảng hoạt động"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+          </aside>
+        )}
 
       </div>
 
-      {/* Upload Modal */}
-      <UploadModal isOpen={isUploadOpen} onClose={() => setIsUploadOpen(false)} />
+      <FolderModal
+        isOpen={isFolderModalOpen}
+        onClose={() => setIsFolderModalOpen(false)}
+        folders={folders}
+        defaultDepartmentId={activeFolder?.departmentId || (folderDepartmentFilter === 'all' ? undefined : folderDepartmentFilter)}
+        defaultParentFolderId={activeFolder?.id || null}
+      />
+
+      {detailFolderId && folders.some((folder) => folder.id === detailFolderId) && (
+        <FolderDetailPanel
+          folder={folders.find((folder) => folder.id === detailFolderId) as FolderItem}
+          folders={folders}
+          currentUser={currentUser}
+          onClose={() => setDetailFolderId(null)}
+          onDeleted={() => {
+            setDetailFolderId(null);
+            setSelectedFolder('all');
+            setRepositoryView('folders');
+          }}
+        />
+      )}
+
+      <UploadModal
+        isOpen={isUploadOpen}
+        onClose={() => setIsUploadOpen(false)}
+        defaultFolderId={activeFolder?.id}
+        onUploaded={handleUploaded}
+      />
     </div>
   );
 };

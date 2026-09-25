@@ -103,8 +103,9 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
   const { skipAuth = false, skipAutoRefresh = false, headers, ...customConfig } = options;
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const isFormDataBody = typeof FormData !== 'undefined' && customConfig.body instanceof FormData;
   const requestHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormDataBody ? {} : { 'Content-Type': 'application/json' }),
     ...(headers as Record<string, string>),
   };
 

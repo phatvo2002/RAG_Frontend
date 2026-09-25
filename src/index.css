@@ -6,6 +6,9 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  --nexora-font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --nexora-font-size-base: 14px;
+  --nexora-line-height-base: 1.45;
   --background: #ffffff;
   --foreground: #09090b;
   --nexora-canvas: #f7faff;
@@ -50,7 +53,9 @@
 body {
   color: var(--foreground);
   background: var(--nexora-canvas);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  font-family: var(--nexora-font-family);
+  font-size: var(--nexora-font-size-base);
+  line-height: var(--nexora-line-height-base);
   margin: 0;
   padding: 0;
   overflow-x: clip;
@@ -62,6 +67,10 @@ input,
 select,
 textarea {
   font: inherit;
+}
+
+.font-sans {
+  font-family: var(--nexora-font-family);
 }
 
 button:focus-visible,
@@ -76,6 +85,13 @@ textarea:focus-visible {
 .nexora-page {
   background: var(--nexora-canvas);
   color: var(--nexora-ink);
+  font-family: var(--nexora-font-family);
+  font-size: var(--nexora-font-size-base);
+  line-height: var(--nexora-line-height-base);
+}
+
+.nexora-page .font-mono {
+  font-family: var(--nexora-font-family);
 }
 
 .nexora-surface {
