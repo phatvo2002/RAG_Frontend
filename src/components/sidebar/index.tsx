@@ -250,7 +250,7 @@ export const Sidebar: React.FC = () => {
   };
 
   const isRootOverviewVisible = isItemVisible(rootOverviewItem);
-  const isChatVisible = !isLoading && (isSuperAdmin || hasModuleAccess(['chat', 'ai']));
+  const isChatVisible = !isLoading;
 
   const visibleGroups = useMemo(() => {
     return menuGroups

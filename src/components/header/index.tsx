@@ -158,7 +158,7 @@ export const Header: React.FC = () => {
                 type="button"
                 onClick={() => {
                   setIsProfileOpen(false);
-                  navigate({ to: '/admin/users' as any });
+                  navigate({ to: '/account' });
                 }}
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors text-left"
               >

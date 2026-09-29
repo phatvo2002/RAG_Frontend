@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { ApiResponse } from '@/types';
 import { apiClient } from './client';
+import { documentFoldersQueryKeys } from './document-folders.api';
 
 export interface DocumentUploadResponse {
   documentId: string;
@@ -86,6 +87,12 @@ export const documentsApi = {
 
     return unwrapData(response);
   },
+
+  async delete(documentId: string): Promise<void> {
+    await apiClient<ApiResponse<unknown> | unknown>(`/api/documents/${encodeURIComponent(documentId)}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 export const documentsQueryKeys = {
@@ -110,6 +117,19 @@ export function useUploadDocumentMutation() {
       documentsApi.upload(folderId, file),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: documentsQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: documentFoldersQueryKeys.lists() });
+    },
+  });
+}
+
+export function useDeleteDocumentMutation() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (documentId: string) => documentsApi.delete(documentId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: documentsQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: documentFoldersQueryKeys.lists() });
     },
   });
 }

@@ -1,631 +1,297 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Header } from '@/components/header';
-import { useApp } from '@/context/AppContext';
+import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import {
-  Sparkles,
-  Paperclip,
-  Send,
-  ThumbsUp,
-  ThumbsDown,
-  Copy,
-  CheckCircle2,
-  FileText,
-  Plus,
-  Search,
-  SlidersHorizontal,
-  ChevronDown,
-  FolderKanban,
-  CheckSquare,
-  Users2,
-  LayoutDashboard,
-  ShieldCheck,
-  FileSpreadsheet,
-  ExternalLink,
-  MessageSquare,
-  Clock,
-  History,
-} from 'lucide-react';
-
-interface ChatSession {
-  id: string;
-  title: string;
-  time: string;
-  group: 'HÔM NAY' | '25/05/2024';
-}
-
-const mockSessions: ChatSession[] = [
-  { id: 's1', title: 'Tóm tắt tiến độ dự án ERP', time: '10:24', group: 'HÔM NAY' },
-  { id: 's2', title: 'Báo cáo rủi ro tuần 21', time: '09:12', group: 'HÔM NAY' },
-  { id: 's3', title: 'Tiến độ triển khai Data Warehouse', time: '08:45', group: 'HÔM NAY' },
-  { id: 's4', title: 'Chuẩn hóa dữ liệu khách hàng', time: 'Hôm qua', group: 'HÔM NAY' },
-  { id: 's5', title: 'Kế hoạch đào tạo người dùng', time: 'Hôm qua', group: 'HÔM NAY' },
-  { id: 's6', title: 'Ngân sách dự án ERP', time: '25/05', group: '25/05/2024' },
-  { id: 's7', title: 'Danh sách nhà cung cấp', time: '25/05', group: '25/05/2024' },
-];
+import { ChevronDown, FileText, LayoutDashboard, LoaderCircle, Menu, Paperclip, Plus, Search, Send, Sparkles, Trash2, X } from 'lucide-react';
+import { chatApi } from '@/api/chat.api';
+import type { ChatConversation, ChatMessage, ChatModel, ChatSource } from '@/api/chat.api';
+import { useApp } from '@/context/AppContext';
 
 export const ChatPage: React.FC = () => {
-  const { showToast } = useApp();
   const navigate = useNavigate();
-  const [activeSessionId, setActiveSessionId] = useState('s1');
-  const [searchQuery, setSearchQuery] = useState('');
-  const [inputText, setInputText] = useState('');
-  const [activeContextFilter, setActiveContextFilter] = useState<'all' | 'doc' | 'meeting' | 'task'>('all');
-  const [contextProject, setContextProject] = useState('Dự án NEXORA Platform');
-  const [feedback, setFeedback] = useState<'up' | 'down' | null>(null);
+  const { currentUser } = useApp();
+  const [conversations, setConversations] = useState<ChatConversation[]>([]);
+  const [activeId, setActiveId] = useState<string | null>(null);
+  const [messages, setMessages] = useState<ChatMessage[]>([]);
+  const [models, setModels] = useState<ChatModel[]>([]);
+  const [modelId, setModelId] = useState('gemini');
+  const [input, setInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [sending, setSending] = useState(false);
+  const [streamText, setStreamText] = useState('');
+  const [streamSources, setStreamSources] = useState<ChatSource[]>([]);
+  const [error, setError] = useState('');
+  const [hasOlder, setHasOlder] = useState(false);
+  const [hasMoreConversations, setHasMoreConversations] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [sourcesOpen, setSourcesOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1280);
+  const [focusedMessageId, setFocusedMessageId] = useState<string | null>(null);
+  const [selectedSourceIndex, setSelectedSourceIndex] = useState(0);
+  const endRef = useRef<HTMLDivElement>(null);
 
-  const handleSendMessage = () => {
-    if (!inputText.trim()) return;
-    showToast('Đã gửi câu hỏi tới NEXORA AI', 'info');
-    setInputText('');
+  useEffect(() => {
+    let cancelled = false;
+    chatApi.models().then(async available => {
+      if (cancelled) return;
+      setModels(available.models);
+      setModelId(available.models.some(model => model.id === available.defaultModel) ? available.defaultModel : available.models[0]?.id ?? '');
+      if (available.configurationError) {
+        setError(available.configurationError);
+      }
+      const history = await chatApi.conversations();
+      if (cancelled) return;
+      setConversations(history);
+      setHasMoreConversations(history.length === 50);
+      if (history.length > 0) {
+        const latestMessages = await chatApi.messages(history[0].id);
+        if (!cancelled) {
+          setActiveId(history[0].id);
+          setMessages(latestMessages);
+          setHasOlder(latestMessages.length === 50);
+        }
+      }
+    }).catch(err => { if (!cancelled) setError(err instanceof Error ? err.message : 'Không thể tải lịch sử hội thoại.'); })
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
+  }, []);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, streamText]);
+
+  const refreshConversations = async () => {
+    const history = await chatApi.conversations();
+    setConversations(history);
+    setHasMoreConversations(history.length === 50);
   };
 
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSendMessage();
+  const openConversation = async (id: string) => {
+    if (sending) return;
+    setHistoryOpen(false);
+    setFocusedMessageId(null);
+    setSelectedSourceIndex(0);
+    setActiveId(id);
+    setMessages([]);
+    setError('');
+    setLoading(true);
+    try {
+      const history = await chatApi.messages(id);
+      setMessages(history);
+      setHasOlder(history.length === 50);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tải tin nhắn.');
+    } finally {
+      setLoading(false);
     }
   };
 
+  const newChat = () => {
+    if (sending) return;
+    setHistoryOpen(false);
+    setFocusedMessageId(null);
+    setSelectedSourceIndex(0);
+    setActiveId(null);
+    setMessages([]);
+    setStreamText('');
+    setStreamSources([]);
+    setError('');
+    setHasOlder(false);
+  };
+
+  const send = async () => {
+    const question = input.trim();
+    if (!question || !modelId || sending) return;
+    setInput('');
+    setError('');
+    setStreamText('');
+    setStreamSources([]);
+    setSending(true);
+    setFocusedMessageId(null);
+    setSelectedSourceIndex(0);
+    const temporaryId = crypto.randomUUID();
+    setMessages(previous => [...previous, {
+      id: temporaryId, conversationId: activeId ?? '', role: 'user', content: question,
+      sequenceNo: 0, createdAt: new Date().toISOString(), status: 'PENDING', sources: [],
+    }]);
+    let conversationId = activeId;
+    try {
+      await chatApi.streamTurn({ conversationId: activeId, question, modelId, clientRequestId: crypto.randomUUID() }, event => {
+        if (event.type === 'started') {
+          conversationId = event.data.conversationId;
+          setActiveId(conversationId);
+          setMessages(previous => previous.map(message => message.id === temporaryId
+            ? { ...message, id: event.data.requestMessageId, conversationId: event.data.conversationId } : message));
+        }
+        if (event.type === 'sources') setStreamSources(event.data);
+        if (event.type === 'delta') setStreamText(previous => previous + event.data.text);
+        if (event.type === 'completed') {
+          setMessages(previous => [...previous, event.data]);
+          setFocusedMessageId(event.data.id);
+          setStreamText('');
+          setStreamSources([]);
+        }
+      });
+      await refreshConversations();
+      if (conversationId) {
+        const history = await chatApi.messages(conversationId);
+        setMessages(history);
+        setHasOlder(history.length === 50);
+      }
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể tạo câu trả lời.');
+      setStreamText('');
+      setStreamSources([]);
+      if (conversationId) {
+        try { setMessages(await chatApi.messages(conversationId)); await refreshConversations(); } catch { /* retain error */ }
+      } else {
+        setMessages(previous => previous.map(message => message.id === temporaryId ? { ...message, status: 'FAILED' } : message));
+      }
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const deleteMessage = async (message: ChatMessage) => {
+    if (!activeId || sending || !window.confirm('Xóa tin nhắn này khỏi hội thoại?')) return;
+    try {
+      await chatApi.deleteMessage(activeId, message.id);
+      setMessages(previous => previous.filter(item => item.id !== message.id));
+      if (focusedMessageId === message.id) setFocusedMessageId(null);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Không thể xóa tin nhắn.');
+    }
+  };
+
+  const loadOlder = async () => {
+    if (!activeId || messages.length === 0) return;
+    try {
+      const older = await chatApi.messages(activeId, messages[0].sequenceNo);
+      setMessages(previous => [...older, ...previous]);
+      setHasOlder(older.length === 50);
+    } catch (err) { setError(err instanceof Error ? err.message : 'Không thể tải tin nhắn cũ.'); }
+  };
+
+  const latestAssistant = [...messages].reverse().find(message => message.role === 'assistant');
+  const focusedAssistant = messages.find(message => message.id === focusedMessageId && message.role === 'assistant');
+  const sources = sending ? streamSources : (focusedAssistant ?? latestAssistant)?.sources ?? [];
+  const filteredConversations = conversations.filter(item => item.title.toLowerCase().includes(search.toLowerCase()));
+  const formatTime = (date: string) => new Date(date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' });
+  const formatDate = (date: string) => new Date(date).toLocaleDateString('vi-VN');
+  const formatDayLabel = (date: string) => formatDate(date) === formatDate(new Date().toISOString()) ? 'Hôm nay' : formatDate(date);
+  const userInitial = (currentUser?.name || 'B').trim().charAt(0).toUpperCase();
+
   return (
-    <div className="nexora-chat flex-1 flex flex-col h-full bg-[#0d131f] text-slate-100 overflow-hidden select-none">
-      
-      {/* 3-Column Standalone Workspace matching 02-ai-assistant-standalone.png */}
-      <div className="flex-1 flex overflow-hidden">
-        
-        {/* ==================================================================== */}
-        {/* 1. LEFT COLUMN: Chat History Sidebar (260px) */}
-        {/* ==================================================================== */}
-        <aside className="hidden md:flex w-64 bg-[#090d16] border-r border-slate-800/80 flex-col h-full shrink-0">
-          
-          {/* Header Action: Dashboard Switcher */}
-          <div className="p-3.5 space-y-2.5 border-b border-slate-800/80">
-            <button
-              onClick={() => navigate({ to: '/dashboard' as any })}
-              className="w-full py-2 px-3 bg-slate-900/90 hover:bg-slate-800 border border-slate-700/60 rounded-xl text-xs font-semibold text-slate-300 flex items-center justify-center gap-2 transition-colors cursor-pointer"
-            >
-              <LayoutDashboard className="w-3.5 h-3.5 text-blue-400" />
-              <span>Dashboard Quản lý</span>
+    <div className="flex h-screen min-h-0 overflow-hidden bg-white text-[#182744]" style={{ colorScheme: 'light' }}>
+      {historyOpen && <button aria-label="Đóng lịch sử hội thoại" onClick={() => setHistoryOpen(false)} className="fixed inset-0 z-20 bg-slate-950/30 md:hidden" />}
+      <aside className={`${historyOpen ? 'flex' : 'hidden'} fixed inset-y-0 left-0 z-30 w-[300px] flex-col border-r border-[#e5ebf4] bg-[#f8fafd] md:static md:z-auto md:flex md:w-[260px] lg:w-[300px] shrink-0`}>
+        <div className="space-y-2.5 border-b border-[#e6ebf4] p-3">
+          <button onClick={() => navigate({ to: '/dashboard' as any })} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-white text-sm font-medium text-[#233658] hover:bg-[#eef3fc]">
+            <LayoutDashboard size={17} strokeWidth={1.8} />Dashboard Quản lý
+          </button>
+          <button onClick={newChat} disabled={sending} className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-[#1762f4] text-sm font-semibold text-white shadow-sm hover:bg-[#0d52d9] disabled:opacity-50">
+            <Plus size={18} />Đoạn chat mới
+          </button>
+          <label className="flex h-11 items-center gap-2 rounded-xl border border-[#dce5f2] bg-white px-3 text-[#7588a9] focus-within:border-[#1762f4]">
+            <Search size={18} aria-hidden="true" />
+            <input value={search} onChange={event => setSearch(event.target.value)} placeholder="Tìm đoạn chat..." aria-label="Tìm đoạn chat" className="min-w-0 flex-1 bg-transparent text-sm text-[#182744] outline-none placeholder:text-[#8190aa]" />
+          </label>
+        </div>
+        <div className="min-h-0 flex-1 space-y-2 overflow-y-auto p-3">
+          {filteredConversations.map(item => (
+            <button key={item.id} onClick={() => void openConversation(item.id)} className={`relative w-full rounded-xl border px-3.5 py-3 text-left transition-colors ${activeId === item.id ? 'border-[#d8e6ff] bg-[#eaf2ff] text-[#1353cf]' : 'border-[#e5ebf4] bg-white text-[#253653] hover:border-[#bbd0f2]'}`}>
+              {activeId === item.id && <span className="absolute inset-y-3 left-0 w-0.5 rounded-full bg-[#1762f4]" />}
+              <span className="flex items-center justify-between gap-2"><strong className="truncate text-[13px] font-semibold">{item.title}</strong><time className="shrink-0 text-[11px] font-normal text-[#8493ad]">{formatDate(item.updatedAt)}</time></span>
+              <span className="mt-1 block truncate text-xs text-[#8593ac]">Mở lại cuộc hội thoại</span>
             </button>
+          ))}
+          {!loading && filteredConversations.length === 0 && <p className="px-2 py-5 text-center text-xs text-[#8190aa]">{search ? 'Không tìm thấy đoạn chat.' : 'Chưa có đoạn chat nào.'}</p>}
+          {hasMoreConversations && <button onClick={async () => { try { const more = await chatApi.conversations(conversations.length); setConversations(previous => [...previous, ...more]); setHasMoreConversations(more.length === 50); } catch (err) { setError(err instanceof Error ? err.message : 'Không thể tải hội thoại.'); } }} className="px-2 py-2 text-xs font-semibold text-[#1762f4] hover:underline">Xem thêm hội thoại</button>}
+        </div>
+      </aside>
 
-            <button
-              onClick={() => showToast('Đã tạo đoạn chat mới', 'success')}
-              className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold flex items-center justify-center gap-2 shadow-xs shadow-blue-500/20 transition-colors cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Đoạn chat mới</span>
-            </button>
-
-            {/* Search Input */}
-            <div className="relative flex items-center pt-1">
-              <input
-                type="text"
-                placeholder="Tìm đoạn chat..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-8 pr-7 py-1.5 bg-[#121826] border border-slate-800 rounded-lg text-xs text-slate-200 placeholder:text-slate-500 focus:outline-none focus:border-blue-500"
-              />
-              <Search className="w-3.5 h-3.5 text-slate-500 absolute left-2.5 pointer-events-none" />
-              <SlidersHorizontal className="w-3 h-3 text-slate-500 absolute right-2.5 cursor-pointer hover:text-slate-300" />
-            </div>
+      <main className="flex min-w-0 flex-1 flex-col bg-white">
+        <header className="flex h-[66px] shrink-0 items-center justify-between gap-3 border-b border-[#e6ebf4] px-4 sm:px-6">
+          <div className="flex min-w-0 items-center gap-2">
+            <button onClick={() => setHistoryOpen(true)} aria-label="Mở lịch sử hội thoại" className="rounded-lg p-2 text-[#52678b] hover:bg-[#eef3fc] md:hidden"><Menu size={20} /></button>
+            <h1 className="truncate text-base font-bold tracking-tight text-[#101f3b] sm:text-lg">Trợ lý AI NEXORA</h1>
           </div>
-
-          {/* Session List */}
-          <div className="flex-1 overflow-y-auto p-3 space-y-4 text-xs">
-            
-            {/* Group: HÔM NAY */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 block">
-                HÔM NAY
-              </span>
-              {mockSessions
-                .filter((s) => s.group === 'HÔM NAY')
-                .map((session) => {
-                  const isActive = activeSessionId === session.id;
-                  return (
-                    <div
-                      key={session.id}
-                      onClick={() => setActiveSessionId(session.id)}
-                      className={`p-2.5 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${
-                        isActive
-                          ? 'bg-[#152033] text-blue-400 font-semibold border border-blue-500/30'
-                          : 'text-slate-300 hover:bg-slate-900/60'
-                      }`}
-                    >
-                      <span className="truncate flex-1 pr-2 text-xs">{session.title}</span>
-                      <span className="text-[10px] font-mono text-slate-500 shrink-0">{session.time}</span>
-                    </div>
-                  );
-                })}
+          <div className="flex items-center gap-2 sm:gap-3">
+            <label htmlFor="chat-model" className="hidden text-sm text-[#7485a2] sm:block">Mô hình</label>
+            <div className="relative">
+              <select id="chat-model" value={modelId} onChange={event => setModelId(event.target.value)} disabled={sending || models.length === 0} className="h-11 max-w-[165px] appearance-none rounded-xl border border-[#dfe7f3] bg-white py-2 pl-3 pr-8 text-xs font-medium text-[#243652] outline-none focus:border-[#1762f4] disabled:opacity-60 sm:max-w-[210px] sm:text-sm">
+                {models.length === 0 && <option value="">Chưa có mô hình</option>}
+                {models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}
+              </select>
+              <ChevronDown size={15} className="pointer-events-none absolute right-2.5 top-3.5 text-[#657997]" />
             </div>
-
-            {/* Group: 25/05/2024 */}
-            <div className="space-y-1">
-              <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider px-2 block">
-                25/05/2024
-              </span>
-              {mockSessions
-                .filter((s) => s.group === '25/05/2024')
-                .map((session) => {
-                  const isActive = activeSessionId === session.id;
-                  return (
-                    <div
-                      key={session.id}
-                      onClick={() => setActiveSessionId(session.id)}
-                      className={`p-2.5 rounded-lg flex items-center justify-between cursor-pointer transition-colors ${
-                        isActive
-                          ? 'bg-[#152033] text-blue-400 font-semibold border border-blue-500/30'
-                          : 'text-slate-300 hover:bg-slate-900/60'
-                      }`}
-                    >
-                      <span className="truncate flex-1 pr-2 text-xs">{session.title}</span>
-                      <span className="text-[10px] font-mono text-slate-500 shrink-0">{session.time}</span>
-                    </div>
-                  );
-                })}
-            </div>
-
+            <button onClick={() => setSourcesOpen(true)} aria-label="Mở nguồn tham khảo" title="Nguồn tham khảo" className={`rounded-lg p-2 text-[#52678b] hover:bg-[#eef3fc] ${sourcesOpen ? 'hidden' : ''}`}><FileText size={19} /></button>
           </div>
+        </header>
 
-          {/* Footer: Xem tất cả hội thoại */}
-          <div className="p-3 border-t border-slate-800/80">
-            <button
-              onClick={() => showToast('Mở lịch sử tất cả cuộc hội thoại', 'info')}
-              className="w-full py-2 px-3 hover:bg-slate-900 rounded-lg text-xs font-medium text-slate-400 hover:text-slate-200 flex items-center justify-center gap-2 transition-colors cursor-pointer"
-            >
-              <History className="w-3.5 h-3.5" />
-              <span>Xem tất cả hội thoại</span>
-            </button>
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-7">
+          <div className="mx-auto max-w-[880px] space-y-6">
+            {loading && <p className="flex items-center gap-2 text-sm text-[#8291aa]"><LoaderCircle size={17} className="animate-spin" />Đang tải hội thoại...</p>}
+            {!loading && messages.length === 0 && !sending && <div className="flex min-h-[40vh] flex-col items-center justify-center gap-3 text-center"><Sparkles size={30} className="text-[#1762f4]" /><strong className="text-lg text-[#1b2d4e]">Hỏi về tài liệu bạn được phép truy cập</strong><p className="text-sm text-[#8190aa]">Câu trả lời sẽ được lưu trong lịch sử hội thoại của bạn.</p></div>}
+            {messages.length > 0 && <div className="flex justify-center"><span className="rounded-xl bg-[#f2f5f9] px-5 py-2 text-xs font-medium text-[#7283a0]">{formatDayLabel(messages[0].createdAt)}</span></div>}
+            {hasOlder && <button onClick={() => void loadOlder()} className="block w-full text-center text-xs font-semibold text-[#1762f4] hover:underline">Tải tin nhắn cũ hơn</button>}
+
+            {messages.map(message => message.role === 'user' ? (
+              <article key={message.id} className="group flex justify-end gap-3">
+                <div className="flex max-w-[min(78%,680px)] flex-col items-end gap-1.5">
+                  <div className="rounded-2xl rounded-tr-md bg-[#1762f4] px-4 py-3 text-sm leading-relaxed text-white shadow-sm whitespace-pre-wrap">{message.content}</div>
+                  <div className="flex items-center gap-2 text-[11px] text-[#8999b2]">
+                    {message.status === 'FAILED' && <span className="text-rose-600">Không thể tạo câu trả lời cho tin nhắn này.</span>}
+                    <button onClick={() => void deleteMessage(message)} disabled={sending || !activeId} aria-label="Xóa tin nhắn" title="Xóa tin nhắn" className="opacity-0 transition-opacity hover:text-rose-600 focus:opacity-100 disabled:hidden group-hover:opacity-100"><Trash2 size={13} /></button>
+                    <time>{formatTime(message.createdAt)}</time>
+                  </div>
+                </div>
+                <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e4edff] text-sm font-bold text-[#1762f4]">{userInitial}</span>
+              </article>
+            ) : (
+              <article key={message.id} className="group flex items-start gap-3">
+                <span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e4edff] text-sm font-bold text-[#1762f4]">N</span>
+                <div className="min-w-0 max-w-[min(88%,760px)] space-y-2">
+                  <div className="rounded-2xl rounded-tl-md bg-[#f1f4f9] px-4 py-3 text-sm leading-relaxed text-[#243653]">
+                    <span className="whitespace-pre-wrap">{message.content}</span>
+                    {message.sources.length > 0 && <span className="ml-1.5 inline-flex flex-wrap gap-1 align-baseline">{message.sources.slice(0, 2).map((source, index) => <button key={source.chunkId} onClick={() => { setFocusedMessageId(message.id); setSelectedSourceIndex(index); setSourcesOpen(true); }} title={source.fileName} className="rounded bg-[#dfebff] px-1.5 py-0.5 text-xs font-semibold text-[#1762f4] hover:bg-[#ccddff]">[{index + 1}]</button>)}</span>}
+                  </div>
+                  <div className="flex items-center gap-3 text-[11px] text-[#8999b2]">
+                    <time>{formatTime(message.createdAt)}</time>
+                    {message.modelName && <span>{message.modelName}</span>}
+                    <button onClick={() => void deleteMessage(message)} disabled={sending || !activeId} aria-label="Xóa tin nhắn" title="Xóa tin nhắn" className="opacity-0 transition-opacity hover:text-rose-600 focus:opacity-100 disabled:hidden group-hover:opacity-100"><Trash2 size={13} /></button>
+                  </div>
+                  {message.sources.length > 0 && <button onClick={() => { setFocusedMessageId(message.id); setSelectedSourceIndex(0); setSourcesOpen(true); }} className="inline-flex items-center gap-2 rounded-full bg-[#edf4ff] px-4 py-2 text-xs font-semibold text-[#1762f4] hover:bg-[#e0edff]"><FileText size={15} />Xem {message.sources.length} nguồn<ChevronDown size={14} /></button>}
+                </div>
+              </article>
+            ))}
+
+            {sending && <article className="flex items-start gap-3"><span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e4edff] text-sm font-bold text-[#1762f4]">N</span><div className="max-w-[85%] rounded-2xl rounded-tl-md bg-[#f1f4f9] px-4 py-3 text-sm leading-relaxed text-[#243653] whitespace-pre-wrap">{streamText || <span className="flex items-center gap-2 text-[#7587a5]"><LoaderCircle size={15} className="animate-spin" />Đang tìm tài liệu và tạo câu trả lời...</span>}</div></article>}
+            {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}{models.length === 0 && <button onClick={() => navigate({ to: '/account' })} className="ml-2 font-semibold text-[#1762f4] underline">Thiết lập khóa API</button>}</div>}
+            <div ref={endRef} />
+          </div>
+        </div>
+
+        <div className="shrink-0 border-t border-[#e7ecf5] bg-white px-3 py-3 sm:px-5 sm:py-4">
+          <div className="mx-auto flex max-w-[930px] items-end gap-2 rounded-2xl border border-[#dce5f2] bg-white p-2 shadow-sm focus-within:border-[#9ebdff]">
+            <button type="button" disabled title="Đính kèm tài liệu chưa được hỗ trợ" aria-label="Đính kèm tài liệu chưa được hỗ trợ" className="mb-1 rounded-lg p-2 text-[#637797] opacity-70"><Paperclip size={20} /></button>
+            <textarea value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void send(); } }} disabled={sending || models.length === 0} maxLength={2000} rows={1} placeholder={models.length ? 'Hỏi về dữ liệu nội bộ...' : 'Chưa cấu hình mô hình AI'} aria-label="Nội dung tin nhắn" className="max-h-36 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-sm text-[#243653] outline-none placeholder:text-[#8191ac] disabled:opacity-60" />
+            <button onClick={() => void send()} disabled={sending || !input.trim() || !modelId} className="flex h-10 items-center gap-2 rounded-xl bg-[#1762f4] px-4 text-sm font-semibold text-white hover:bg-[#0d52d9] disabled:opacity-50"><Send size={17} />Gửi</button>
+          </div>
+        </div>
+      </main>
+
+      {sourcesOpen && <>
+        <button aria-label="Đóng nguồn tham khảo" onClick={() => setSourcesOpen(false)} className="fixed inset-0 z-20 bg-slate-950/30 xl:hidden" />
+        <aside className="fixed inset-y-0 right-0 z-30 flex w-[min(360px,90vw)] shrink-0 flex-col border-l border-[#e6ebf4] bg-[#fbfcfe] xl:static xl:z-auto xl:w-[334px]">
+          <div className="flex items-center justify-between px-5 pb-2 pt-6"><h2 className="text-base font-bold text-[#172744]">Nguồn tham khảo</h2><button onClick={() => setSourcesOpen(false)} aria-label="Đóng nguồn tham khảo" className="rounded-lg p-1 text-[#627694] hover:bg-[#eaf0f8]"><X size={19} /></button></div>
+          <p className="px-5 pb-4 text-xs leading-relaxed text-[#7486a4]">Chỉ sử dụng tài liệu đã lập chỉ mục mà bạn được phép truy cập.</p>
+          <div className="mx-5 border-t border-[#e6ebf4]" />
+          <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3.5 pb-5 pt-4">
+            {sources.length === 0 && <p className="px-2 py-4 text-sm text-[#8190aa]">Nguồn phù hợp sẽ xuất hiện khi có câu trả lời từ tài liệu.</p>}
+            {sources.map((source, index) => <button key={`${source.chunkId}-${index}`} onClick={() => setSelectedSourceIndex(index)} className={`block w-full rounded-xl border bg-white p-3 text-left transition-colors ${selectedSourceIndex === index ? 'border-[#6c9bff] shadow-[0_0_0_1px_#dbe7ff]' : 'border-[#e5ebf4] hover:border-[#acc7f8]'}`}>
+              <div className="flex items-start gap-2.5"><FileText size={18} className="mt-0.5 shrink-0 text-[#1762f4]" /><div className="min-w-0 flex-1"><p className="truncate text-xs font-semibold text-[#223452]"><span className="text-[#1762f4]">[{index + 1}]</span> {source.fileName}</p><p className="mt-1 text-[11px] text-[#8090aa]">Điểm tương đồng: {source.score.toFixed(3)}</p></div><ChevronDown size={14} className={`mt-0.5 shrink-0 text-[#7285a4] ${selectedSourceIndex === index ? 'rotate-180' : ''}`} /></div>
+              {selectedSourceIndex === index && <div className="mt-3 rounded-lg bg-[#f4f7fc] px-3 py-3 text-xs leading-relaxed text-[#304363]"><p>{source.pageNo != null ? `Trang ${source.pageNo}` : 'Vị trí trong tài liệu'}{source.charStart != null && source.charEnd != null ? ` · Ký tự ${source.charStart}–${source.charEnd}` : ''}</p><p className="mt-1.5 truncate text-[11px] text-[#8292ac]">{source.fileName}</p></div>}
+            </button>)}
           </div>
         </aside>
-
-        {/* ==================================================================== */}
-        {/* 2. MIDDLE COLUMN: Main Chat Messages & Floating Input */}
-        {/* ==================================================================== */}
-        <main className="flex-1 flex flex-col h-full min-w-0 bg-[#0a0e17] overflow-hidden">
-          
-          {/* Header Bar */}
-          <div className="h-14 px-3 sm:px-5 border-b border-slate-800/80 flex items-center justify-between shrink-0 bg-[#0c121d]">
-            <div className="flex items-center gap-3 min-w-0">
-              <h2 className="font-bold text-sm text-slate-100 flex items-center gap-2 truncate">
-                <span>Trợ lý AI NEXORA</span>
-              </h2>
-              <button
-                onClick={() => navigate({ to: '/dashboard' as any })}
-                className="hidden lg:flex px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-md text-xs font-medium items-center gap-1.5 cursor-pointer shrink-0"
-              >
-                <LayoutDashboard className="w-3 h-3 text-blue-400" />
-                <span>Vào Dashboard Quản lý</span>
-              </button>
-            </div>
-
-            <div className="hidden sm:flex items-center gap-3 text-xs shrink-0">
-              <span className="text-slate-400">VN</span>
-              <span className="text-slate-400">☀</span>
-              <span className="text-slate-400">🔔 3</span>
-              <div className="flex items-center gap-2">
-                <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center">
-                  AD
-                </div>
-                <span className="font-semibold text-slate-200">Admin</span>
-              </div>
-            </div>
-          </div>
-
-          {/* Messages Scroll Area */}
-          <div className="flex-1 overflow-y-auto p-3 sm:p-6 space-y-6 max-w-4xl w-full mx-auto">
-            
-            {/* User Message Bubble */}
-            <div className="bg-[#121927] border border-slate-800 rounded-2xl p-4 space-y-1.5 shadow-xs">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-blue-400">Bạn</span>
-                <span className="text-[11px] font-mono text-slate-500">10:24</span>
-              </div>
-              <p className="text-xs text-slate-200 leading-relaxed">
-                Tóm tắt tiến độ dự án ERP và các rủi ro cần xử lý trong tuần này.
-              </p>
-            </div>
-
-            {/* AI Assistant Message Bubble matching 02-ai-assistant-standalone.png */}
-            <div className="bg-[#121927] border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xs">
-              <div className="flex items-center justify-between text-xs">
-                <span className="font-bold text-blue-400 flex items-center gap-1.5">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-400" />
-                  NEXORA AI
-                </span>
-                <span className="text-[11px] font-mono text-slate-500">10:24</span>
-              </div>
-
-              {/* Section 1: Tóm tắt tiến độ */}
-              <div className="space-y-2 text-xs">
-                <h4 className="font-bold text-slate-100 text-sm">Tóm tắt tiến độ dự án ERP</h4>
-                <ul className="space-y-1.5 text-slate-300 pl-2">
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-500">•</span>
-                    <span>Dự án ERP Nexora đang ở tuần 21/32 (65% tiến độ tổng thể).</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-500">•</span>
-                    <span>Các phân hệ chính đã hoàn thành: Quản trị hệ thống, Tài chính – Kế toán, Mua hàng.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-500">•</span>
-                    <span>Đang triển khai & kiểm thử: Bán hàng, Kho, Sản xuất. Tiến độ đúng kế hoạch tổng thể.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-500">•</span>
-                    <span>
-                      Dữ liệu đã làm sạch & chuẩn hóa đạt 78%.{' '}
-                      <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-blue-600 text-white font-mono text-[9px] font-bold">
-                        1
-                      </span>
-                    </span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Section 2: 3 rủi ro ưu tiên cần xử lý */}
-              <div className="space-y-2.5 text-xs pt-1">
-                <h4 className="font-bold text-slate-100 text-sm">3 rủi ro ưu tiên cần xử lý</h4>
-                
-                <div className="space-y-2">
-                  <div className="p-2.5 bg-[#172133] rounded-lg border border-slate-800 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-200">
-                        ❶ Rủi ro dữ liệu không đồng nhất ở phân hệ Kho và Bán hàng.
-                      </span>
-                      <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-blue-600 text-white font-mono text-[9px] font-bold">
-                        1
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 pl-4">
-                      Ảnh hưởng: Chậm kiểm thử tích hợp. Mức độ:{' '}
-                      <strong className="text-rose-400 font-semibold">Cao</strong>.
-                    </p>
-                  </div>
-
-                  <div className="p-2.5 bg-[#172133] rounded-lg border border-slate-800 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-200">
-                        ❷ Thiếu nhân sự kiểm thử tích hợp (UAT) trong tuần 21–22.
-                      </span>
-                      <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-blue-600 text-white font-mono text-[9px] font-bold">
-                        2
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 pl-4">
-                      Ảnh hưởng: Trễ kiểm thử người dùng. Mức độ:{' '}
-                      <strong className="text-rose-400 font-semibold">Cao</strong>.
-                    </p>
-                  </div>
-
-                  <div className="p-2.5 bg-[#172133] rounded-lg border border-slate-800 space-y-1">
-                    <div className="flex items-center justify-between">
-                      <span className="font-semibold text-slate-200">
-                        ❸ Hệ thống báo cáo hiện tại chưa đáp ứng đầy đủ yêu cầu quản trị.
-                      </span>
-                      <span className="inline-flex items-center justify-center w-4 h-4 rounded bg-blue-600 text-white font-mono text-[9px] font-bold">
-                        3
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-400 pl-4">
-                      Ảnh hưởng: Phát sinh thêm yêu cầu thay đổi. Mức độ:{' '}
-                      <strong className="text-amber-400 font-semibold">Trung bình</strong>.
-                    </p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Section 3: Hành động đề xuất trong tuần này */}
-              <div className="space-y-2 text-xs pt-1">
-                <h4 className="font-bold text-slate-100 text-sm">Hành động đề xuất trong tuần này</h4>
-                <ul className="space-y-1.5 text-slate-300 pl-2">
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-500">•</span>
-                    <span>Hoàn tất chuẩn hóa & đồng bộ dữ liệu Kho, Bán hàng trước 31/05.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-500">•</span>
-                    <span>Bổ sung 02 kiểm thử viên cho UAT và chốt kịch bản kiểm thử.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-500">•</span>
-                    <span>Rà soát & ưu tiên các yêu cầu báo cáo bắt buộc theo từng phòng ban.</span>
-                  </li>
-                  <li className="flex items-start gap-2">
-                    <span className="text-slate-500">•</span>
-                    <span>Tổ chức họp đánh giá rủi ro & tiến độ vào cuối tuần.</span>
-                  </li>
-                </ul>
-              </div>
-
-              {/* Attached Docs Bar */}
-              <div className="pt-3 border-t border-slate-800 flex items-center gap-2 flex-wrap text-xs">
-                <span className="text-slate-400 font-medium">Tài liệu đính kèm:</span>
-                <span className="px-2 py-1 bg-slate-800 text-slate-300 rounded-md flex items-center gap-1.5 border border-slate-700/60 font-mono text-[11px]">
-                  <span className="px-1 py-0.2 bg-rose-500/20 text-rose-400 rounded text-[9px] font-bold">PDF</span>
-                  Báo cáo tiến độ dự án.pdf
-                </span>
-                <span className="px-2 py-1 bg-slate-800 text-slate-300 rounded-md flex items-center gap-1.5 border border-slate-700/60 font-mono text-[11px]">
-                  <span className="px-1 py-0.2 bg-emerald-500/20 text-emerald-400 rounded text-[9px] font-bold">XLSX</span>
-                  Kế hoạch dự án Phase 2.xlsx
-                </span>
-                <span className="px-2 py-1 bg-slate-800 text-slate-300 rounded-md flex items-center gap-1.5 border border-slate-700/60 font-mono text-[11px]">
-                  <span className="px-1 py-0.2 bg-blue-500/20 text-blue-400 rounded text-[9px] font-bold">DOCX</span>
-                  Biên bản họp 14-05.docx
-                </span>
-              </div>
-
-              {/* Feedback Bar */}
-              <div className="pt-2 border-t border-slate-800/80 flex items-center justify-end gap-3 text-xs text-slate-400">
-                <span>Phản hồi này có hữu ích?</span>
-                <button
-                  onClick={() => {
-                    setFeedback('up');
-                    showToast('Cảm ơn bạn đã gửi phản hồi tích cực!', 'success');
-                  }}
-                  className={`p-1 rounded hover:bg-slate-800 cursor-pointer ${
-                    feedback === 'up' ? 'text-emerald-400' : ''
-                  }`}
-                >
-                  <ThumbsUp className="w-3.5 h-3.5" />
-                </button>
-                <button
-                  onClick={() => {
-                    setFeedback('down');
-                    showToast('Cảm ơn bạn đã phản hồi, hệ thống sẽ cải thiện!', 'info');
-                  }}
-                  className={`p-1 rounded hover:bg-slate-800 cursor-pointer ${
-                    feedback === 'down' ? 'text-rose-400' : ''
-                  }`}
-                >
-                  <ThumbsDown className="w-3.5 h-3.5" />
-                </button>
-              </div>
-
-            </div>
-
-          </div>
-
-          {/* Floating Input Box Bar matching 02-ai-assistant-standalone.png */}
-          <div className="p-2 sm:p-4 bg-[#0c121d] border-t border-slate-800/80 shrink-0">
-            <div className="max-w-4xl mx-auto space-y-2">
-              <div className="bg-[#151e2e] border border-slate-700/80 rounded-2xl p-3 flex items-center justify-between gap-3 shadow-lg">
-                <textarea
-                  rows={1}
-                  placeholder="Hỏi về dữ liệu nội bộ..."
-                  value={inputText}
-                  onChange={(e) => setInputText(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                  className="bg-transparent border-none text-xs text-slate-100 placeholder:text-slate-500 focus:outline-none flex-1 resize-none leading-relaxed"
-                />
-                <div className="flex items-center gap-2 shrink-0">
-                  <button
-                    onClick={() => showToast('Mở hộp thoại đính kèm tài liệu', 'info')}
-                    className="px-2.5 py-1.5 text-xs text-slate-400 hover:text-slate-200 flex items-center gap-1 cursor-pointer"
-                  >
-                    <Paperclip className="w-3.5 h-3.5" />
-                    <span className="hidden sm:inline">Đính kèm</span>
-                  </button>
-                  <button
-                    onClick={handleSendMessage}
-                    className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold rounded-xl flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
-                  >
-                    <Send className="w-3.5 h-3.5" />
-                    <span>Gửi</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Security Statement */}
-              <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400">
-                <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-                <span>NEXORA AI chỉ sử dụng dữ liệu nội bộ được ủy quyền. Cam kết không lưu trữ hội thoại ngoài hệ thống.</span>
-              </div>
-            </div>
-          </div>
-
-        </main>
-
-        {/* ==================================================================== */}
-        {/* 3. RIGHT COLUMN: Ngữ Cảnh & Nguồn (320px) */}
-        {/* ==================================================================== */}
-        <aside className="hidden xl:flex w-80 bg-[#090d16] border-l border-slate-800/80 flex-col h-full shrink-0 overflow-y-auto text-xs p-5 space-y-6">
-          
-          {/* Header */}
-          <div className="space-y-3">
-            <h3 className="font-bold text-xs text-slate-200 uppercase tracking-wider">
-              Ngữ cảnh & nguồn
-            </h3>
-            
-            <div className="space-y-1">
-              <span className="text-[10px] text-slate-500 font-semibold uppercase">NGỮ CẢNH HIỆN TẠI</span>
-              <div className="relative">
-                <select
-                  value={contextProject}
-                  onChange={(e) => setContextProject(e.target.value)}
-                  className="w-full bg-[#121826] border border-slate-700/80 rounded-xl p-2.5 text-xs text-slate-200 appearance-none focus:outline-none focus:border-blue-500 cursor-pointer font-semibold"
-                >
-                  <option value="Dự án NEXORA Platform">Dự án NEXORA Platform</option>
-                  <option value="Dự án ERP Nexora">Dự án ERP Nexora</option>
-                  <option value="Ứng dụng CRM">Ứng dụng CRM</option>
-                  <option value="Data Warehouse">Data Warehouse</option>
-                </select>
-                <ChevronDown className="w-3.5 h-3.5 text-slate-400 absolute right-3 top-3 pointer-events-none" />
-              </div>
-              <p className="text-[11px] text-slate-500 pt-0.5 leading-relaxed">
-                Bao gồm tài liệu, cuộc họp và dữ liệu liên quan đến {contextProject}.
-              </p>
-            </div>
-          </div>
-
-          {/* Bộ lọc theo loại */}
-          <div className="space-y-2">
-            <span className="text-[10px] text-slate-500 font-semibold uppercase">BỘ LỌC THEO LOẠI</span>
-            <div className="grid grid-cols-4 gap-1 p-0.5 bg-[#121826] rounded-xl border border-slate-800 text-[11px]">
-              <button
-                onClick={() => setActiveContextFilter('all')}
-                className={`py-1 rounded-lg font-medium transition-colors ${
-                  activeContextFilter === 'all' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-400'
-                }`}
-              >
-                Tất cả
-              </button>
-              <button
-                onClick={() => setActiveContextFilter('doc')}
-                className={`py-1 rounded-lg font-medium transition-colors ${
-                  activeContextFilter === 'doc' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-400'
-                }`}
-              >
-                Tài liệu
-              </button>
-              <button
-                onClick={() => setActiveContextFilter('meeting')}
-                className={`py-1 rounded-lg font-medium transition-colors ${
-                  activeContextFilter === 'meeting' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-400'
-                }`}
-              >
-                Cuộc họp
-              </button>
-              <button
-                onClick={() => setActiveContextFilter('task')}
-                className={`py-1 rounded-lg font-medium transition-colors ${
-                  activeContextFilter === 'task' ? 'bg-blue-600 text-white font-semibold' : 'text-slate-400'
-                }`}
-              >
-                Công việc
-              </button>
-            </div>
-          </div>
-
-          {/* Tài liệu đang hoạt động (5) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <span className="font-semibold text-slate-200">Tài liệu đang hoạt động (5)</span>
-              <button
-                onClick={() => navigate({ to: '/data-repo' as any })}
-                className="text-[11px] text-blue-400 hover:underline cursor-pointer"
-              >
-                Xem tất cả
-              </button>
-            </div>
-
-            <div className="space-y-2">
-              {/* Doc 1 */}
-              <div className="p-2.5 bg-[#121826] rounded-xl border border-slate-800 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded bg-rose-500/20 text-rose-400 font-bold text-[10px] flex items-center justify-center shrink-0">
-                    PDF
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-200 text-xs truncate">Báo cáo tiến độ dự án.pdf</p>
-                    <p className="text-[10px] text-slate-500">Văn phòng PMO • 28/05/2024</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-emerald-500/15 text-emerald-400 rounded">
-                    Có quyền
-                  </span>
-                  <span className="w-4 h-4 rounded bg-blue-600 text-white font-mono text-[9px] font-bold flex items-center justify-center">
-                    1
-                  </span>
-                </div>
-              </div>
-
-              {/* Doc 2 */}
-              <div className="p-2.5 bg-[#121826] rounded-xl border border-slate-800 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded bg-emerald-500/20 text-emerald-400 font-bold text-[10px] flex items-center justify-center shrink-0">
-                    XLSX
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-200 text-xs truncate">Kế hoạch dự án Phase 2.xlsx</p>
-                    <p className="text-[10px] text-slate-500">QA • 27/05/2024</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-emerald-500/15 text-emerald-400 rounded">
-                    Có quyền
-                  </span>
-                  <span className="w-4 h-4 rounded bg-blue-600 text-white font-mono text-[9px] font-bold flex items-center justify-center">
-                    2
-                  </span>
-                </div>
-              </div>
-
-              {/* Doc 3 */}
-              <div className="p-2.5 bg-[#121826] rounded-xl border border-slate-800 flex items-center justify-between gap-2">
-                <div className="flex items-center gap-2.5 min-w-0">
-                  <div className="w-7 h-7 rounded bg-blue-500/20 text-blue-400 font-bold text-[10px] flex items-center justify-center shrink-0">
-                    DOCX
-                  </div>
-                  <div className="min-w-0">
-                    <p className="font-semibold text-slate-200 text-xs truncate">Biên bản họp 14-05-docx</p>
-                    <p className="text-[10px] text-slate-500">Tài chính • 24/05/2024</p>
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 shrink-0">
-                  <span className="px-1.5 py-0.5 text-[9px] font-semibold bg-emerald-500/15 text-emerald-400 rounded">
-                    Có quyền
-                  </span>
-                  <span className="w-4 h-4 rounded bg-blue-600 text-white font-mono text-[9px] font-bold flex items-center justify-center">
-                    3
-                  </span>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Nguồn tham chiếu */}
-          <div className="space-y-3">
-            <span className="font-semibold text-slate-200">Nguồn tham chiếu</span>
-            <div className="space-y-2 text-[11px]">
-              <div className="p-2.5 bg-[#121826] rounded-xl border border-slate-800 flex items-start gap-2">
-                <span className="w-4 h-4 rounded bg-blue-600 text-white font-mono text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                  1
-                </span>
-                <div>
-                  <p className="font-semibold text-slate-200">Báo cáo tiến độ dự án ERP Nexora_Tuần 21</p>
-                  <p className="text-[10px] text-slate-500">Phiên bản 1.2 • Cập nhật: 28/05/2024</p>
-                </div>
-              </div>
-
-              <div className="p-2.5 bg-[#121826] rounded-xl border border-slate-800 flex items-start gap-2">
-                <span className="w-4 h-4 rounded bg-blue-600 text-white font-mono text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                  2
-                </span>
-                <div>
-                  <p className="font-semibold text-slate-200">Kế hoạch kiểm thử UAT_Tuần 21–22</p>
-                  <p className="text-[10px] text-slate-500">Phiên bản 1.0 • Cập nhật: 27/05/2024</p>
-                </div>
-              </div>
-
-              <div className="p-2.5 bg-[#121826] rounded-xl border border-slate-800 flex items-start gap-2">
-                <span className="w-4 h-4 rounded bg-blue-600 text-white font-mono text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">
-                  3
-                </span>
-                <div>
-                  <p className="font-semibold text-slate-200">Yêu cầu báo cáo quản trị_ERP Nexora</p>
-                  <p className="text-[10px] text-slate-500">Phiên bản 0.9 • Cập nhật: 24/05/2024</p>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom CTA: Quản lý tài liệu */}
-          <div className="pt-2">
-            <button
-              onClick={() => navigate({ to: '/data-repo' as any })}
-              className="w-full py-2.5 bg-[#151e2e] hover:bg-slate-800 border border-slate-700/80 rounded-xl text-xs font-semibold text-slate-200 flex items-center justify-center gap-2 transition-colors cursor-pointer"
-            >
-              <FileText className="w-4 h-4 text-blue-400" />
-              <span>Quản lý tài liệu</span>
-            </button>
-          </div>
-
-        </aside>
-
-      </div>
+      </>}
     </div>
   );
 };

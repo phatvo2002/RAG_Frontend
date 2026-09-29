@@ -44,3 +44,30 @@
 ## Final result
 
 blocked
+
+---
+
+# Design QA — AI chat layout
+
+## Source visual truth
+
+- User-provided chat screenshot: `codex-clipboard-e53e988d-b56e-433f-be8d-b4fd27771a01.png` (1611 × 732 px).
+- Target: light three-column layout with conversation history, chat bubbles, and a reference panel.
+
+## Implementation evidence
+
+- Route: `/chat`.
+- Updated `src/pages/chat/ChatPage.tsx` using live conversation, streaming, model, and source data.
+- Frontend dev server started at `http://127.0.0.1:5173/`.
+- TypeScript check: `npx tsc --noEmit` passed.
+- Browser capture: unavailable because the desktop browser automation tool failed to initialize (`failed to write kernel assets`).
+
+## Comparison
+
+- Source screenshot inspected at its supplied dimensions.
+- Runtime visual comparison and interaction inspection are blocked until the desktop browser tool works or the authenticated chat page is opened in a usable browser session.
+- Source cards show available filename, score, page, and character location metadata. The chat API does not provide a passage excerpt, so no excerpt was fabricated for the expanded card.
+
+## Final result
+
+blocked

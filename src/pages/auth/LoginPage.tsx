@@ -42,7 +42,7 @@ export const LoginPage: React.FC = () => {
           onSuccess: (result) => {
             setCurrentUser(result.user);
             setIsAuthenticated(true);
-            navigate({ to: '/admin/users' as any });
+            navigate({ to: '/chat' as any });
             showToast(`Đăng nhập thành công! Chào mừng trở lại ${result.user.name}`, 'success');
           },
           onError: (error: any) => {

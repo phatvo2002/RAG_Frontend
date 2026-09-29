@@ -10,6 +10,7 @@ import { AppProvider } from '@/context/AppContext';
 import { AppLayout } from '@/components/layout';
 import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { ChatPage } from '@/pages/chat/ChatPage';
+import { AccountPage } from '@/pages/account/AccountPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { DataRepoPage } from '@/pages/data-repo/DataRepoPage';
 import { ProjectsPage } from '@/pages/projects/ProjectsPage';
@@ -45,13 +46,19 @@ const rootRoute = createRootRoute({
 const indexRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/',
-  component: () => <Navigate to="/admin/users" />,
+  component: () => <Navigate to="/chat" />,
 });
 
 const chatRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/chat',
   component: ChatPage,
+});
+
+const accountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/account',
+  component: AccountPage,
 });
 
 // Các phân hệ đã hoàn thiện giao diện theo nexora-workbench-v3
@@ -207,6 +214,7 @@ const loginRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   chatRoute,
+  accountRoute,
   dashboardRoute,
   dataRepoRoute,
   projectsRoute,

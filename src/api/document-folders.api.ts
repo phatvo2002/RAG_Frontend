@@ -10,6 +10,14 @@ export interface FolderItem {
   parentFolderId: string | null;
   name: string;
   ownerUserId: string;
+  createdAt?: string;
+  updatedAt?: string;
+  documentCount?: number;
+  totalSizeBytes?: number;
+  indexedCount?: number;
+  processingCount?: number;
+  failedCount?: number;
+  latestDocumentUpdatedAt?: string | null;
 }
 
 export interface FolderAccessGrant {
@@ -51,6 +59,14 @@ export function normalizeFolder(raw: any): FolderItem {
     parentFolderId: raw?.parentFolderId || null,
     name: String(raw?.name || ''),
     ownerUserId: String(raw?.ownerUserId || raw?.ownerId || ''),
+    createdAt: raw?.createdAt || undefined,
+    updatedAt: raw?.updatedAt || undefined,
+    documentCount: Number(raw?.documentCount || 0),
+    totalSizeBytes: Number(raw?.totalSizeBytes || 0),
+    indexedCount: Number(raw?.indexedCount || 0),
+    processingCount: Number(raw?.processingCount || 0),
+    failedCount: Number(raw?.failedCount || 0),
+    latestDocumentUpdatedAt: raw?.latestDocumentUpdatedAt || null,
   };
 }
 

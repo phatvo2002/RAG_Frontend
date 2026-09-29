@@ -6,8 +6,9 @@ import { FolderModal } from './FolderModal';
 import { FolderDetailPanel } from './FolderDetailPanel';
 import { useDepartmentsQuery } from '@/api/departments.api';
 import { FolderItem, useDocumentFoldersQuery } from '@/api/document-folders.api';
-import { DocumentUploadResponse, useDocumentsQuery } from '@/api/documents.api';
+import { DocumentListItem, DocumentUploadResponse, useDeleteDocumentMutation, useDocumentsQuery } from '@/api/documents.api';
 import { CustomTable } from '@/components/customTable';
+import { ConfirmModal } from '@/components/disclosure';
 import {
   Upload,
   FolderPlus,
@@ -20,7 +21,6 @@ import {
   Clock,
   ChevronDown,
   ChevronRight,
-  MoreHorizontal,
   RefreshCw,
   FileText,
   CheckCircle2,
@@ -34,6 +34,7 @@ import {
   Plus,
   ExternalLink,
   ChevronLeft,
+  Trash2,
 } from 'lucide-react';
 
 interface FolderTreeNode extends FolderItem {
@@ -83,8 +84,10 @@ export const DataRepoPage: React.FC = () => {
   const [detailFolderId, setDetailFolderId] = useState<string | null>(null);
   const [folderDepartmentFilter, setFolderDepartmentFilter] = useState('all');
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
+  const [documentToDelete, setDocumentToDelete] = useState<DocumentListItem | null>(null);
   const [documentPage, setDocumentPage] = useState(1);
   const [documentPageSize, setDocumentPageSize] = useState(25);
+  const deleteDocumentMutation = useDeleteDocumentMutation();
 
   const { data: departments = [] } = useDepartmentsQuery();
   const {
@@ -140,13 +143,23 @@ export const DataRepoPage: React.FC = () => {
     [showToast]
   );
 
+  const handleDeleteDocument = async () => {
+    if (!documentToDelete) return;
+
+    try {
+      await deleteDocumentMutation.mutateAsync(documentToDelete.documentId);
+      showToast(`Đã xóa tài liệu ${documentToDelete.originalFileName || documentToDelete.title}.`, 'success');
+      setDocumentToDelete(null);
+    } catch (error) {
+      showToast(error instanceof Error ? error.message : 'Không thể xóa tài liệu.', 'error');
+    }
+  };
+
   const folderRows = useMemo(() => folders.map((folder) => ({
     ...folder,
-    documentCount: '—',
-    size: '—',
-    manager: '—',
-    updatedAt: '—',
-  })), [folders]);
+    departmentName: departments.find((department) => department.id === folder.departmentId)?.name || '—',
+    latestUpdatedAt: folder.latestDocumentUpdatedAt || folder.updatedAt || folder.createdAt || '',
+  })), [folders, departments]);
 
   const filteredFolderRows = useMemo(() => {
     const q = search.trim().toLowerCase();
@@ -232,6 +245,12 @@ export const DataRepoPage: React.FC = () => {
     return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
+  const formatFolderSize = (sizeBytes: number) => {
+    if (sizeBytes === 0) return '0 B';
+    if (sizeBytes < 1024 * 1024) return `${Math.max(1, Math.round(sizeBytes / 1024))} KB`;
+    return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MB`;
+  };
+
   const formatDocumentDate = (value: string) => {
     if (!value) return '—';
     return new Date(value).toLocaleString('vi-VN');
@@ -271,7 +290,7 @@ export const DataRepoPage: React.FC = () => {
           </h1>
           <p className="text-xs text-slate-500 dark:text-zinc-400">
             {isFolderView
-              ? 'Quản lý thư mục, tài liệu, quyền truy cập và trạng thái lập chỉ mục'
+              ? `${folders.length} thư mục • ${folders.reduce((total, folder) => total + (folder.documentCount || 0), 0)} tài liệu • ${folders.reduce((total, folder) => total + (folder.failedCount || 0), 0)} cần kiểm tra`
               : `${activeFolder ? (documentResult?.totalCount ?? 0) : 0} tài liệu • Quản lý bởi ${activeFolder ? 'phòng ban' : 'Nexora'}`}
           </p>
         </div>
@@ -459,29 +478,13 @@ export const DataRepoPage: React.FC = () => {
                 <option value="FAILED">Cần kiểm tra</option>
               </select>}
 
-              {isFolderView && (
-                <>
-                  <select className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs">
-                    <option>Quyền truy cập</option>
-                    <option>Phòng ban</option>
-                    <option>Nội bộ</option>
-                    <option>Hạn chế</option>
-                  </select>
-                  <select className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs">
-                    <option>Cập nhật gần nhất</option>
-                    <option>Tên thư mục</option>
-                    <option>Số tài liệu</option>
-                  </select>
-                </>
-              )}
-
-              <button
+              {!isFolderView && <button
                 onClick={() => showToast('Mở bộ lọc nâng cao', 'info')}
                 className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-2xs cursor-pointer"
               >
                 <Filter className="w-3.5 h-3.5" />
                 <span>Bộ lọc</span>
-              </button>
+              </button>}
             </div>
           </div>
 
@@ -501,33 +504,32 @@ export const DataRepoPage: React.FC = () => {
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[860px] text-left text-xs border-collapse">
+              <table className="w-full min-w-[760px] text-left text-xs border-collapse">
                 <thead className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
                   <tr>
                     <th className="w-10 px-4 py-3 text-center"><input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700" /></th>
                     <th className="px-3 py-3">TÊN THƯ MỤC <span className="text-blue-600">↑</span></th>
-                    <th className="px-3 py-3">SỐ TÀI LIỆU</th>
-                    <th className="px-3 py-3">DUNG LƯỢNG</th>
-                    <th className="px-3 py-3">ĐƠN VỊ QUẢN LÝ</th>
-                    <th className="px-3 py-3">CẬP NHẬT GẦN NHẤT ↓</th>
-                    <th className="px-3 py-3">TÌNH TRẠNG CHỈ MỤC</th>
-                    <th className="px-3 py-3">QUYỀN TRUY CẬP</th>
+                    <th className="w-28 px-3 py-3">SỐ TÀI LIỆU</th>
+                    <th className="w-28 px-3 py-3">DUNG LƯỢNG</th>
+                    <th className="w-40 px-3 py-3">PHÒNG BAN</th>
+                    <th className="w-40 px-3 py-3">CẬP NHẬT GẦN NHẤT</th>
+                    <th className="min-w-52 px-3 py-3">TRẠNG THÁI TÀI LIỆU</th>
                     <th className="w-10 px-4 py-3 text-right" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
                   {isFoldersError ? (
                     <tr>
-                      <td colSpan={9} className="py-10 text-center text-rose-600 dark:text-rose-400">
+                      <td colSpan={8} className="py-10 text-center text-rose-600 dark:text-rose-400">
                         <div className="mb-2 flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> Không thể tải danh sách folder.</div>
                         <p className="mb-3 text-[11px] text-slate-400">{(foldersError as Error)?.message || 'Vui lòng kiểm tra kết nối API.'}</p>
                         <button type="button" onClick={() => refetchFolders()} className="btn btn-xs btn-outline">Thử lại</button>
                       </td>
                     </tr>
                   ) : isFoldersLoading ? (
-                    <tr><td colSpan={9} className="py-10 text-center text-slate-400"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin text-blue-500" />Đang tải danh sách folder...</td></tr>
+                    <tr><td colSpan={8} className="py-10 text-center text-slate-400"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin text-blue-500" />Đang tải danh sách folder...</td></tr>
                   ) : filteredFolderRows.length === 0 ? (
-                    <tr><td colSpan={9} className="py-10 text-center text-slate-400">Không tìm thấy folder phù hợp.</td></tr>
+                    <tr><td colSpan={8} className="py-10 text-center text-slate-400">Không tìm thấy folder phù hợp.</td></tr>
                   ) : filteredFolderRows.map((folder) => (
                     <tr
                       key={folder.id}
@@ -546,16 +548,20 @@ export const DataRepoPage: React.FC = () => {
                         </button>
                       </td>
                       <td className="px-3 py-3 text-slate-600 dark:text-zinc-400 font-medium">{folder.documentCount}</td>
-                      <td className="px-3 py-3 text-slate-600 dark:text-zinc-400">{folder.size}</td>
+                      <td className="px-3 py-3 whitespace-nowrap text-slate-600 dark:text-zinc-400">{formatFolderSize(folder.totalSizeBytes || 0)}</td>
+                      <td className="px-3 py-3 text-slate-700 dark:text-zinc-300">{folder.departmentName}</td>
+                      <td className="px-3 py-3 whitespace-nowrap text-slate-500 dark:text-zinc-400 text-[11px]">{formatDocumentDate(folder.latestUpdatedAt)}</td>
                       <td className="px-3 py-3">
-                        <span className="inline-flex items-center gap-2 text-slate-700 dark:text-zinc-300">
-                          <span className="w-6 h-6 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center text-[10px] font-bold">{folder.manager === '—' ? '—' : folder.manager.slice(0, 2).toUpperCase()}</span>
-                          {folder.manager}
-                        </span>
+                        {folder.documentCount === 0 ? (
+                          <span className="text-slate-400 dark:text-zinc-500">Chưa có tài liệu</span>
+                        ) : (
+                          <div className="flex flex-wrap gap-1.5">
+                            {(folder.indexedCount ?? 0) > 0 && <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">{folder.indexedCount} đã lập chỉ mục</span>}
+                            {(folder.processingCount ?? 0) > 0 && <span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">{folder.processingCount} đang xử lý</span>}
+                            {(folder.failedCount ?? 0) > 0 && <span className="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-400">{folder.failedCount} cần kiểm tra</span>}
+                          </div>
+                        )}
                       </td>
-                      <td className="px-3 py-3 text-slate-500 dark:text-zinc-400 font-mono text-[11px]">{folder.updatedAt}</td>
-                      <td className="px-3 py-3 text-slate-400 dark:text-zinc-500">—</td>
-                      <td className="px-3 py-3 text-slate-400 dark:text-zinc-500">—</td>
                       <td className="px-4 py-3 text-right">
                         <button
                           type="button"
@@ -667,10 +673,14 @@ export const DataRepoPage: React.FC = () => {
                         <td className="px-3 py-3 text-slate-400 dark:text-zinc-500">—</td>
                         <td className="px-4 py-3 text-right">
                           <button
-                            onClick={() => showToast(`Tùy chọn ${documentName}`, 'info')}
-                            className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded cursor-pointer"
+                            type="button"
+                            onClick={() => setDocumentToDelete(doc)}
+                            disabled={deleteDocumentMutation.isPending}
+                            aria-label={`Xóa tài liệu ${documentName}`}
+                            title="Xóa tài liệu"
+                            className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded cursor-pointer disabled:opacity-50"
                           >
-                            <MoreHorizontal className="w-4 h-4" />
+                            <Trash2 className="w-4 h-4" />
                           </button>
                         </td>
                       </tr>
@@ -996,6 +1006,18 @@ export const DataRepoPage: React.FC = () => {
         onClose={() => setIsUploadOpen(false)}
         defaultFolderId={activeFolder?.id}
         onUploaded={handleUploaded}
+      />
+
+      <ConfirmModal
+        isOpen={Boolean(documentToDelete)}
+        onClose={() => setDocumentToDelete(null)}
+        onConfirm={handleDeleteDocument}
+        isLoading={deleteDocumentMutation.isPending}
+        title="Xóa tài liệu"
+        message={documentToDelete
+          ? `Bạn có chắc muốn xóa "${documentToDelete.originalFileName || documentToDelete.title}"? File gốc, nội dung các đoạn và vector RAG sẽ bị xóa.`
+          : ''}
+        confirmText="Xóa tài liệu"
       />
     </div>
   );
