@@ -22,6 +22,28 @@ export interface ApiFunctionItem {
   updatedAt?: string;
 }
 
+export interface ApiFunctionTreeNode {
+  functionId: string | null;
+  functionCode: string;
+  functionName: string;
+  module: string;
+  description?: string | null;
+  url?: string | null;
+  apiEndpoint?: string | null;
+  parentCode?: string | null;
+  order: number;
+  status?: string | null;
+  httpMethod?: string | null;
+  routeTemplate?: string | null;
+  actionType?: string | null;
+  riskLevel?: string | null;
+  requiresConfirmation: boolean;
+  version: number;
+  createdAt: string;
+  updatedAt: string;
+  childFunctions: ApiFunctionTreeNode[];
+}
+
 export interface CreateApiFunctionData {
   code: string;
   module: string;
@@ -218,6 +240,19 @@ export const apiFunctionsApi = {
   },
 
   /**
+   * GET /api/api-functions?tree=true
+   * Lấy danh mục API Function theo cấu trúc phân hệ và chức năng con.
+   */
+  async getApiFunctionTree(): Promise<ApiFunctionTreeNode[]> {
+    const response = await apiClient<ApiResponse<ApiFunctionTreeNode[]> | ApiFunctionTreeNode[]>(
+      '/api/api-functions?tree=true',
+      { method: 'GET' },
+    );
+    const resData = (response as any).data || response;
+    return Array.isArray(resData) ? resData : [];
+  },
+
+  /**
    * GET /api/api-functions/{apiFunctionId}
    * Lấy chi tiết một chức năng / API endpoint
    */
@@ -313,6 +348,7 @@ export const apiFunctionsQueryKeys = {
   all: ['api-functions'] as const,
   lists: () => [...apiFunctionsQueryKeys.all, 'list'] as const,
   list: (params?: any) => [...apiFunctionsQueryKeys.lists(), params] as const,
+  tree: () => [...apiFunctionsQueryKeys.all, 'tree'] as const,
   details: () => [...apiFunctionsQueryKeys.all, 'detail'] as const,
   detail: (id: string) => [...apiFunctionsQueryKeys.details(), id] as const,
   modules: () => [...apiFunctionsQueryKeys.all, 'modules'] as const,
@@ -328,6 +364,14 @@ export function useApiFunctionsQuery(params?: ApiFunctionFilterParams) {
       return await apiFunctionsApi.getApiFunctions(params);
     },
     staleTime: 1000 * 60 * 5, // Cache 5 phút
+  });
+}
+
+export function useApiFunctionTreeQuery() {
+  return useQuery({
+    queryKey: apiFunctionsQueryKeys.tree(),
+    queryFn: apiFunctionsApi.getApiFunctionTree,
+    staleTime: 1000 * 60 * 5,
   });
 }
 

@@ -13,7 +13,7 @@ import {
   ApiFunctionItem,
   RoleUserItem,
 } from '@/api/roles.api';
-import { useApiFunctionsQuery } from '@/api/api-functions.api';
+import { useApiFunctionTreeQuery } from '@/api/api-functions.api';
 import { useUsersQuery, useAssignRoleMutation, useRemoveRoleMutation } from '@/api/users.api';
 import { useDepartmentsQuery } from '@/api/departments.api';
 import { User } from '@/types';
@@ -227,9 +227,28 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
   // API Queries & Mutations
   const { data: allUsers = [] } = useUsersQuery();
   const { data: departments = [] } = useDepartmentsQuery();
-  const { data: allApiFunctions = [], isLoading: isLoadingAllApiFunctions } = useApiFunctionsQuery({
-    pageSize: 999,
-  });
+  const { data: apiFunctionTree = [], isLoading: isLoadingAllApiFunctions } = useApiFunctionTreeQuery();
+  const allApiFunctions = useMemo<ApiFunctionItem[]>(
+    () => apiFunctionTree.flatMap((moduleNode) => moduleNode.childFunctions
+      .filter((functionNode) => Boolean(functionNode.functionId))
+      .map((functionNode) => ({
+        apiFunctionId: functionNode.functionId!,
+        code: functionNode.functionCode,
+        module: functionNode.module || moduleNode.module,
+        name: functionNode.functionName,
+        description: functionNode.description,
+        httpMethod: functionNode.httpMethod || 'GET',
+        routeTemplate: functionNode.routeTemplate || '',
+        actionType: functionNode.actionType || 'Read',
+        riskLevel: functionNode.riskLevel || 'Low',
+        requiresConfirmation: functionNode.requiresConfirmation,
+        status: functionNode.status || 'Active',
+        version: functionNode.version,
+        createdAt: functionNode.createdAt,
+        updatedAt: functionNode.updatedAt,
+      }))),
+    [apiFunctionTree],
+  );
 
   // Call API for Role Detail when modal is open and has targetRoleId
   const {
@@ -247,7 +266,7 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
   const assignRoleMutation = useAssignRoleMutation();
   const removeRoleMutation = useRemoveRoleMutation();
 
-  // Populate master permission matrix from Backend API (GET /api/api-functions)
+  // Render permission groups from the API's module/function tree.
   const permissionColumns = useMemo(() => {
     // Hợp nhất danh sách tổng allApiFunctions và roleDetail.apiFunctions để đảm bảo không bị thiếu bất kỳ quyền nào
     const mergedMap = new Map<string, ApiFunctionItem>();
@@ -269,25 +288,41 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
     const sourceList = Array.from(mergedMap.values());
 
     if (sourceList.length > 0) {
-      // Group master apiFunctions by module
-      const moduleMap = new Map<string, PermissionItem[]>();
-      sourceList.forEach((fn: ApiFunctionItem) => {
-        const mod = fn.module || 'Hệ thống';
-        if (!moduleMap.has(mod)) {
-          moduleMap.set(mod, []);
-        }
-        moduleMap.get(mod)!.push({
-          id: fn.apiFunctionId || fn.code,
-          code: fn.code,
-          label: fn.name || fn.code,
-        });
+      const representedKeys = new Set<string>();
+      const dynamicGroups: PermissionGroup[] = apiFunctionTree.map((moduleNode) => {
+        const items = moduleNode.childFunctions
+          .filter((functionNode) => Boolean(functionNode.functionId))
+          .map((functionNode) => {
+            representedKeys.add(functionNode.functionId!);
+            representedKeys.add(functionNode.functionCode);
+            return {
+              id: functionNode.functionId!,
+              code: functionNode.functionCode,
+              label: functionNode.functionName || functionNode.functionCode,
+              desc: functionNode.description,
+              route: functionNode.routeTemplate || undefined,
+              method: functionNode.httpMethod || undefined,
+            };
+          });
+
+        return {
+          id: `module_${moduleNode.functionCode.toLowerCase()}`,
+          name: `Phân hệ ${moduleNode.functionName}`,
+          items,
+        };
       });
 
-      const dynamicGroups: PermissionGroup[] = Array.from(moduleMap.entries()).map(([modName, items]) => ({
-        id: `module_${modName.toLowerCase()}`,
-        name: `Phân hệ ${modName}`,
-        items,
-      }));
+      const missingFunctions = sourceList.filter((fn) =>
+        !representedKeys.has(fn.apiFunctionId) && !representedKeys.has(fn.code));
+      missingFunctions.forEach((fn) => {
+        const modName = fn.module || 'Hệ thống';
+        let group = dynamicGroups.find((item) => item.name === `Phân hệ ${modName}`);
+        if (!group) {
+          group = { id: `module_${modName.toLowerCase()}`, name: `Phân hệ ${modName}`, items: [] };
+          dynamicGroups.push(group);
+        }
+        group.items.push({ id: fn.apiFunctionId || fn.code, code: fn.code, label: fn.name || fn.code });
+      });
 
       // Distribute evenly across 3 columns
       const cols: { column: number; title: string; groups: PermissionGroup[] }[] = [
