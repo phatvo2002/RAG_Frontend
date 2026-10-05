@@ -7,7 +7,7 @@ import { FolderDetailPanel } from './FolderDetailPanel';
 import { useDepartmentsQuery } from '@/api/departments.api';
 import { FolderItem, useDocumentFoldersQuery } from '@/api/document-folders.api';
 import { DocumentListItem, DocumentUploadResponse, useDeleteDocumentMutation, useDocumentsQuery } from '@/api/documents.api';
-import { CustomTable } from '@/components/customTable';
+import { CustomTable, TableRowActions } from '@/components/customTable';
 import { ConfirmModal } from '@/components/disclosure';
 import {
   Upload,
@@ -33,8 +33,10 @@ import {
   ShieldCheck,
   Plus,
   ExternalLink,
+  Eye,
   ChevronLeft,
   Trash2,
+  Activity,
 } from 'lucide-react';
 
 interface FolderTreeNode extends FolderItem {
@@ -80,8 +82,10 @@ export const DataRepoPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
-  const [isActivityOpen, setIsActivityOpen] = useState(false);
+  const [isActivityOpen, setIsActivityOpen] = useState(true);
+  const [activityTab, setActivityTab] = useState<'issues' | 'recent'>('issues');
   const [detailFolderId, setDetailFolderId] = useState<string | null>(null);
+  const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
   const [folderDepartmentFilter, setFolderDepartmentFilter] = useState('all');
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
   const [documentToDelete, setDocumentToDelete] = useState<DocumentListItem | null>(null);
@@ -163,14 +167,38 @@ export const DataRepoPage: React.FC = () => {
 
   const filteredFolderRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return folderRows.filter((folder) => !q || folder.name.toLowerCase().includes(q));
-  }, [folderRows, search]);
+    const folderById = new Map(folderRows.map((folder) => [folder.id, folder]));
+    const collectVisibleRows = (nodes: FolderTreeNode[], depth = 0): Array<{ folder: (typeof folderRows)[number]; depth: number; hasChildren: boolean }> => {
+      const rows: Array<{ folder: (typeof folderRows)[number]; depth: number; hasChildren: boolean }> = [];
+      nodes.forEach((node) => {
+        const folder = folderById.get(node.id);
+        if (!folder) return;
+
+        const childRows = collectVisibleRows(node.children, depth + 1);
+        if (!q || folder.name.toLowerCase().includes(q) || childRows.length > 0) {
+          rows.push({ folder, depth, hasChildren: node.children.length > 0 });
+          if (q || !collapsedFolderIds.has(folder.id)) rows.push(...childRows);
+        }
+      });
+      return rows;
+    };
+
+    return collectVisibleRows(folderTree);
+  }, [collapsedFolderIds, folderRows, folderTree, search]);
+
+  const toggleFolderExpanded = (folderId: string) => {
+    setCollapsedFolderIds((current) => {
+      const next = new Set(current);
+      if (next.has(folderId)) next.delete(folderId);
+      else next.add(folderId);
+      return next;
+    });
+  };
 
   const openFolder = (folderId: string) => {
     setSelectedFolder(folderId);
     setRepositoryView('documents');
     setSelectedDocIds([]);
-    setDetailFolderId(folderId);
   };
 
   const getDocTypeBadge = (type: string) => {
@@ -297,6 +325,15 @@ export const DataRepoPage: React.FC = () => {
 
         <div className="flex items-center gap-2">
           <button
+            type="button"
+            onClick={() => setIsActivityOpen((open) => !open)}
+            className="2xl:hidden px-2.5 py-1.5 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+            aria-expanded={isActivityOpen}
+          >
+            <Activity className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Hoạt động</span>
+          </button>
+          <button
             onClick={() => setIsFolderModalOpen(true)}
             className="px-3 py-1.5 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
           >
@@ -315,12 +352,12 @@ export const DataRepoPage: React.FC = () => {
       </div>
 
       {/* Main 3-Column Content Body */}
-      <div className="flex-1 flex overflow-hidden w-full">
+      <div className="relative flex-1 flex overflow-hidden w-full">
         
         {/* ==================================================================== */}
         {/* 1. LEFT COLUMN: Cây Thư Mục (Folder Tree) 240px */}
         {/* ==================================================================== */}
-        <aside className="hidden w-60 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950 lg:flex">
+        <aside className="hidden w-52 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-3.5 dark:border-zinc-800 dark:bg-zinc-950 lg:flex 2xl:w-56 2xl:p-4">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">Cây thư mục</span>
             <div className="flex items-center gap-1">
@@ -340,16 +377,31 @@ export const DataRepoPage: React.FC = () => {
             {folderTree.map((node) => {
               const renderNode = (item: FolderTreeNode, depth: number): React.ReactNode => (
                 <React.Fragment key={item.id}>
-                  <button
-                    type="button"
-                    onClick={() => openFolder(item.id)}
-                    className={`flex w-full items-center gap-1.5 rounded-lg py-1.5 pr-1 text-left text-xs ${selectedFolder === item.id ? 'bg-blue-50 font-semibold text-blue-600 dark:bg-blue-950/50 dark:text-blue-400' : 'text-slate-600 hover:bg-slate-50 dark:text-zinc-400 dark:hover:bg-zinc-900'}`}
-                    style={{ paddingLeft: `${8 + depth * 14}px` }}
-                  >
-                    <Folder className="h-3.5 w-3.5 shrink-0 text-slate-400" />
-                    <span className="truncate">{item.name}</span>
-                  </button>
-                  {item.children.map((child) => renderNode(child, depth + 1))}
+                  <div className="flex items-center gap-1" style={{ paddingLeft: `${8 + depth * 14}px` }}>
+                    {item.children.length > 0 ? (
+                      <button
+                        type="button"
+                        onClick={() => toggleFolderExpanded(item.id)}
+                        className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                        aria-label={`${collapsedFolderIds.has(item.id) ? 'Mở rộng' : 'Thu gọn'} folder ${item.name}`}
+                        title={collapsedFolderIds.has(item.id) ? 'Mở rộng folder' : 'Thu gọn folder'}
+                        aria-expanded={!collapsedFolderIds.has(item.id)}
+                      >
+                        {collapsedFolderIds.has(item.id) ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                      </button>
+                    ) : (
+                      <span className="h-5 w-5 shrink-0" />
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => openFolder(item.id)}
+                      className={`flex min-w-0 flex-1 items-center gap-1.5 rounded-lg py-1.5 pr-1 text-left text-xs ${selectedFolder === item.id ? 'bg-blue-50 font-semibold text-blue-600 dark:bg-blue-950/50 dark:text-blue-400' : 'text-slate-600 hover:bg-slate-50 dark:text-zinc-400 dark:hover:bg-zinc-900'}`}
+                    >
+                      <Folder className="h-3.5 w-3.5 shrink-0 text-slate-400" />
+                      <span className="truncate">{item.name}</span>
+                    </button>
+                  </div>
+                  {!collapsedFolderIds.has(item.id) && item.children.map((child) => renderNode(child, depth + 1))}
                 </React.Fragment>
               );
               return renderNode(node, 0);
@@ -418,8 +470,8 @@ export const DataRepoPage: React.FC = () => {
           
           {/* Toolbar Filters matching 02/03-knowledge-repository.png */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
-            <div className="flex items-center gap-2 flex-1 min-w-[240px]">
-              <div className="relative flex-1">
+            <div className="flex flex-1 flex-wrap items-center gap-2 min-w-[240px]">
+              <div className="relative min-w-[220px] flex-1">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
                 <input
                   type="text"
@@ -514,7 +566,7 @@ export const DataRepoPage: React.FC = () => {
                     <th className="w-40 px-3 py-3">PHÒNG BAN</th>
                     <th className="w-40 px-3 py-3">CẬP NHẬT GẦN NHẤT</th>
                     <th className="min-w-52 px-3 py-3">TRẠNG THÁI TÀI LIỆU</th>
-                    <th className="w-10 px-4 py-3 text-right" />
+                    <th className="w-10 px-4 py-3 text-right">THAO TÁC</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
@@ -530,22 +582,38 @@ export const DataRepoPage: React.FC = () => {
                     <tr><td colSpan={8} className="py-10 text-center text-slate-400"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin text-blue-500" />Đang tải danh sách folder...</td></tr>
                   ) : filteredFolderRows.length === 0 ? (
                     <tr><td colSpan={8} className="py-10 text-center text-slate-400">Không tìm thấy folder phù hợp.</td></tr>
-                  ) : filteredFolderRows.map((folder) => (
+                  ) : filteredFolderRows.map(({ folder, depth, hasChildren }) => (
                     <tr
                       key={folder.id}
-                      onClick={() => { setDetailFolderId(folder.id); openFolder(folder.id); }}
-                      className={`cursor-pointer transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 ${detailFolderId === folder.id ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}
+                      onClick={() => openFolder(folder.id)}
+                      className={`cursor-pointer transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 ${selectedFolder === folder.id ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}
                     >
                       <td className="px-4 py-3 text-center"><input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" /></td>
                       <td className="px-3 py-3">
-                        <button
-                          type="button"
-                          onClick={(event) => { event.stopPropagation(); openFolder(folder.id); }}
-                          className="flex items-center gap-2.5 text-left font-semibold text-slate-900 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
-                        >
-                          <Folder className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
-                          <span>{folder.name}</span>
-                        </button>
+                        <div className="flex items-center gap-1.5" style={{ paddingLeft: `${depth * 24}px` }}>
+                          {hasChildren ? (
+                            <button
+                              type="button"
+                              onClick={(event) => { event.stopPropagation(); toggleFolderExpanded(folder.id); }}
+                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
+                              aria-label={`${collapsedFolderIds.has(folder.id) ? 'Mở rộng' : 'Thu gọn'} folder ${folder.name}`}
+                              title={collapsedFolderIds.has(folder.id) ? 'Mở rộng folder' : 'Thu gọn folder'}
+                              aria-expanded={!collapsedFolderIds.has(folder.id)}
+                            >
+                              {collapsedFolderIds.has(folder.id) ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                            </button>
+                          ) : (
+                            <span className="h-5 w-5 shrink-0" />
+                          )}
+                          <button
+                            type="button"
+                            onClick={(event) => { event.stopPropagation(); openFolder(folder.id); }}
+                            className="flex items-center gap-2.5 text-left font-semibold text-slate-900 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
+                          >
+                            <Folder className="w-5 h-5 text-blue-600 dark:text-blue-400 shrink-0" />
+                            <span>{folder.name}</span>
+                          </button>
+                        </div>
                       </td>
                       <td className="px-3 py-3 text-slate-600 dark:text-zinc-400 font-medium">{folder.documentCount}</td>
                       <td className="px-3 py-3 whitespace-nowrap text-slate-600 dark:text-zinc-400">{formatFolderSize(folder.totalSizeBytes || 0)}</td>
@@ -563,14 +631,15 @@ export const DataRepoPage: React.FC = () => {
                         )}
                       </td>
                       <td className="px-4 py-3 text-right">
-                        <button
-                          type="button"
-                          onClick={(event) => { event.stopPropagation(); openFolder(folder.id); }}
-                          className="p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 rounded cursor-pointer"
-                          title={`Mở thư mục ${folder.name}`}
-                        >
-                          <ChevronRight className="w-4 h-4" />
-                        </button>
+                        <TableRowActions
+                          items={[
+                            {
+                              label: 'Xem chi tiết',
+                              icon: <Eye className="h-3.5 w-3.5" />,
+                              onClick: () => setDetailFolderId(folder.id),
+                            },
+                          ]}
+                        />
                       </td>
                     </tr>
                   ))}
@@ -879,7 +948,7 @@ export const DataRepoPage: React.FC = () => {
         {/* 4. RIGHT COLUMN: Hoạt động matching 02/03-knowledge-repository.png */}
         {/* ==================================================================== */}
         {isActivityOpen ? (
-        <aside className="w-72 xl:w-80 border-l border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full shrink-0 overflow-y-auto p-4 space-y-4 text-xs">
+        <aside className="absolute inset-y-0 right-0 z-30 flex h-full w-[min(88vw,20rem)] shrink-0 flex-col space-y-4 overflow-y-auto border-l border-slate-200 bg-white p-4 text-xs shadow-xl dark:border-zinc-800 dark:bg-zinc-950 2xl:relative 2xl:inset-auto 2xl:h-full 2xl:w-80 2xl:shadow-none">
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-base text-slate-900 dark:text-zinc-100">Hoạt động</h3>
             <button
@@ -893,19 +962,21 @@ export const DataRepoPage: React.FC = () => {
           </div>
 
           <div className="flex items-center gap-6 border-b border-slate-200 dark:border-zinc-800 text-xs font-semibold">
-            <button type="button" className="relative -mb-px min-h-9 text-blue-600 dark:text-blue-400 cursor-default">
+            <button type="button" onClick={() => setActivityTab('issues')} className={`relative -mb-px min-h-9 cursor-pointer ${activityTab === 'issues' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200'}`}>
               Vấn đề lập chỉ mục
-              <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />
+              {activityTab === 'issues' && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />}
             </button>
             <button
               type="button"
-              onClick={() => showToast('Hiển thị tài liệu tải lên gần đây', 'info')}
-              className="min-h-9 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 cursor-pointer"
+              onClick={() => setActivityTab('recent')}
+              className={`relative -mb-px min-h-9 cursor-pointer ${activityTab === 'recent' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200'}`}
             >
               Tải lên gần đây
+              {activityTab === 'recent' && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />}
             </button>
           </div>
 
+          {activityTab === 'issues' ? (
           <div className="divide-y divide-slate-200 dark:divide-zinc-800">
             {[
               { tone: 'error', title: 'Không trích xuất được nội dung', file: 'Mẫu hợp đồng dịch vụ.docx', detail: 'Lỗi định dạng tệp', date: '03/09/2026 15:18' },
@@ -926,8 +997,26 @@ export const DataRepoPage: React.FC = () => {
               </div>
             ))}
           </div>
+          ) : (
+            <div className="divide-y divide-slate-200 dark:divide-zinc-800">
+              {documentItems.slice(0, 8).map((doc) => {
+                const documentName = doc.originalFileName || doc.title;
+                return (
+                  <div key={doc.documentId} className="flex items-start gap-2.5 py-3">
+                    <FileText className="mt-0.5 h-4 w-4 shrink-0 text-slate-400" />
+                    <div className="min-w-0 space-y-0.5">
+                      <p className="font-semibold text-slate-800 dark:text-zinc-200">{getIndexStatusBadge(doc.processingStatus) || doc.processingStatus}</p>
+                      <p className="truncate text-slate-600 dark:text-zinc-400">{documentName}</p>
+                      <p className="text-slate-400 dark:text-zinc-500">{formatDocumentDate(doc.updatedAt)}</p>
+                    </div>
+                  </div>
+                );
+              })}
+              {documentItems.length === 0 && <p className="py-3 text-slate-400">Chưa có tài liệu gần đây trong folder hiện tại.</p>}
+            </div>
+          )}
 
-          <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 space-y-2">
+          {activityTab === 'issues' && <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 space-y-2">
             <div className="flex items-center justify-between">
               <h4 className="font-bold text-sm text-slate-900 dark:text-zinc-100">Tải lên gần đây</h4>
               <button
@@ -953,18 +1042,18 @@ export const DataRepoPage: React.FC = () => {
               })}
               {documentItems.length === 0 && <p className="py-3 text-xs text-slate-400">Chưa có tài liệu trong folder hiện tại.</p>}
             </div>
-          </div>
+          </div>}
 
-          <button
+          {activityTab === 'issues' && <button
             type="button"
             onClick={() => showToast('Mở toàn bộ hoạt động kho tri thức', 'info')}
             className="pt-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
           >
             Xem tất cả hoạt động <span className="ml-1">→</span>
-          </button>
+          </button>}
         </aside>
         ) : (
-          <aside className="flex w-10 shrink-0 items-start justify-center border-l border-slate-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950">
+          <aside className="hidden w-10 shrink-0 items-start justify-center border-l border-slate-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950 2xl:flex">
             <button
               type="button"
               onClick={() => setIsActivityOpen(true)}

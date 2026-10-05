@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { ChevronDown, FileText, LayoutDashboard, LoaderCircle, Menu, Paperclip, Plus, Search, Send, Sparkles, Trash2, X } from 'lucide-react';
 import { chatApi } from '@/api/chat.api';
-import type { ChatConversation, ChatMessage, ChatModel, ChatSource } from '@/api/chat.api';
+import type { ChatConversation, ChatMessage, ChatSource } from '@/api/chat.api';
 import { useApp } from '@/context/AppContext';
 
 export const ChatPage: React.FC = () => {
@@ -11,8 +11,7 @@ export const ChatPage: React.FC = () => {
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
-  const [models, setModels] = useState<ChatModel[]>([]);
-  const [modelId, setModelId] = useState('gemini');
+  const [modelsAvailable, setModelsAvailable] = useState(false);
   const [input, setInput] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -32,8 +31,7 @@ export const ChatPage: React.FC = () => {
     let cancelled = false;
     chatApi.models().then(async available => {
       if (cancelled) return;
-      setModels(available.models);
-      setModelId(available.models.some(model => model.id === available.defaultModel) ? available.defaultModel : available.models[0]?.id ?? '');
+      setModelsAvailable(available.models.length > 0);
       if (available.configurationError) {
         setError(available.configurationError);
       }
@@ -97,7 +95,7 @@ export const ChatPage: React.FC = () => {
 
   const send = async () => {
     const question = input.trim();
-    if (!question || !modelId || sending) return;
+    if (!question || !modelsAvailable || sending) return;
     setInput('');
     setError('');
     setStreamText('');
@@ -112,7 +110,7 @@ export const ChatPage: React.FC = () => {
     }]);
     let conversationId = activeId;
     try {
-      await chatApi.streamTurn({ conversationId: activeId, question, modelId, clientRequestId: crypto.randomUUID() }, event => {
+      await chatApi.streamTurn({ conversationId: activeId, question, clientRequestId: crypto.randomUUID() }, event => {
         if (event.type === 'started') {
           conversationId = event.data.conversationId;
           setActiveId(conversationId);
@@ -121,6 +119,7 @@ export const ChatPage: React.FC = () => {
         }
         if (event.type === 'sources') setStreamSources(event.data);
         if (event.type === 'delta') setStreamText(previous => previous + event.data.text);
+        if (event.type === 'reset') setStreamText('');
         if (event.type === 'completed') {
           setMessages(previous => [...previous, event.data]);
           setFocusedMessageId(event.data.id);
@@ -213,14 +212,6 @@ export const ChatPage: React.FC = () => {
             <h1 className="truncate text-base font-bold tracking-tight text-[#101f3b] sm:text-lg">Trợ lý AI NEXORA</h1>
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
-            <label htmlFor="chat-model" className="hidden text-sm text-[#7485a2] sm:block">Mô hình</label>
-            <div className="relative">
-              <select id="chat-model" value={modelId} onChange={event => setModelId(event.target.value)} disabled={sending || models.length === 0} className="h-11 max-w-[165px] appearance-none rounded-xl border border-[#dfe7f3] bg-white py-2 pl-3 pr-8 text-xs font-medium text-[#243652] outline-none focus:border-[#1762f4] disabled:opacity-60 sm:max-w-[210px] sm:text-sm">
-                {models.length === 0 && <option value="">Chưa có mô hình</option>}
-                {models.map(model => <option key={model.id} value={model.id}>{model.name}</option>)}
-              </select>
-              <ChevronDown size={15} className="pointer-events-none absolute right-2.5 top-3.5 text-[#657997]" />
-            </div>
             <button onClick={() => setSourcesOpen(true)} aria-label="Mở nguồn tham khảo" title="Nguồn tham khảo" className={`rounded-lg p-2 text-[#52678b] hover:bg-[#eef3fc] ${sourcesOpen ? 'hidden' : ''}`}><FileText size={19} /></button>
           </div>
         </header>
@@ -263,7 +254,7 @@ export const ChatPage: React.FC = () => {
             ))}
 
             {sending && <article className="flex items-start gap-3"><span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[#e4edff] text-sm font-bold text-[#1762f4]">N</span><div className="max-w-[85%] rounded-2xl rounded-tl-md bg-[#f1f4f9] px-4 py-3 text-sm leading-relaxed text-[#243653] whitespace-pre-wrap">{streamText || <span className="flex items-center gap-2 text-[#7587a5]"><LoaderCircle size={15} className="animate-spin" />Đang tìm tài liệu và tạo câu trả lời...</span>}</div></article>}
-            {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}{models.length === 0 && <button onClick={() => navigate({ to: '/account' })} className="ml-2 font-semibold text-[#1762f4] underline">Thiết lập khóa API</button>}</div>}
+            {error && <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}{!modelsAvailable && <button onClick={() => navigate({ to: '/account' })} className="ml-2 font-semibold text-[#1762f4] underline">Thiết lập khóa API</button>}</div>}
             <div ref={endRef} />
           </div>
         </div>
@@ -271,8 +262,8 @@ export const ChatPage: React.FC = () => {
         <div className="shrink-0 border-t border-[#e7ecf5] bg-white px-3 py-3 sm:px-5 sm:py-4">
           <div className="mx-auto flex max-w-[930px] items-end gap-2 rounded-2xl border border-[#dce5f2] bg-white p-2 shadow-sm focus-within:border-[#9ebdff]">
             <button type="button" disabled title="Đính kèm tài liệu chưa được hỗ trợ" aria-label="Đính kèm tài liệu chưa được hỗ trợ" className="mb-1 rounded-lg p-2 text-[#637797] opacity-70"><Paperclip size={20} /></button>
-            <textarea value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void send(); } }} disabled={sending || models.length === 0} maxLength={2000} rows={1} placeholder={models.length ? 'Hỏi về dữ liệu nội bộ...' : 'Chưa cấu hình mô hình AI'} aria-label="Nội dung tin nhắn" className="max-h-36 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-sm text-[#243653] outline-none placeholder:text-[#8191ac] disabled:opacity-60" />
-            <button onClick={() => void send()} disabled={sending || !input.trim() || !modelId} className="flex h-10 items-center gap-2 rounded-xl bg-[#1762f4] px-4 text-sm font-semibold text-white hover:bg-[#0d52d9] disabled:opacity-50"><Send size={17} />Gửi</button>
+            <textarea value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void send(); } }} disabled={sending || !modelsAvailable} maxLength={2000} rows={1} placeholder={modelsAvailable ? 'Hỏi về dữ liệu nội bộ...' : 'Chưa cấu hình mô hình AI'} aria-label="Nội dung tin nhắn" className="max-h-36 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-sm text-[#243653] outline-none placeholder:text-[#8191ac] disabled:opacity-60" />
+            <button onClick={() => void send()} disabled={sending || !input.trim() || !modelsAvailable} className="flex h-10 items-center gap-2 rounded-xl bg-[#1762f4] px-4 text-sm font-semibold text-white hover:bg-[#0d52d9] disabled:opacity-50"><Send size={17} />Gửi</button>
           </div>
         </div>
       </main>

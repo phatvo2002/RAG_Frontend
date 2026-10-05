@@ -128,14 +128,24 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
 
   return (
     <>
-      <aside className="fixed inset-y-0 right-0 z-40 mt-[60px] flex w-full max-w-[420px] flex-col overflow-y-auto border-l border-slate-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+      <div
+        className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4 backdrop-blur-xs"
+        onClick={onClose}
+      >
+        <section
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="folder-detail-title"
+          onClick={(event) => event.stopPropagation()}
+          className="flex max-h-[calc(100vh-2rem)] w-full max-w-xl flex-col overflow-hidden rounded-xl border border-slate-200 bg-white shadow-2xl dark:border-zinc-800 dark:bg-zinc-950"
+        >
         <div className="flex items-center justify-between border-b border-slate-200 p-4 dark:border-zinc-800">
           <div className="flex min-w-0 items-center gap-2.5">
             <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-400">
               <Folder className="h-5 w-5" />
             </div>
             <div className="min-w-0">
-              <h2 className="truncate text-sm font-bold text-slate-900 dark:text-zinc-100">{selectedFolder.name}</h2>
+              <h2 id="folder-detail-title" className="truncate text-sm font-bold text-slate-900 dark:text-zinc-100">{selectedFolder.name}</h2>
               <p className="text-[11px] text-slate-400">Chi tiết folder</p>
             </div>
           </div>
@@ -144,7 +154,7 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
           </button>
         </div>
 
-        <div className="space-y-5 p-4 text-xs">
+        <div className="space-y-5 overflow-y-auto p-4 text-xs">
           {grantError && (
             <div className="flex items-start gap-2 rounded-lg border border-rose-200 bg-rose-50 p-3 text-rose-700 dark:border-rose-800 dark:bg-rose-950/40 dark:text-rose-300">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
@@ -153,9 +163,9 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
           )}
 
           <dl className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-zinc-800">
-            <div className="flex justify-between gap-3"><dt className="text-slate-400">Department ID</dt><dd className="max-w-[220px] truncate font-mono text-slate-700 dark:text-zinc-300">{selectedFolder.departmentId || '—'}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-slate-400">Phòng ban</dt><dd className="max-w-[220px] truncate text-right font-medium text-slate-700 dark:text-zinc-300">{selectedFolder.departmentId ? departmentNames.get(selectedFolder.departmentId) || 'Không xác định' : '—'}</dd></div>
             <div className="flex justify-between gap-3"><dt className="text-slate-400">Folder cha</dt><dd className="font-medium text-slate-700 dark:text-zinc-300">{folders.find((item) => item.id === selectedFolder.parentFolderId)?.name || 'Root'}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-slate-400">Owner ID</dt><dd className="max-w-[220px] truncate font-mono text-slate-700 dark:text-zinc-300">{selectedFolder.ownerUserId || '—'}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-slate-400">Chủ sở hữu</dt><dd className="max-w-[220px] truncate text-right font-medium text-slate-700 dark:text-zinc-300">{selectedFolder.ownerUserId ? userNames.get(selectedFolder.ownerUserId) || 'Không xác định' : '—'}</dd></div>
           </dl>
 
           {isOwner && (
@@ -229,7 +239,8 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
             )}
           </section>
         </div>
-      </aside>
+        </section>
+      </div>
 
       <FolderModal isOpen={isRenameOpen} onClose={() => setIsRenameOpen(false)} folders={folders} folderToRename={selectedFolder} />
       <ConfirmModal isOpen={isDeleteOpen} onClose={() => setIsDeleteOpen(false)} onConfirm={handleDeleteFolder} isLoading={deleteFolderMutation.isPending} title="Xóa folder" message={`Bạn có chắc muốn xóa folder "${selectedFolder.name}" không? Folder còn tài liệu sẽ bị backend từ chối.`} confirmText="Xóa folder" />

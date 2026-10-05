@@ -8,38 +8,38 @@
 ## Implementation evidence
 
 - Intended route: `/data-repo`
-- Intended states: `Theo thư mục` (default) and an opened folder with its document list.
-- Viewport: not captured.
 - Source dimensions: 1488 × 1059 px for both references.
-- Implementation screenshot: unavailable because the local route requires an authenticated session; the preview stopped at the login screen.
-- Density normalization: not applicable; no implementation capture was available.
+- Intended states: folder list and an opened folder with its document list, in light and dark themes.
+- Viewport: implementation capture not available. The Vite preview required elevated process permission and the request was rejected.
+- Implementation screenshot: not captured; visual comparison and interaction checks could not be completed.
+- Production build: `npm run build` passed. TypeScript and Vite completed; Vite reported the existing >500 KB bundle warning.
+- Density normalization: not applicable because no implementation capture is available.
 
 ## Comparison
 
-- Full-view comparison: blocked; the authenticated Kho tri thức screen could not be opened in the preview browser.
-- Focused region comparison: blocked for the same reason.
-- Static source review confirms the intended flow is represented in `DataRepoPage`: folder table first, then filtered document table after opening a folder. The visible secondary tree was removed from the layout and the right-side health panel was replaced by the activity panel shown in the references.
+- Full-view comparison: blocked; the rendered `/data-repo` screen could not be captured.
+- Focused region comparison: blocked because no implementation screenshot is available.
+- Static review confirms the page retains folder and document views, nested folder controls, existing modals, and the activity panel. The activity panel is responsive and its tabs switch between indexing issues and documents in the current folder.
 
 ## Findings
 
-- [P1] Runtime visual comparison could not be completed. The preview route requires login and no authenticated browser session was available.
-  - Fix: open `/data-repo` with a valid local session and re-run the two-state visual comparison.
+- [P1] Runtime visual comparison and interaction checks could not be completed. The local preview launch permission request was rejected.
+  - Fix: start the local preview with permission, open `/data-repo` in an authenticated session, and compare both states at the source viewport.
 
 ## Comparison history
 
-- Initial pass: the implementation still showed a secondary folder tree and a knowledge-health panel, which differed from the 02/03 reference structure.
-- Fix applied: the tree is hidden from the visible layout; Folder rows are rendered in the main `CustomTable`; the right panel now presents indexing issues and recent uploads as `Hoạt động`.
-- Post-fix capture: blocked because the preview browser remains unauthenticated.
+- Implementation updates: the activity panel opens by default, overlays content below wide desktop sizes, and can be toggled from the page header. Its tabs switch content. Folder selection highlight follows the active folder; expand buttons expose `aria-expanded` state.
+- Visual iteration: blocked before screenshot capture because local preview permission was rejected; no visual fixes were judged from a rendered comparison.
 
 ## Implementation checklist
 
-- [x] Default repository view is Folder-first.
-- [x] Folder rows open the matching document list.
-- [x] Breadcrumb and active folder title update when a folder is opened.
-- [x] Existing upload, search, filters, callbacks and route remain in place.
+- [x] Folder and document views, parent-child navigation, upload/create/detail flows, and existing API behavior are retained.
+- [x] Light and dark theme styles remain; narrow layouts use the responsive activity panel.
 - [x] `npx tsc --noEmit` passes.
 - [x] `npm run build` passes.
 - [x] `git diff --check` passes.
+- [ ] Compare rendered folder and document views in light/dark themes and at a narrow viewport.
+- [ ] Verify folder expand/collapse, tabs, activity panel controls, and existing actions in the browser.
 
 ## Final result
 

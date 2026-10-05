@@ -13,6 +13,7 @@ export type ChatEvent =
   | { type: 'started'; data: { conversationId: string; requestMessageId: string; turnId: string } }
   | { type: 'sources'; data: ChatSource[] }
   | { type: 'delta'; data: { text: string } }
+  | { type: 'reset'; data: { modelName: string } }
   | { type: 'completed'; data: ChatMessage }
   | { type: 'error'; data: { message: string } };
 

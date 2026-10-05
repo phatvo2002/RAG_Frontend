@@ -297,7 +297,7 @@ export const Sidebar: React.FC = () => {
   // =========================================================================
   if (!isSidebarOpen && !isMobileSidebarOpen) {
     return (
-      <aside className="hidden lg:flex w-16 bg-[#08172b] border-r border-[#1a2a43] flex-col h-screen shrink-0 select-none text-slate-300 font-sans transition-all duration-300">
+      <aside style={{ fontFamily: 'Arial, Helvetica, sans-serif' }} className="hidden lg:flex w-16 bg-[#08172b] border-r border-[#1a2a43] flex-col h-screen shrink-0 select-none text-slate-300 font-sans transition-all duration-300">
         <div className="h-16 px-2 border-b border-[#1a2a43] flex items-center justify-center shrink-0">
           <button
             type="button"
@@ -401,7 +401,7 @@ export const Sidebar: React.FC = () => {
         aria-label="Đóng menu"
       />
     )}
-    <aside className={`w-60 bg-[#08172b] border-r border-[#1a2a43] flex flex-col h-screen shrink-0 select-none text-slate-300 font-sans transition-all duration-300 ${isMobileSidebarOpen ? 'fixed inset-y-0 left-0 z-50 translate-x-0 flex shadow-2xl lg:relative lg:shadow-none' : 'hidden lg:flex'}`}>
+    <aside style={{ fontFamily: 'Arial, Helvetica, sans-serif' }} className={`w-60 bg-[#08172b] border-r border-[#1a2a43] flex flex-col h-screen shrink-0 select-none text-slate-300 font-sans transition-all duration-300 ${isMobileSidebarOpen ? 'fixed inset-y-0 left-0 z-50 translate-x-0 flex shadow-2xl lg:relative lg:shadow-none' : 'hidden lg:flex'}`}>
       <div className="h-16 px-4 border-b border-[#1a2a43] flex items-center justify-between shrink-0">
         <button
           type="button"
@@ -469,7 +469,7 @@ export const Sidebar: React.FC = () => {
               <button
                 type="button"
                 onClick={() => toggleGroup(group.id)}
-                className={`w-full px-3 py-2 rounded-lg flex items-center justify-between text-[11px] uppercase tracking-[0.08em] font-bold transition-colors cursor-pointer ${activeGroupId === group.id ? 'text-blue-200' : 'text-slate-500 hover:text-slate-200'}`}
+                className={`w-full px-3 py-2 rounded-lg flex items-center justify-between text-[11px] uppercase tracking-[0.04em] font-semibold transition-colors cursor-pointer ${activeGroupId === group.id ? 'text-blue-200' : 'text-slate-400 hover:text-slate-200'}`}
                 aria-expanded={isOpen}
                 aria-controls={`sidebar-group-${group.id}`}
               >
