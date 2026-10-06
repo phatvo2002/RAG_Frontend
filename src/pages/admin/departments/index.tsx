@@ -9,7 +9,7 @@ import {
 } from '@/api/departments.api';
 import { useUsersQuery } from '@/api/users.api';
 import { DepartmentModal } from './DepartmentModal';
-import { ConfirmModal } from '@/components/disclosure';
+import { ConfirmModal, Modal } from '@/components/disclosure';
 import { CustomTable, TableRowActions } from '@/components/customTable';
 import {
   Plus,
@@ -710,21 +710,8 @@ export const DepartmentsPage: React.FC = () => {
         {/* 2. RIGHT COLUMN: Side Drawer Chi tiết phòng ban matching 09.png */}
         {/* ==================================================================== */}
         {activeDeptDetail && (
-          <aside className="hidden lg:flex w-80 xl:w-96 bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 flex-col h-full shrink-0 shadow-sm transition-all duration-200 overflow-y-auto">
-            
-            {/* Drawer Header */}
-            <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between shrink-0">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-zinc-100 truncate">
-                Phòng {activeDeptDetail.name}
-              </h3>
-              <button
-                onClick={() => setActiveDeptDetail(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
-                title="Đóng chi tiết"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+          <Modal isOpen={Boolean(activeDeptDetail)} onClose={() => setActiveDeptDetail(null)} title={`Phòng ${activeDeptDetail.name}`} maxWidth="lg">
+            <div className="max-h-[72vh] overflow-y-auto">
 
             {/* Drawer Body */}
             <div className="p-5 space-y-6 flex-1 text-xs">
@@ -878,7 +865,8 @@ export const DepartmentsPage: React.FC = () => {
 
             </div>
 
-          </aside>
+            </div>
+          </Modal>
         )}
 
       </div>

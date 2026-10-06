@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
+import { Modal } from '@/components/disclosure';
 import {
   ChevronLeft,
   ChevronRight,
@@ -12,6 +13,7 @@ export const CalendarPage: React.FC = () => {
   const { showToast } = useApp();
   const [currentMonth] = useState('Tháng 05, 2024');
   const [selectedDay, setSelectedDay] = useState(16);
+  const [isDayDetailsOpen, setIsDayDetailsOpen] = useState(false);
 
   const daysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
 
@@ -98,7 +100,7 @@ export const CalendarPage: React.FC = () => {
                 return (
                   <div
                     key={day}
-                    onClick={() => setSelectedDay(day)}
+                    onClick={() => { setSelectedDay(day); setIsDayDetailsOpen(true); }}
                     className={`min-h-[100px] p-2 transition-all cursor-pointer relative space-y-1 ${
                       isSelected
                         ? 'bg-blue-50/50 dark:bg-zinc-800/80 ring-2 ring-blue-600/40 dark:ring-blue-500/40 inset-0 z-10'
@@ -145,7 +147,9 @@ export const CalendarPage: React.FC = () => {
         </div>
 
         {/* Right Event Detail Sidebar */}
-        <aside className="w-80 bg-white dark:bg-zinc-950 border-l border-slate-200 dark:border-zinc-800 p-5 flex flex-col gap-5 shrink-0 overflow-y-auto hidden lg:flex select-none text-xs transition-colors">
+        {isDayDetailsOpen && <Modal isOpen={isDayDetailsOpen} onClose={() => setIsDayDetailsOpen(false)} title={`Lịch trình ngày ${selectedDay}/05`} maxWidth="md">
+        <div className="max-h-[70vh] overflow-y-auto p-1">
+        <div className="bg-white dark:bg-zinc-950 p-3 flex flex-col gap-5 select-none text-xs transition-colors">
           <div>
             <span className="text-[11px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">
               Sự kiện ngày {selectedDay} Tháng 05
@@ -175,7 +179,9 @@ export const CalendarPage: React.FC = () => {
               </div>
             )}
           </div>
-        </aside>
+        </div>
+        </div>
+        </Modal>}
       </div>
     </div>
   );

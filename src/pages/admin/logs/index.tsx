@@ -8,6 +8,7 @@ import {
 } from '@/api/activity-logs.api';
 import { useUsersQuery } from '@/api/users.api';
 import { LogDetailModal } from './LogDetailModal';
+import { Modal } from '@/components/disclosure';
 import { CustomTable, TableRowActions } from '@/components/customTable';
 import {
   Search,
@@ -942,7 +943,8 @@ export const LogsPage: React.FC = () => {
         {/* 2. RIGHT COLUMN: Detail Drawer / Panel using 100% REAL API DATA */}
         {/* ==================================================================== */}
         {activeSelectedLog && (
-          <aside className="w-80 lg:w-96 bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 flex flex-col h-full shrink-0 shadow-sm transition-all duration-200 overflow-y-auto">
+          <Modal isOpen={Boolean(activeSelectedLog)} onClose={() => setSelectedLogId(null)} title="Chi tiết hoạt động" maxWidth="lg">
+          <div className="max-h-[72vh] overflow-y-auto">
             
             {/* Drawer Header */}
             <div className="p-4 border-b border-slate-200 dark:border-zinc-800 space-y-3 shrink-0">
@@ -1164,7 +1166,8 @@ export const LogsPage: React.FC = () => {
               </button>
             </div>
 
-          </aside>
+          </div>
+          </Modal>
         )}
 
       </div>

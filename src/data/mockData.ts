@@ -5,8 +5,6 @@ import {
   DataPolicy,
   ActivityLog,
   DocumentItem,
-  Meeting,
-  MeetingRoom,
   Project,
   TaskItem,
   CalendarEvent,
@@ -432,80 +430,6 @@ export const mockSharedDocuments = [
     title: 'Quy trình onboarding.pdf',
     sharedWithText: 'Chia sẻ với: Phòng Nhân sự',
     date: '09/05/2024'
-  }
-];
-
-export const mockMeetings: Meeting[] = [
-  {
-    id: 'meet_001',
-    title: 'Họp khởi động dự án NEXORA',
-    date: '16/05/2024 (Thứ Năm)',
-    time: '10:00 - 11:30',
-    room: 'Phòng họp Orion',
-    participants: ['AK', 'TM', 'MH', 'LM', 'PV'],
-    languages: ['VI', 'EN'],
-    status: 'Sắp tới',
-    transcriptsAvailable: true
-  },
-  {
-    id: 'meet_002',
-    title: 'Weekly Project Sync',
-    date: '17/05/2024',
-    time: '14:00 - 15:00',
-    room: 'Phòng họp Vega',
-    participants: ['AK', 'TM', 'MH'],
-    languages: ['VI', 'EN'],
-    status: 'Sắp tới'
-  },
-  {
-    id: 'meet_003',
-    title: 'Rà soát tiến độ Sprint 6',
-    date: '18/05/2024',
-    time: '09:00 - 10:30',
-    room: 'Phòng họp Polaris',
-    participants: ['AK', 'TM', 'MH', 'QD'],
-    languages: ['VI'],
-    status: 'Sắp tới'
-  }
-];
-
-export const mockMeetingRooms: MeetingRoom[] = [
-  { id: 'rm_001', name: 'Orion', capacity: 12, status: 'Trống' },
-  { id: 'rm_002', name: 'Vega', capacity: 8, status: 'Trống' },
-  { id: 'rm_003', name: 'Polaris', capacity: 10, status: 'Đang họp' },
-  { id: 'rm_004', name: 'Nova', capacity: 6, status: 'Trống' },
-  { id: 'rm_005', name: 'Galaxy', capacity: 20, status: 'Trống' },
-  { id: 'rm_006', name: 'Zenith', capacity: 4, status: 'Trống' }
-];
-
-export const mockRecentTranscripts = [
-  {
-    id: 'tr_001',
-    title: 'Họp khởi động dự án NEXORA',
-    date: '16/05/2024 • 14:15 • Phòng Orion',
-    languages: ['VI'],
-    participants: ['AK', 'TM']
-  },
-  {
-    id: 'tr_002',
-    title: 'Weekly Project Sync',
-    date: '15/05/2024 • 15:30 • Phòng Vega',
-    languages: ['VI'],
-    participants: ['AK', 'TM']
-  },
-  {
-    id: 'tr_003',
-    title: 'Rà soát tiến độ Sprint 5',
-    date: '14/05/2024 • 10:45 • Phòng Polaris',
-    languages: ['VI'],
-    participants: ['AK', 'MH']
-  },
-  {
-    id: 'tr_004',
-    title: 'Họp tổng kết tháng 4',
-    date: '10/05/2024 • 16:00 • Phòng Orion',
-    languages: ['VI'],
-    participants: ['AK', 'PV']
   }
 ];
 

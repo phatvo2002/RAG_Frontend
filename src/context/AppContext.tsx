@@ -8,7 +8,6 @@ import {
   Department,
   Project,
   TaskItem,
-  Meeting,
   DocumentItem,
   ChatMessage,
   ChatSession,
@@ -21,7 +20,6 @@ import {
   mockDepartments,
   mockProjects,
   mockTasks,
-  mockMeetings,
   mockDocuments,
   mockChatSessions,
   mockChatMessages,
@@ -90,9 +88,6 @@ interface AppContextType {
 
   documents: DocumentItem[];
   addDocument: (doc: Omit<DocumentItem, 'id'>) => void;
-
-  meetings: Meeting[];
-  addMeeting: (meet: Omit<Meeting, 'id'>) => void;
 
   calendarEvents: CalendarEvent[];
   addCalendarEvent: (evt: Omit<CalendarEvent, 'id'>) => void;
@@ -264,7 +259,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeProject, setActiveProject] = useState<Project | null>(mockProjects[0]);
   const [tasks, setTasks] = useState<TaskItem[]>(mockTasks);
   const [documents, setDocuments] = useState<DocumentItem[]>(mockDocuments);
-  const [meetings, setMeetings] = useState<Meeting[]>(mockMeetings);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(mockCalendarEvents);
 
   const [chatSessions, setChatSessions] = useState<ChatSession[]>(mockChatSessions);
@@ -412,15 +406,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     showToast(`Uploaded document: ${newDoc.name}`, 'success');
   };
 
-  const addMeeting = (meetData: Omit<Meeting, 'id'>) => {
-    const newMeet: Meeting = {
-      ...meetData,
-      id: `mtg_${Date.now().toString().slice(-4)}`
-    };
-    setMeetings((prev) => [newMeet, ...prev]);
-    showToast(`Scheduled meeting: ${newMeet.title}`, 'success');
-  };
-
   const addCalendarEvent = (evtData: Omit<CalendarEvent, 'id'>) => {
     const newEvt: CalendarEvent = {
       ...evtData,
@@ -501,8 +486,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateTaskStatus,
         documents,
         addDocument,
-        meetings,
-        addMeeting,
         calendarEvents,
         addCalendarEvent,
         chatSessions,

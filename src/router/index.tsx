@@ -16,6 +16,7 @@ import { DataRepoPage } from '@/pages/data-repo/DataRepoPage';
 import { ProjectsPage } from '@/pages/projects/ProjectsPage';
 import { TasksPage } from '@/pages/tasks/TasksPage';
 import { MeetingsPage } from '@/pages/meetings/MeetingsPage';
+import { MeetingRoomPage } from '@/pages/meetings/MeetingRoomPage';
 import { CalendarPage } from '@/pages/calendar/CalendarPage';
 import { ReportsPage } from '@/pages/reports/ReportsPage';
 import {
@@ -108,6 +109,16 @@ const meetingsRoute = createRoute({
   component: () => (
     <PermissionGuard isImplemented={true}>
       <MeetingsPage />
+    </PermissionGuard>
+  ),
+});
+
+const meetingRoomRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/meetings/$meetingId',
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <MeetingRoomPage />
     </PermissionGuard>
   ),
 });
@@ -220,6 +231,7 @@ const routeTree = rootRoute.addChildren([
   projectsRoute,
   tasksRoute,
   meetingsRoute,
+  meetingRoomRoute,
   calendarRoute,
   reportsRoute,
   adminRoute,

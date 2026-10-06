@@ -4,6 +4,7 @@ import { ChevronDown, FileText, LayoutDashboard, LoaderCircle, Menu, Paperclip, 
 import { chatApi } from '@/api/chat.api';
 import type { ChatConversation, ChatMessage, ChatSource } from '@/api/chat.api';
 import { useApp } from '@/context/AppContext';
+import { Modal } from '@/components/disclosure';
 
 export const ChatPage: React.FC = () => {
   const navigate = useNavigate();
@@ -22,7 +23,7 @@ export const ChatPage: React.FC = () => {
   const [hasOlder, setHasOlder] = useState(false);
   const [hasMoreConversations, setHasMoreConversations] = useState(false);
   const [historyOpen, setHistoryOpen] = useState(false);
-  const [sourcesOpen, setSourcesOpen] = useState(() => typeof window !== 'undefined' && window.innerWidth >= 1280);
+  const [sourcesOpen, setSourcesOpen] = useState(false);
   const [focusedMessageId, setFocusedMessageId] = useState<string | null>(null);
   const [selectedSourceIndex, setSelectedSourceIndex] = useState(0);
   const endRef = useRef<HTMLDivElement>(null);
@@ -268,10 +269,8 @@ export const ChatPage: React.FC = () => {
         </div>
       </main>
 
-      {sourcesOpen && <>
-        <button aria-label="Đóng nguồn tham khảo" onClick={() => setSourcesOpen(false)} className="fixed inset-0 z-20 bg-slate-950/30 xl:hidden" />
-        <aside className="fixed inset-y-0 right-0 z-30 flex w-[min(360px,90vw)] shrink-0 flex-col border-l border-[#e6ebf4] bg-[#fbfcfe] xl:static xl:z-auto xl:w-[334px]">
-          <div className="flex items-center justify-between px-5 pb-2 pt-6"><h2 className="text-base font-bold text-[#172744]">Nguồn tham khảo</h2><button onClick={() => setSourcesOpen(false)} aria-label="Đóng nguồn tham khảo" className="rounded-lg p-1 text-[#627694] hover:bg-[#eaf0f8]"><X size={19} /></button></div>
+      {sourcesOpen && <Modal isOpen={sourcesOpen} onClose={() => setSourcesOpen(false)} title="Nguồn tham khảo" maxWidth="lg">
+        <div className="flex max-h-[72vh] flex-col overflow-y-auto bg-[#fbfcfe] p-2 dark:bg-zinc-900">
           <p className="px-5 pb-4 text-xs leading-relaxed text-[#7486a4]">Chỉ sử dụng tài liệu đã lập chỉ mục mà bạn được phép truy cập.</p>
           <div className="mx-5 border-t border-[#e6ebf4]" />
           <div className="min-h-0 flex-1 space-y-2.5 overflow-y-auto px-3.5 pb-5 pt-4">
@@ -281,8 +280,8 @@ export const ChatPage: React.FC = () => {
               {selectedSourceIndex === index && <div className="mt-3 rounded-lg bg-[#f4f7fc] px-3 py-3 text-xs leading-relaxed text-[#304363]"><p>{source.pageNo != null ? `Trang ${source.pageNo}` : 'Vị trí trong tài liệu'}{source.charStart != null && source.charEnd != null ? ` · Ký tự ${source.charStart}–${source.charEnd}` : ''}</p><p className="mt-1.5 truncate text-[11px] text-[#8292ac]">{source.fileName}</p></div>}
             </button>)}
           </div>
-        </aside>
-      </>}
+        </div>
+      </Modal>}
     </div>
   );
 };

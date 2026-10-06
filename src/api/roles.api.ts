@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiClient } from './client';
 import { ApiResponse } from '@/types';
 import { mockRoles } from '@/data/mockData';
+import type { ApiFunctionTreeNode } from './api-functions.api';
 
 // ============================================================================
 // 1. TYPES & DATA STRUCTURES (Chuẩn khớp đặc tả 10 endpoints Backend)
@@ -69,7 +70,8 @@ export interface RoleDetailResponse {
   code?: string;
   description?: string;
   isActive: boolean;
-  apiFunctions?: ApiFunctionItem[];
+  apiFunctions?: ApiFunctionTreeNode[];
+  assignedApiFunctions?: ApiFunctionItem[];
   users?: RoleUserItem[];
 }
 
@@ -217,7 +219,7 @@ export const rolesApi = {
 
   /**
    * 3. GET /api/roles/{roleId}
-   * Lấy chi tiết Role: trả về { roleId, name, isActive, apiFunctions, users }
+   * Lấy chi tiết Role: apiFunctions là cây phân hệ; assignedApiFunctions chứa quyền đã cấp.
    */
   async getRoleById(roleId: string): Promise<RoleDetailResponse> {
     const response = await apiClient<ApiResponse<any> | any>(`/api/roles/${roleId}`, {
@@ -225,13 +227,24 @@ export const rolesApi = {
     });
 
     const resData = (response as any).data || response;
+    const apiFunctions = Array.isArray(resData.apiFunctions) ? resData.apiFunctions : [];
+    const apiFunctionTree = Array.isArray(resData.apiFunctionTree)
+      ? resData.apiFunctionTree
+      : apiFunctions.some((item: any) => Array.isArray(item.childFunctions))
+        ? apiFunctions
+        : [];
+    const assignedApiFunctions = Array.isArray(resData.assignedApiFunctions)
+      ? resData.assignedApiFunctions
+      : apiFunctions.filter((item: any) => !Array.isArray(item.childFunctions));
+
     return {
       roleId: resData.roleId || resData.id || roleId,
       name: resData.name || resData.roleName || resData.role || '',
       code: resData.code || (resData.name || '').slice(0, 5).toUpperCase(),
       description: resData.description || '',
       isActive: resData.isActive !== false && resData.status !== 'Inactive' && resData.status !== 'Vô hiệu hóa',
-      apiFunctions: Array.isArray(resData.apiFunctions) ? resData.apiFunctions : [],
+      apiFunctions: apiFunctionTree,
+      assignedApiFunctions,
       users: Array.isArray(resData.users) ? resData.users.map((u: any) => ({
         userId: u.userId || u.id || '',
         email: u.email || '',

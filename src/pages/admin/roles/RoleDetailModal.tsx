@@ -24,6 +24,7 @@ import {
   Trash2,
   X,
   CheckSquare,
+  Check,
   Square,
   Building,
   UserCheck,
@@ -56,6 +57,7 @@ interface PermissionItem {
   desc?: string | null;
   method?: string;
   route?: string;
+  children?: PermissionItem[];
 }
 
 interface PermissionGroup {
@@ -63,6 +65,11 @@ interface PermissionGroup {
   name: string;
   items: PermissionItem[];
 }
+
+const flattenPermissionLeaves = (items: PermissionItem[]): PermissionItem[] =>
+  items.flatMap((item) => item.children?.length
+    ? flattenPermissionLeaves(item.children)
+    : [item]);
 
 const DEFAULT_PROJECT_PERMISSIONS: { column: number; title: string; groups: PermissionGroup[] }[] = [
   {
@@ -268,7 +275,7 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
 
   // Render permission groups from the API's module/function tree.
   const permissionColumns = useMemo(() => {
-    // Hợp nhất danh sách tổng allApiFunctions và roleDetail.apiFunctions để đảm bảo không bị thiếu bất kỳ quyền nào
+    // Hợp nhất danh sách tổng và danh sách quyền đã cấp để không bị thiếu chức năng.
     const mergedMap = new Map<string, ApiFunctionItem>();
 
     allApiFunctions.forEach((fn: ApiFunctionItem) => {
@@ -276,8 +283,8 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
       if (key) mergedMap.set(key, fn);
     });
 
-    if (roleDetail?.apiFunctions && Array.isArray(roleDetail.apiFunctions)) {
-      roleDetail.apiFunctions.forEach((fn: ApiFunctionItem) => {
+    if (roleDetail?.assignedApiFunctions && Array.isArray(roleDetail.assignedApiFunctions)) {
+      roleDetail.assignedApiFunctions.forEach((fn: ApiFunctionItem) => {
         const key = fn.apiFunctionId || fn.code;
         if (key && !mergedMap.has(key)) {
           mergedMap.set(key, fn);
@@ -286,24 +293,32 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
     }
 
     const sourceList = Array.from(mergedMap.values());
+    const permissionTree = roleDetail?.apiFunctions?.length
+      ? roleDetail.apiFunctions
+      : apiFunctionTree;
 
-    if (sourceList.length > 0) {
+    if (sourceList.length > 0 || permissionTree.length > 0) {
       const representedKeys = new Set<string>();
-      const dynamicGroups: PermissionGroup[] = apiFunctionTree.map((moduleNode) => {
+      const mapFunctionNode = (functionNode: (typeof permissionTree)[number]['childFunctions'][number]): PermissionItem => {
+        const children = functionNode.childFunctions
+          .filter((childNode) => Boolean(childNode.functionId || childNode.childFunctions.length > 0))
+          .map(mapFunctionNode);
+        if (functionNode.functionId) representedKeys.add(functionNode.functionId);
+        representedKeys.add(functionNode.functionCode);
+        return {
+          id: functionNode.functionId || functionNode.functionCode,
+          code: functionNode.functionCode,
+          label: functionNode.functionName || functionNode.functionCode,
+          desc: functionNode.description,
+          route: functionNode.routeTemplate || undefined,
+          method: functionNode.httpMethod || undefined,
+          children: children.length > 0 ? children : undefined,
+        };
+      };
+      const dynamicGroups: PermissionGroup[] = permissionTree.map((moduleNode) => {
         const items = moduleNode.childFunctions
-          .filter((functionNode) => Boolean(functionNode.functionId))
-          .map((functionNode) => {
-            representedKeys.add(functionNode.functionId!);
-            representedKeys.add(functionNode.functionCode);
-            return {
-              id: functionNode.functionId!,
-              code: functionNode.functionCode,
-              label: functionNode.functionName || functionNode.functionCode,
-              desc: functionNode.description,
-              route: functionNode.routeTemplate || undefined,
-              method: functionNode.httpMethod || undefined,
-            };
-          });
+          .filter((functionNode) => Boolean(functionNode.functionId || functionNode.childFunctions.length > 0))
+          .map(mapFunctionNode);
 
         return {
           id: `module_${moduleNode.functionCode.toLowerCase()}`,
@@ -340,18 +355,18 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
       }
     }
     return DEFAULT_PROJECT_PERMISSIONS;
-  }, [allApiFunctions, roleDetail?.apiFunctions]);
+  }, [allApiFunctions, apiFunctionTree, roleDetail?.apiFunctions, roleDetail?.assignedApiFunctions]);
 
   // All permissions and groups flatten lists
   const allPermissionIds = useMemo(() => {
-    return permissionColumns.flatMap((c) => c.groups.flatMap((g) => g.items.map((i) => i.id)));
+    return permissionColumns.flatMap((c) => c.groups.flatMap((g) => flattenPermissionLeaves(g.items).map((i) => i.id)));
   }, [permissionColumns]);
 
   const allGroupIds = useMemo(() => {
     return permissionColumns.flatMap((c) => c.groups.map((g) => g.id));
   }, [permissionColumns]);
 
-  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set(allGroupIds));
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
   // Reset & Populate Form when Modal opens or when roleDetail is loaded/updated
   useEffect(() => {
@@ -366,10 +381,10 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
       setScopes((roleDetail as any).scopes || ['Dự án NEXORA', 'Kho tri thức RAG']);
       setIsActive(roleDetail.isActive !== false);
 
-      // Populate permissions by comparing roleDetail.apiFunctions against the master list
-      if (roleDetail.apiFunctions && roleDetail.apiFunctions.length > 0) {
+      // Populate selections from the role's assigned permission list.
+      if (roleDetail.assignedApiFunctions && roleDetail.assignedApiFunctions.length > 0) {
         const assignedIds = new Set<string>();
-        roleDetail.apiFunctions.forEach((f) => {
+        roleDetail.assignedApiFunctions.forEach((f) => {
           if (f.status !== 'Inactive') {
             if (f.apiFunctionId) assignedIds.add(f.apiFunctionId);
             if (f.code) assignedIds.add(f.code);
@@ -427,7 +442,7 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
   // Keep expanded groups in sync whenever permission groups load or change
   useEffect(() => {
     if (isOpen && allGroupIds.length > 0) {
-      setExpandedGroups(new Set(allGroupIds));
+      setExpandedGroups(new Set());
     }
   }, [isOpen, allGroupIds]);
 
@@ -479,7 +494,7 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
     let count = 0;
     permissionColumns.forEach((c) => {
       c.groups.forEach((g) => {
-        g.items.forEach((i) => {
+        flattenPermissionLeaves(g.items).forEach((i) => {
           if (checkIsPermissionSelected(i)) {
             count++;
           }
@@ -491,7 +506,7 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
 
   const totalMasterCount = useMemo(() => {
     return permissionColumns.reduce(
-      (sum, c) => sum + c.groups.reduce((gSum, g) => gSum + g.items.length, 0),
+      (sum, c) => sum + c.groups.reduce((gSum, g) => gSum + flattenPermissionLeaves(g.items).length, 0),
       0
     );
   }, [permissionColumns]);
@@ -507,7 +522,7 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
       const allKeys = new Set<string>();
       permissionColumns.forEach((c) =>
         c.groups.forEach((g) =>
-          g.items.forEach((i) => {
+          flattenPermissionLeaves(g.items).forEach((i) => {
             allKeys.add(i.id);
             if (i.code) allKeys.add(i.code);
           })
@@ -515,24 +530,6 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
       );
       setSelectedPermissions(allKeys);
     }
-  };
-
-  const handleToggleGroup = (group: PermissionGroup) => {
-    const isGroupAllSelected = group.items.every(checkIsPermissionSelected);
-    const groupItemKeys = group.items.flatMap((i) => [i.id, i.code].filter(Boolean) as string[]);
-
-    setSelectedPermissions((prev) => {
-      const next = new Set(prev);
-      if (isGroupAllSelected) {
-        groupItemKeys.forEach((key) => next.delete(key));
-      } else {
-        group.items.forEach((i) => {
-          next.add(i.id);
-          if (i.code) next.add(i.code);
-        });
-      }
-      return next;
-    });
   };
 
   const handleTogglePermission = (item: PermissionItem) => {
@@ -548,6 +545,41 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
       }
       return next;
     });
+  };
+
+  const renderPermissionItem = (item: PermissionItem, depth = 0): React.ReactNode => {
+    const children = item.children || [];
+    const isParent = children.length > 0;
+    const descendantLeaves = flattenPermissionLeaves([item]);
+    const hasSelectedDescendants = descendantLeaves.some(checkIsPermissionSelected);
+
+    return (
+      <div key={item.id} className={depth > 0 ? 'ml-3 border-l border-slate-200 dark:border-zinc-700 pl-3' : ''}>
+        <div className="flex items-center gap-2 py-0.5 text-[11px] text-slate-600 dark:text-zinc-400">
+          {isParent ? (
+            <span
+              aria-label={`${item.label}: ${descendantLeaves.filter(checkIsPermissionSelected).length} quyền con đã chọn`}
+              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border ${
+                hasSelectedDescendants
+                  ? 'border-primary bg-primary text-primary-content'
+                  : 'border-base-300 bg-base-100'
+              }`}
+            >
+              {hasSelectedDescendants && <Check className="h-3 w-3" aria-hidden="true" />}
+            </span>
+          ) : (
+            <input
+              type="checkbox"
+              checked={checkIsPermissionSelected(item)}
+              onChange={() => handleTogglePermission(item)}
+              className="checkbox checkbox-xs rounded border-slate-300 dark:border-zinc-600 shrink-0"
+            />
+          )}
+          <span className={isParent ? 'font-medium text-slate-700 dark:text-zinc-300' : 'truncate'}>{item.label}</span>
+        </div>
+        {isParent && <div className="mt-1 space-y-1">{children.map((child) => renderPermissionItem(child, depth + 1))}</div>}
+      </div>
+    );
   };
 
   // Add/Remove Scope tags
@@ -721,7 +753,7 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
     const selectedFunctionGuids: string[] = [];
     permissionColumns.forEach((c) => {
       c.groups.forEach((g) => {
-        g.items.forEach((item) => {
+        flattenPermissionLeaves(g.items).forEach((item) => {
           if (checkIsPermissionSelected(item)) {
             // Tìm apiFunctionId tương ứng từ allApiFunctions hoặc item.id
             const matchedFn = allApiFunctions.find(
@@ -928,10 +960,10 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
                   </div>
 
                   {col.groups.map((group) => {
-                    const isGroupAllSelected = group.items.every(checkIsPermissionSelected);
-                    const selectedCountInGroup = group.items.filter(checkIsPermissionSelected).length;
-                    const isGroupSomeSelected = !isGroupAllSelected && selectedCountInGroup > 0;
+                    const groupLeaves = flattenPermissionLeaves(group.items);
+                    const selectedCountInGroup = groupLeaves.filter(checkIsPermissionSelected).length;
                     const isExpanded = expandedGroups.has(group.id);
+                    const hasSelectedChildren = selectedCountInGroup > 0;
 
                     return (
                       <div
@@ -954,15 +986,16 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
                               />
                             </button>
 
-                            <input
-                              type="checkbox"
-                              checked={isGroupAllSelected}
-                              ref={(el) => {
-                                if (el) el.indeterminate = isGroupSomeSelected;
-                              }}
-                              onChange={() => handleToggleGroup(group)}
-                              className="checkbox checkbox-primary checkbox-xs rounded shrink-0"
-                            />
+                            <span
+                              aria-label={`${group.name}: ${selectedCountInGroup} quyền con đã chọn`}
+                              className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-[4px] border ${
+                                hasSelectedChildren
+                                  ? 'border-primary bg-primary text-primary-content'
+                                  : 'border-base-300 bg-base-100'
+                              }`}
+                            >
+                              {hasSelectedChildren && <Check className="h-3 w-3" aria-hidden="true" />}
+                            </span>
 
                             <span
                               onClick={() => handleToggleExpandGroup(group.id)}
@@ -974,30 +1007,16 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
                           </div>
 
                           <span className="text-[10px] text-slate-400 dark:text-zinc-500 font-mono shrink-0">
-                            {selectedCountInGroup}/{group.items.length}
+                            {selectedCountInGroup}/{groupLeaves.length}
                           </span>
                         </div>
 
                         {/* Danh sách các quyền chi tiết (chỉ hiển thị khi mở rộng) */}
                         {isExpanded && (
                           <div className="pl-6 space-y-1 border-l-2 border-slate-200 dark:border-zinc-700 ml-2 mt-1.5 pt-0.5 animate-fadeIn">
-                            {group.items.map((item) => {
-                              const isChecked = checkIsPermissionSelected(item);
-                              return (
-                                <label
-                                  key={item.id}
-                                  className="flex items-center gap-2 py-0.5 cursor-pointer text-slate-600 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200 select-none text-[11px]"
-                                >
-                                  <input
-                                    type="checkbox"
-                                    checked={isChecked}
-                                    onChange={() => handleTogglePermission(item)}
-                                    className="checkbox checkbox-xs rounded border-slate-300 dark:border-zinc-600 shrink-0"
-                                  />
-                                  <span className="truncate">{item.label}</span>
-                                </label>
-                              );
-                            })}
+                            <div className="space-y-1">
+                              {group.items.map((item) => renderPermissionItem(item))}
+                            </div>
                           </div>
                         )}
                       </div>

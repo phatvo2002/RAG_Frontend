@@ -13,6 +13,7 @@ import { useRolesQuery } from '@/api/roles.api';
 import { useDepartmentsQuery } from '@/api/departments.api';
 import { UserModal } from './UserModal';
 import { ResetPasswordModal } from './ResetPasswordModal';
+import { Modal } from '@/components/disclosure';
 import { CustomTable, TableRowActions } from '@/components/customTable';
 import {
   Plus,
@@ -641,21 +642,8 @@ export const UsersPage: React.FC = () => {
         {/* 2. RIGHT COLUMN: Side Drawer Chi tiết người dùng matching 08.png */}
         {/* ==================================================================== */}
         {activeUserDetail && (
-          <aside className="hidden lg:flex w-80 xl:w-96 bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 flex-col h-full shrink-0 shadow-sm transition-all duration-200 overflow-y-auto">
-            
-            {/* Drawer Header */}
-            <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between shrink-0">
-              <h3 className="font-bold text-sm text-slate-900 dark:text-zinc-100">
-                Chi tiết người dùng
-              </h3>
-              <button
-                onClick={() => setActiveUserDetail(null)}
-                className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded-lg hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer transition-colors"
-                title="Đóng chi tiết"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
+          <Modal isOpen={Boolean(activeUserDetail)} onClose={() => setActiveUserDetail(null)} title="Chi tiết người dùng" maxWidth="lg">
+            <div className="max-h-[72vh] overflow-y-auto">
 
             {/* Drawer Body */}
             <div className="p-5 space-y-6 flex-1 text-xs">
@@ -857,7 +845,8 @@ export const UsersPage: React.FC = () => {
 
             </div>
 
-          </aside>
+            </div>
+          </Modal>
         )}
 
       </div>

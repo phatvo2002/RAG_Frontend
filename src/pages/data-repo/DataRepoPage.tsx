@@ -8,7 +8,7 @@ import { useDepartmentsQuery } from '@/api/departments.api';
 import { FolderItem, useDocumentFoldersQuery } from '@/api/document-folders.api';
 import { DocumentListItem, DocumentUploadResponse, useDeleteDocumentMutation, useDocumentsQuery } from '@/api/documents.api';
 import { CustomTable, TableRowActions } from '@/components/customTable';
-import { ConfirmModal } from '@/components/disclosure';
+import { ConfirmModal, Modal } from '@/components/disclosure';
 import {
   Upload,
   FolderPlus,
@@ -82,7 +82,7 @@ export const DataRepoPage: React.FC = () => {
   const [viewMode, setViewMode] = useState<'list' | 'grid'>('list');
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
-  const [isActivityOpen, setIsActivityOpen] = useState(true);
+  const [isActivityOpen, setIsActivityOpen] = useState(false);
   const [activityTab, setActivityTab] = useState<'issues' | 'recent'>('issues');
   const [detailFolderId, setDetailFolderId] = useState<string | null>(null);
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
@@ -327,7 +327,7 @@ export const DataRepoPage: React.FC = () => {
           <button
             type="button"
             onClick={() => setIsActivityOpen((open) => !open)}
-            className="2xl:hidden px-2.5 py-1.5 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
+            className="px-2.5 py-1.5 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
             aria-expanded={isActivityOpen}
           >
             <Activity className="w-3.5 h-3.5" />
@@ -947,19 +947,8 @@ export const DataRepoPage: React.FC = () => {
         {/* ==================================================================== */}
         {/* 4. RIGHT COLUMN: Hoạt động matching 02/03-knowledge-repository.png */}
         {/* ==================================================================== */}
-        {isActivityOpen ? (
-        <aside className="absolute inset-y-0 right-0 z-30 flex h-full w-[min(88vw,20rem)] shrink-0 flex-col space-y-4 overflow-y-auto border-l border-slate-200 bg-white p-4 text-xs shadow-xl dark:border-zinc-800 dark:bg-zinc-950 2xl:relative 2xl:inset-auto 2xl:h-full 2xl:w-80 2xl:shadow-none">
-          <div className="flex items-center justify-between">
-            <h3 className="font-bold text-base text-slate-900 dark:text-zinc-100">Hoạt động</h3>
-            <button
-              type="button"
-              onClick={() => setIsActivityOpen(false)}
-              className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 rounded cursor-pointer"
-              aria-label="Đóng bảng hoạt động"
-            >
-              <span className="text-lg leading-none">×</span>
-            </button>
-          </div>
+        {isActivityOpen && <Modal isOpen={isActivityOpen} onClose={() => setIsActivityOpen(false)} title="Hoạt động" maxWidth="lg">
+          <div className="flex max-h-[72vh] flex-col space-y-4 overflow-y-auto p-1 text-xs">
 
           <div className="flex items-center gap-6 border-b border-slate-200 dark:border-zinc-800 text-xs font-semibold">
             <button type="button" onClick={() => setActivityTab('issues')} className={`relative -mb-px min-h-9 cursor-pointer ${activityTab === 'issues' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200'}`}>
@@ -1051,20 +1040,8 @@ export const DataRepoPage: React.FC = () => {
           >
             Xem tất cả hoạt động <span className="ml-1">→</span>
           </button>}
-        </aside>
-        ) : (
-          <aside className="hidden w-10 shrink-0 items-start justify-center border-l border-slate-200 bg-white pt-4 dark:border-zinc-800 dark:bg-zinc-950 2xl:flex">
-            <button
-              type="button"
-              onClick={() => setIsActivityOpen(true)}
-              className="btn btn-ghost btn-sm btn-square text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200"
-              aria-label="Mở bảng hoạt động"
-              title="Mở bảng hoạt động"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-          </aside>
-        )}
+          </div>
+        </Modal>}
 
       </div>
 

@@ -3,6 +3,7 @@ import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
 import { ProjectModal } from './ProjectModal';
 import { CustomTable } from '@/components/customTable';
+import { Modal } from '@/components/disclosure';
 import { useNavigate } from '@tanstack/react-router';
 import {
   Plus,
@@ -123,6 +124,7 @@ export const ProjectsPage: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [deptFilter, setDeptFilter] = useState('all');
   const [selectedProjectId, setSelectedProjectId] = useState<string>('p1');
+  const [isProjectDetailOpen, setIsProjectDetailOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [timelineView, setTimelineView] = useState<'list' | 'roadmap'>('list');
 
@@ -231,6 +233,10 @@ export const ProjectsPage: React.FC = () => {
             </button>
           </div>
 
+          <div className="flex justify-end">
+            <button type="button" onClick={() => setIsProjectDetailOpen(true)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800">Chi tiết dự án đang chọn</button>
+          </div>
+
           {/* Search & Filters Row */}
           <div className="flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2 flex-1 min-w-[220px]">
@@ -317,7 +323,7 @@ export const ProjectsPage: React.FC = () => {
                           return (
                             <tr
                               key={proj.id}
-                              onClick={() => setSelectedProjectId(proj.id)}
+                              onClick={() => { setSelectedProjectId(proj.id); setIsProjectDetailOpen(true); }}
                               className={`border-b border-slate-100 dark:border-zinc-800/80 hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors ${
                                 isSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
                               }`}
@@ -517,7 +523,9 @@ export const ProjectsPage: React.FC = () => {
         {/* ==================================================================== */}
         {/* 2. RIGHT 1/3 COLUMN: Chi Tiết Dự Án (Project Detail Panel) 320px */}
         {/* ==================================================================== */}
-        <aside className="w-80 border-l border-slate-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 flex flex-col h-full shrink-0 overflow-y-auto p-5 space-y-5 text-xs">
+        {isProjectDetailOpen && <Modal isOpen={isProjectDetailOpen} onClose={() => setIsProjectDetailOpen(false)} title={`Chi tiết dự án: ${selectedProject.name}`} maxWidth="xl">
+        <div className="max-h-[72vh] overflow-y-auto p-1">
+        <div className="bg-white dark:bg-zinc-950 flex flex-col space-y-5 p-2 text-xs">
           
           {/* Header */}
           <div className="flex items-center justify-between">
@@ -699,7 +707,9 @@ export const ProjectsPage: React.FC = () => {
             </button>
           </div>
 
-        </aside>
+        </div>
+        </div>
+        </Modal>}
 
       </div>
 

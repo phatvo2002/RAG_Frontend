@@ -9,7 +9,7 @@ import {
   RoleItem,
 } from '@/api/roles.api';
 import { RoleDetailModal } from './RoleDetailModal';
-import { ConfirmModal } from '@/components/disclosure';
+import { ConfirmModal, Modal } from '@/components/disclosure';
 import { CustomTable, TableRowActions } from '@/components/customTable';
 import {
   Shield,
@@ -587,19 +587,9 @@ export const RolesPage: React.FC = () => {
       </div>
 
       {activeRoleDetail && (
-        <aside className="hidden lg:flex w-80 xl:w-96 bg-white dark:bg-zinc-900 border-l border-slate-200 dark:border-zinc-800 flex-col h-full shrink-0 shadow-sm overflow-y-auto">
+        <Modal isOpen={Boolean(activeRoleDetail)} onClose={() => setActiveRoleDetail(null)} title="Chi tiết nhóm quyền" maxWidth="lg">
+          <div className="max-h-[72vh] overflow-y-auto p-1">
           <div className="p-5 space-y-5">
-            <div className="flex items-center justify-between gap-3">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-zinc-100">Chi tiết nhóm quyền</h2>
-              <button
-                type="button"
-                onClick={() => setActiveRoleDetail(null)}
-                className="p-1.5 rounded-lg text-slate-400 hover:text-slate-800 dark:hover:text-zinc-100 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
-                aria-label="Đóng chi tiết nhóm quyền"
-              >
-                <span className="text-xl leading-none">×</span>
-              </button>
-            </div>
 
             <div className="flex items-center gap-3">
               <div className={`w-12 h-12 rounded-full ${activeRoleDetail.iconBg} text-white flex items-center justify-center shrink-0 shadow-sm`}>
@@ -652,7 +642,8 @@ export const RolesPage: React.FC = () => {
               </button>
             </div>
           </div>
-        </aside>
+          </div>
+        </Modal>
       )}
       </div>
 
