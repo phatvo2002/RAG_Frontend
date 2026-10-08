@@ -37,6 +37,7 @@ export interface UpdateUserData {
   roleIds?: string[];
   department?: string;
   departmentId?: string;
+  organizationId?: string;
   phone?: string;
   phoneNumber?: string;
   status?: string;
@@ -184,6 +185,7 @@ export const usersApi = {
       roleIds: roleIdsArray,
       department: data.department,
       departmentId: data.departmentId,
+      ...(data.organizationId ? { organizationId: data.organizationId } : {}),
       phoneNumber: data.phone || data.phoneNumber,
       status: data.status,
     };

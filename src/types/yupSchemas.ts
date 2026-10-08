@@ -47,6 +47,7 @@ export const userYupSchema = yup.object({
   department: yup
     .string()
     .required(validationMessages.user.departmentRequired),
+  organizationId: yup.string().optional(),
   role: yup
     .string()
     .required(validationMessages.user.roleRequired),

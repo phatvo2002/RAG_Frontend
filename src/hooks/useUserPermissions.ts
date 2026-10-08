@@ -147,6 +147,8 @@ export function useUserPermissions(): UserPermissionsResult {
         return hasModuleAccess(['meeting', 'meetings', 'meet']);
       case '/reports':
         return hasModuleAccess(['report', 'reports', 'rep']);
+      case '/catalog/organizations':
+        return hasModuleAccess('ORGANIZATION.READ');
       case '/admin':
         return hasModuleAccess(ADMIN_MODULES);
       case '/admin/users':

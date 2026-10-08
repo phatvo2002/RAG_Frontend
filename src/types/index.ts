@@ -51,6 +51,7 @@ export interface User {
   status: UserStatus | string;
   department?: string;
   departmentId?: string;
+  organizationId?: string | null;
   preferredLanguage?: string;
   timeZone?: string | null;
   avatar?: string;

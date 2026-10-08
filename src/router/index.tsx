@@ -30,6 +30,7 @@ import {
 } from '@/pages/admin';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { OrganizationsPage } from '@/pages/catalog/organizations';
 
 // Root Route wrapping AppProvider and AppLayout
 const rootRoute = createRootRoute({
@@ -143,6 +144,16 @@ const reportsRoute = createRoute({
   ),
 });
 
+const organizationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/catalog/organizations',
+  component: () => (
+    <PermissionGuard module="ORGANIZATION.READ" isImplemented={true}>
+      <OrganizationsPage />
+    </PermissionGuard>
+  ),
+});
+
 // ============================================================================
 // ADMIN ROUTES (Được bảo vệ bằng PermissionGuard theo từng phân hệ)
 // ============================================================================
@@ -234,6 +245,7 @@ const routeTree = rootRoute.addChildren([
   meetingRoomRoute,
   calendarRoute,
   reportsRoute,
+  organizationsRoute,
   adminRoute,
   adminUsersRoute,
   adminDepartmentsRoute,

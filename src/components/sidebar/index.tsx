@@ -66,6 +66,7 @@ export const Sidebar: React.FC = () => {
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
     operations: true,
     collaboration: true,
+    catalog: true,
     admin: true,
   });
 
@@ -82,6 +83,7 @@ export const Sidebar: React.FC = () => {
     if (hasModuleAccess(['chat', 'ai'])) return '/chat';
     if (hasModuleAccess(['document', 'documents', 'data-repo'])) return '/data-repo';
     if (hasModuleAccess(['project', 'projects', 'proj'])) return '/projects';
+    if (hasModuleAccess('ORGANIZATION.READ')) return '/catalog/organizations';
     if (hasModuleAccess(['task', 'tasks'])) return '/tasks';
     if (hasModuleAccess([
       'department', 'departments', 'dept',
@@ -171,6 +173,21 @@ export const Sidebar: React.FC = () => {
           path: '/meetings',
           icon: CalendarClock,
           module: ['meeting', 'meetings', 'meet'],
+          isImplemented: true,
+        },
+      ],
+    },
+    {
+      id: 'catalog',
+      title: 'Danh mục',
+      icon: Building2,
+      items: [
+        {
+          id: 'organizations',
+          label: 'Tổ chức',
+          path: '/catalog/organizations',
+          icon: Building2,
+          module: 'ORGANIZATION.READ',
           isImplemented: true,
         },
       ],

@@ -5,6 +5,7 @@ import { User, userYupSchema, UserFormData } from '@/types';
 import { useCreateUserMutation, useUpdateUserMutation } from '@/api/users.api';
 import { useDepartmentsQuery } from '@/api/departments.api';
 import { useRolesQuery } from '@/api/roles.api';
+import { useCurrentOrganizationQuery } from '@/api/organizations.api';
 import { Mail, User as UserIcon, Phone, Building, Shield, AlertCircle, Eye, EyeOff, KeyRound } from 'lucide-react';
 
 interface UserModalProps {
@@ -29,6 +30,7 @@ export const UserModal: React.FC<UserModalProps> = ({
   // Fetch departments and roles from Backend APIs
   const { data: fetchedDepartments = [] } = useDepartmentsQuery();
   const { data: fetchedRoles = [] } = useRolesQuery();
+  const { data: currentOrganization, isError: organizationLoadFailed } = useCurrentOrganizationQuery(isEditMode && isOpen);
 
   // Danh sách các vai trò hệ thống mặc định để luôn đảm bảo có dữ liệu
   const defaultSystemRoles = useMemo(
@@ -107,6 +109,7 @@ export const UserModal: React.FC<UserModalProps> = ({
       password: 'Nexora@2026',
       role: 'Nhân viên',
       department: 'Công nghệ thông tin',
+      organizationId: '',
       phone: '',
     } as UserFormData,
     validators: {
@@ -149,6 +152,7 @@ export const UserModal: React.FC<UserModalProps> = ({
               roleIds: roleId ? [roleId] : [],
               department: value.department,
               departmentId: matchedDept?.id,
+              organizationId: currentOrganization?.organizationId === value.organizationId ? value.organizationId : undefined,
               phone: value.phone || '',
               phoneNumber: value.phone || '',
             },
@@ -241,6 +245,7 @@ export const UserModal: React.FC<UserModalProps> = ({
         form.setFieldValue('email', userToEdit.email || '');
         form.setFieldValue('role', resolvedRole);
         form.setFieldValue('department', resolvedDept);
+        form.setFieldValue('organizationId', userToEdit.organizationId || '');
         form.setFieldValue('phone', userToEdit.phone || userToEdit.phoneNumber || '');
         form.setFieldValue('password', '');
       } else {
@@ -498,6 +503,33 @@ export const UserModal: React.FC<UserModalProps> = ({
               );
             }}
           </form.Field>
+
+          {isEditMode && (
+            <form.Field name="organizationId">
+              {(field) => (
+                <div>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Tổ chức</label>
+                  <div className="relative flex items-center">
+                    <select
+                      name={field.name}
+                      value={field.state.value || ''}
+                      onBlur={field.handleBlur}
+                      onChange={(event) => field.handleChange(event.target.value)}
+                      disabled={!currentOrganization}
+                      className="select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
+                    >
+                      <option value="">Không thay đổi tổ chức</option>
+                      {currentOrganization && (
+                        <option value={currentOrganization.organizationId}>{currentOrganization.name}</option>
+                      )}
+                    </select>
+                    <Building className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                  </div>
+                  {organizationLoadFailed && <p className="mt-1 text-[11px] text-rose-600">Không tải được tổ chức hiện tại; bạn vẫn có thể sửa thông tin khác.</p>}
+                </div>
+              )}
+            </form.Field>
+          )}
 
           {/* Vai trò Dropdown */}
           <form.Field name="role">
