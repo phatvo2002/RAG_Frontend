@@ -71,3 +71,43 @@ blocked
 ## Final result
 
 blocked
+
+---
+
+# Design QA — Meeting waiting room
+
+## Source and implementation
+
+- Source: user-provided screenshot `codex-clipboard-3a3ea5f0-6c81-43ae-8eef-4cfa5595f7e7.png` (1494 × 635, organizer, Scheduled).
+- Implementation: `src/pages/meetings/MeetingRoomPage.tsx`.
+- Production build: `npm.cmd run build` passed.
+
+## Comparison
+
+- The source image was inspected. The implementation could not be captured in the same authenticated meeting state because no local frontend/backend session was running.
+- Fonts, layout, colors, icon, and copy cannot be judged against a rendered screenshot yet.
+- Next check: open a Scheduled meeting as its organizer at 1494 × 635, compare a capture with the source, then inspect the participant and narrow-screen states.
+
+## Final result
+
+blocked
+
+---
+
+# Design QA — Meeting calendar by day period
+
+## Source and implementation
+
+- Source: user-provided screenshot `codex-clipboard-cf1a391b-134a-40c0-be6a-6ab5ca684ab3.png` (1396 × 597, week view).
+- Implementation: `src/pages/meetings/MeetingsPage.tsx`.
+- Production build: `npm.cmd run build` passed.
+
+## Comparison
+
+- The source image was inspected. The authenticated meeting calendar could not be captured locally because no frontend/backend session was running.
+- The rendered typography, spacing, colors, icons, and meeting cards therefore remain unverified against the screenshot.
+- Next check: open `/meetings` with meeting data at the source viewport, compare the week layout, then inspect month view and narrower widths.
+
+## Final result
+
+blocked
