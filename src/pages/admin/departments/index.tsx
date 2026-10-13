@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
-import { useTranslation } from 'react-i18next';
 import { Department } from '@/types';
 import {
   useDepartmentsQuery,
@@ -58,8 +57,8 @@ interface EnrichedDepartment {
 }
 
 export const DepartmentsPage: React.FC = () => {
-  const { showToast } = useApp();
-  const { t } = useTranslation(['admin', 'common', 'table']);
+  const { showToast, language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
 
   // TanStack Query for Departments & Users
   const {
@@ -102,7 +101,7 @@ export const DepartmentsPage: React.FC = () => {
   // Enrich Departments matching 09.Màn hình phòng ban.png
   const enrichedDepartments: EnrichedDepartment[] = useMemo(() => {
     return departments.map((d, index) => {
-      const name = d.name || 'Phòng ban';
+      const name = d.name || tr('Department', 'Phòng ban');
       const lower = name.toLowerCase();
       let code = d.code || (d.id ? d.id.slice(0, 4).toUpperCase() : 'DEPT');
       let icon = Monitor;
@@ -111,13 +110,13 @@ export const DepartmentsPage: React.FC = () => {
       let managerName = 'Lê Ngọc Huy';
       let hasManager = true;
       let status: 'active' | 'no_manager' | 'inactive' = 'active';
-      let statusText = 'Hoạt động';
-      let updatedAt = 'Hôm nay, 10:24';
+      let statusText = tr('Active', 'Hoạt động');
+      let updatedAt = tr('Today, 10:24', 'Hôm nay, 10:24');
       let duties: string[] = [
-        'Quản lý hạ tầng công nghệ thông tin của công ty',
-        'Phát triển và vận hành các hệ thống phần mềm nội bộ',
-        'Đảm bảo an toàn thông tin và bảo mật dữ liệu',
-        'Hỗ trợ kỹ thuật cho người dùng và các phòng ban',
+        tr('Manage company IT infrastructure', 'Quản lý hạ tầng công nghệ thông tin của công ty'),
+        tr('Develop and operate internal software systems', 'Phát triển và vận hành các hệ thống phần mềm nội bộ'),
+        tr('Ensure information and data security', 'Đảm bảo an toàn thông tin và bảo mật dữ liệu'),
+        tr('Provide technical support to users and departments', 'Hỗ trợ kỹ thuật cho người dùng và các phòng ban'),
       ];
 
       // Check manager from userMap
@@ -133,12 +132,12 @@ export const DepartmentsPage: React.FC = () => {
         code = d.code || 'IT';
         managerName = managerName || 'Lê Ngọc Huy';
         memberCount = 18;
-        updatedAt = 'Hôm nay, 10:24';
+        updatedAt = tr('Today, 10:24', 'Hôm nay, 10:24');
         duties = [
-          'Quản lý hạ tầng công nghệ thông tin của công ty',
-          'Phát triển và vận hành các hệ thống phần mềm nội bộ',
-          'Đảm bảo an toàn thông tin và bảo mật dữ liệu',
-          'Hỗ trợ kỹ thuật cho người dùng và các phòng ban',
+          tr('Manage company IT infrastructure', 'Quản lý hạ tầng công nghệ thông tin của công ty'),
+          tr('Develop and operate internal software systems', 'Phát triển và vận hành các hệ thống phần mềm nội bộ'),
+          tr('Ensure information and data security', 'Đảm bảo an toàn thông tin và bảo mật dữ liệu'),
+          tr('Provide technical support to users and departments', 'Hỗ trợ kỹ thuật cho người dùng và các phòng ban'),
         ];
       } else if (lower.includes('kinh doanh') || lower.includes('sale') || lower.includes('sales')) {
         icon = TrendingUp;
@@ -146,11 +145,11 @@ export const DepartmentsPage: React.FC = () => {
         code = d.code || 'SALE';
         managerName = 'Vũ Phạm Anh Tuấn';
         memberCount = 32;
-        updatedAt = 'Hôm qua, 16:45';
+        updatedAt = tr('Yesterday, 16:45', 'Hôm qua, 16:45');
         duties = [
-          'Phát triển mạng lưới đối tác và khách hàng doanh nghiệp',
-          'Tối ưu hóa phễu bán hàng và tăng trưởng doanh thu',
-          'Đàm phán và ký kết hợp đồng thương mại',
+          tr('Develop the partner and enterprise customer network', 'Phát triển mạng lưới đối tác và khách hàng doanh nghiệp'),
+          tr('Improve the sales funnel and revenue growth', 'Tối ưu hóa phễu bán hàng và tăng trưởng doanh thu'),
+          tr('Negotiate and sign commercial contracts', 'Đàm phán và ký kết hợp đồng thương mại'),
         ];
       } else if (lower.includes('marketing') || lower.includes('truyền thông')) {
         icon = BarChart2;
@@ -160,9 +159,9 @@ export const DepartmentsPage: React.FC = () => {
         memberCount = 12;
         updatedAt = '23/05/2024, 17:30';
         duties = [
-          'Xây dựng chiến lược nhận diện thương hiệu NEXORA',
-          'Quản lý các kênh truyền thông và sự kiện',
-          'Thu hút khách hàng tiềm năng qua digital marketing',
+          tr('Build the NEXORA brand strategy', 'Xây dựng chiến lược nhận diện thương hiệu NEXORA'),
+          tr('Manage communication channels and events', 'Quản lý các kênh truyền thông và sự kiện'),
+          tr('Attract leads through digital marketing', 'Thu hút khách hàng tiềm năng qua digital marketing'),
         ];
       } else if (lower.includes('tài chính') || lower.includes('kế toán') || lower.includes('finance')) {
         icon = Coins;
@@ -172,9 +171,9 @@ export const DepartmentsPage: React.FC = () => {
         memberCount = 15;
         updatedAt = '22/05/2024, 14:20';
         duties = [
-          'Quản lý dòng tiền, ngân sách và báo cáo tài chính',
-          'Kiểm toán nội bộ và tuân thủ chuẩn mực kế toán',
-          'Thực hiện thanh quyết toán và đối soát định kỳ',
+          tr('Manage cash flow, budgets, and financial reports', 'Quản lý dòng tiền, ngân sách và báo cáo tài chính'),
+          tr('Handle internal audits and accounting compliance', 'Kiểm toán nội bộ và tuân thủ chuẩn mực kế toán'),
+          tr('Perform periodic settlements and reconciliation', 'Thực hiện thanh quyết toán và đối soát định kỳ'),
         ];
       } else if (lower.includes('nhân sự') || lower.includes('hr') || lower.includes('tổ chức')) {
         icon = Users;
@@ -184,24 +183,24 @@ export const DepartmentsPage: React.FC = () => {
         memberCount = 9;
         updatedAt = '21/05/2024, 09:10';
         duties = [
-          'Hoạch định nguồn nhân lực và tuyển dụng nhân tài',
-          'Đào tạo và phát triển văn hóa doanh nghiệp',
-          'Quản lý chế độ đãi ngộ, phúc lợi và đánh giá hiệu suất',
+          tr('Plan staffing and recruit talent', 'Hoạch định nguồn nhân lực và tuyển dụng nhân tài'),
+          tr('Train staff and develop company culture', 'Đào tạo và phát triển văn hóa doanh nghiệp'),
+          tr('Manage benefits and performance reviews', 'Quản lý chế độ đãi ngộ, phúc lợi và đánh giá hiệu suất'),
         ];
       } else if (lower.includes('pháp chế') || lower.includes('legal') || lower.includes('luật')) {
         icon = Shield;
         iconBg = 'bg-blue-700';
         code = d.code || 'LEGAL';
-        managerName = 'Chưa phân công';
+        managerName = tr('Unassigned', 'Chưa phân công');
         hasManager = false;
         status = 'no_manager';
-        statusText = 'Chưa có trưởng phòng';
+        statusText = tr('No manager', 'Chưa có trưởng phòng');
         memberCount = 4;
         updatedAt = '20/05/2024, 11:05';
         duties = [
-          'Soạn thảo, thẩm định hợp đồng và văn bản pháp lý',
-          'Đảm bảo hoạt động kinh doanh tuân thủ quy định pháp luật',
-          'Tư vấn và xử lý các vấn đề pháp lý phát sinh',
+          tr('Draft and review contracts and legal documents', 'Soạn thảo, thẩm định hợp đồng và văn bản pháp lý'),
+          tr('Ensure business complies with the law', 'Đảm bảo hoạt động kinh doanh tuân thủ quy định pháp luật'),
+          tr('Advise on and resolve legal issues', 'Tư vấn và xử lý các vấn đề pháp lý phát sinh'),
         ];
       } else if (lower.includes('vận hành') || lower.includes('ops') || lower.includes('operation')) {
         icon = Settings;
@@ -211,9 +210,9 @@ export const DepartmentsPage: React.FC = () => {
         memberCount = 14;
         updatedAt = '20/05/2024, 08:40';
         duties = [
-          'Giám sát quy trình hoạt động hàng ngày của doanh nghiệp',
-          'Cải tiến hiệu suất quy trình và phân bổ nguồn lực',
-          'Quản lý cơ sở vật chất và văn phòng phẩm',
+          tr('Oversee daily business operations', 'Giám sát quy trình hoạt động hàng ngày của doanh nghiệp'),
+          tr('Improve process efficiency and resource allocation', 'Cải tiến hiệu suất quy trình và phân bổ nguồn lực'),
+          tr('Manage facilities and office supplies', 'Quản lý cơ sở vật chất và văn phòng phẩm'),
         ];
       } else if (lower.includes('sản phẩm') || lower.includes('product')) {
         icon = Package;
@@ -223,15 +222,15 @@ export const DepartmentsPage: React.FC = () => {
         memberCount = 16;
         updatedAt = '19/05/2024, 16:25';
         duties = [
-          'Nghiên cứu thị trường và định hình lộ trình sản phẩm',
-          'Thiết kế trải nghiệm người dùng và tính năng AI',
-          'Phối hợp cùng đội ngũ kỹ thuật để phát hành tính năng',
+          tr('Research the market and shape the product roadmap', 'Nghiên cứu thị trường và định hình lộ trình sản phẩm'),
+          tr('Design the user experience and AI features', 'Thiết kế trải nghiệm người dùng và tính năng AI'),
+          tr('Coordinate feature releases with engineering', 'Phối hợp cùng đội ngũ kỹ thuật để phát hành tính năng'),
         ];
       }
 
       if (d.status === 'Inactive' || d.status === 'Vô hiệu hóa') {
         status = 'inactive';
-        statusText = 'Tạm khóa';
+        statusText = tr('Inactive', 'Tạm khóa');
       }
 
       return {
@@ -254,7 +253,7 @@ export const DepartmentsPage: React.FC = () => {
         duties,
       };
     });
-  }, [departments, userMap]);
+  }, [departments, userMap, language]);
 
   const metrics = useMemo(() => ({
     total: enrichedDepartments.length,
@@ -315,7 +314,7 @@ export const DepartmentsPage: React.FC = () => {
     if (!deptToArchive) return;
     archiveMutation.mutate(deptToArchive.id, {
       onSuccess: () => {
-        showToast(`Phòng ban ${deptToArchive.name} đã được lưu trữ thành công!`, 'info');
+        showToast(tr(`Department ${deptToArchive.name} archived.`, `Phòng ban ${deptToArchive.name} đã được lưu trữ thành công!`), 'info');
         setDeptToArchive(null);
         refetch();
         if (activeDeptDetail?.id === deptToArchive.id) {
@@ -323,7 +322,7 @@ export const DepartmentsPage: React.FC = () => {
         }
       },
       onError: (err: any) => {
-        showToast(err.message || 'Thao tác thất bại', 'error');
+        showToast(err.message || tr('Action failed', 'Thao tác thất bại'), 'error');
         setDeptToArchive(null);
       },
     });
@@ -331,12 +330,12 @@ export const DepartmentsPage: React.FC = () => {
 
   const handleExportCsv = () => {
     if (filteredDepartments.length === 0) {
-      showToast('Không có dữ liệu phòng ban để xuất', 'warning');
+      showToast(tr('No department data to export', 'Không có dữ liệu phòng ban để xuất'), 'warning');
       return;
     }
     const csvContent =
       'data:text/csv;charset=utf-8,' +
-      ['Tên phòng ban,Mã phòng ban,Trưởng phòng,Số nhân sự,Trạng thái,Cập nhật gần nhất']
+      [tr('Department name,Department code,Manager,Members,Status,Last updated', 'Tên phòng ban,Mã phòng ban,Trưởng phòng,Số nhân sự,Trạng thái,Cập nhật gần nhất')]
         .concat(
           filteredDepartments.map(
             (d) =>
@@ -352,7 +351,7 @@ export const DepartmentsPage: React.FC = () => {
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
-    showToast(`Đã xuất ${filteredDepartments.length} phòng ban ra file CSV`, 'info');
+    showToast(tr(`Exported ${filteredDepartments.length} departments to CSV`, `Đã xuất ${filteredDepartments.length} phòng ban ra file CSV`), 'info');
   };
 
   return (
@@ -370,10 +369,10 @@ export const DepartmentsPage: React.FC = () => {
           <div className="flex items-start justify-between gap-4 flex-wrap">
             <div className="space-y-1">
               <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
-                Phòng ban
+                {tr('Departments', 'Phòng ban')}
               </h1>
               <p className="text-xs text-slate-500 dark:text-zinc-400">
-                Quản lý cơ cấu tổ chức, phòng ban và người phụ trách.
+                {tr('Manage the organization structure, departments, and managers.', 'Quản lý cơ cấu tổ chức, phòng ban và người phụ trách.')}
               </p>
             </div>
             <div className="flex items-center gap-2">
@@ -383,7 +382,7 @@ export const DepartmentsPage: React.FC = () => {
                 className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
-                <span>Thêm phòng ban</span>
+                <span>{tr('Add department', 'Thêm phòng ban')}</span>
               </button>
               <button
                 type="button"
@@ -391,23 +390,23 @@ export const DepartmentsPage: React.FC = () => {
                 className="px-3.5 py-2 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-200 rounded-lg text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Xuất dữ liệu</span>
+                <span>{tr('Export data', 'Xuất dữ liệu')}</span>
               </button>
             </div>
           </div>
 
           <div className="flex items-center gap-4 text-xs font-semibold text-slate-800 dark:text-zinc-200 pt-0.5">
-            <span><strong>{metrics.total}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">phòng ban</span></span>
+            <span><strong>{metrics.total}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">{tr('departments', 'phòng ban')}</span></span>
             <span className="text-slate-300 dark:text-zinc-700">|</span>
-            <span><strong>{metrics.members}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">nhân sự</span></span>
+            <span><strong>{metrics.members}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">{tr('members', 'nhân sự')}</span></span>
             <span className="text-slate-300 dark:text-zinc-700">|</span>
-            <span><strong>{metrics.managers}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">trưởng phòng</span></span>
+            <span><strong>{metrics.managers}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">{tr('managers', 'trưởng phòng')}</span></span>
             <span className="text-slate-300 dark:text-zinc-700">|</span>
-            <span><strong>{metrics.unassigned}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">chưa phân công</span></span>
+            <span><strong>{metrics.unassigned}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">{tr('unassigned', 'chưa phân công')}</span></span>
           </div>
 
           {/* Search, Filter & Action Bar matching 09.Màn hình phòng ban.png */}
-          <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-2xs">
+          <div className="nexora-table-filters bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-2xs">
             <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
               
               {/* Left Search & Filter Selects */}
@@ -416,7 +415,7 @@ export const DepartmentsPage: React.FC = () => {
                 <div className="relative flex-1 min-w-[220px]">
                   <input
                     type="text"
-                    placeholder="Tìm theo tên phòng ban..."
+                    placeholder={tr('Search departments...', 'Tìm theo tên phòng ban...')}
                     value={search}
                     onChange={(e) => {
                       setSearch(e.target.value);
@@ -436,10 +435,10 @@ export const DepartmentsPage: React.FC = () => {
                   }}
                   className="px-3 py-2 bg-slate-50/80 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-800 dark:text-zinc-200 focus:outline-none focus:border-blue-500 cursor-pointer"
                 >
-                  <option value="all">Trạng thái: Tất cả</option>
-                  <option value="active">Hoạt động</option>
-                  <option value="no_manager">Chưa có trưởng phòng</option>
-                  <option value="inactive">Tạm khóa</option>
+                  <option value="all">{tr('Status: All', 'Trạng thái: Tất cả')}</option>
+                  <option value="active">{tr('Active', 'Hoạt động')}</option>
+                  <option value="no_manager">{tr('No manager', 'Chưa có trưởng phòng')}</option>
+                  <option value="inactive">{tr('Inactive', 'Tạm khóa')}</option>
                 </select>
 
                 {/* Manager Filter */}
@@ -451,9 +450,9 @@ export const DepartmentsPage: React.FC = () => {
                   }}
                   className="px-3 py-2 bg-slate-50/80 dark:bg-zinc-950 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-800 dark:text-zinc-200 focus:outline-none focus:border-blue-500 cursor-pointer"
                 >
-                  <option value="all">Người phụ trách: Tất cả</option>
-                  <option value="assigned">Đã phân công</option>
-                  <option value="unassigned">Chưa phân công</option>
+                  <option value="all">{tr('Manager: All', 'Người phụ trách: Tất cả')}</option>
+                  <option value="assigned">{tr('Assigned', 'Đã phân công')}</option>
+                  <option value="unassigned">{tr('Unassigned', 'Chưa phân công')}</option>
                   <option value="huy">Lê Ngọc Huy</option>
                   <option value="tuấn">Vũ Phạm Anh Tuấn</option>
                 </select>
@@ -467,14 +466,14 @@ export const DepartmentsPage: React.FC = () => {
             <div className="p-3 bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50 rounded-lg flex items-center justify-between text-xs text-amber-800 dark:text-amber-300">
               <div className="flex items-center gap-2">
                 <AlertCircle className="w-4 h-4 shrink-0 text-amber-600 dark:text-amber-400" />
-                <span>Không thể tải dữ liệu phòng ban: {(error as any)?.message || 'Vui lòng kiểm tra kết nối API'}.</span>
+                <span>{tr('Could not load departments:', 'Không thể tải dữ liệu phòng ban:')} {(error as any)?.message || tr('Check the API connection', 'Vui lòng kiểm tra kết nối API')}.</span>
               </div>
               <button
                 onClick={() => refetch()}
                 className="px-2 py-1 bg-amber-200 dark:bg-amber-800 hover:bg-amber-300 text-amber-900 dark:text-amber-100 font-medium rounded text-xs flex items-center gap-1 cursor-pointer"
               >
                 <RefreshCw className="w-3 h-3" />
-                <span>Thử lại</span>
+                <span>{tr('Retry', 'Thử lại')}</span>
               </button>
             </div>
           )}
@@ -482,47 +481,47 @@ export const DepartmentsPage: React.FC = () => {
           {/* Department Table matching 09.Màn hình phòng ban.png */}
           <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50/80 dark:bg-zinc-950/80 border-b border-slate-200 dark:border-zinc-800 text-[11px] font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">
-                    <th className="py-3.5 px-4">TÊN PHÒNG BAN</th>
-                    <th className="py-3.5 px-4">MÃ PHÒNG BAN</th>
-                    <th className="py-3.5 px-4">TRƯỞNG PHÒNG</th>
-                    <th className="py-3.5 px-4">SỐ NHÂN SỰ</th>
-                    <th className="py-3.5 px-4">TRẠNG THÁI</th>
-                    <th className="py-3.5 px-4">CẬP NHẬT GẦN NHẤT</th>
-                    <th className="py-3.5 px-4 text-right">THAO TÁC</th>
-                  </tr>
-                </thead>
+              <CustomTable.Table className="w-full text-left border-collapse text-xs">
+                <CustomTable.Head>
+                  <CustomTable.Row className="bg-slate-50/80 dark:bg-zinc-950/80 border-b border-slate-200 dark:border-zinc-800 text-[11px] font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">
+                    <CustomTable.HeaderCell className="py-3.5 px-4">{tr('DEPARTMENT', 'TÊN PHÒNG BAN')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3.5 px-4">{tr('CODE', 'MÃ PHÒNG BAN')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3.5 px-4">{tr('MANAGER', 'TRƯỞNG PHÒNG')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3.5 px-4">{tr('MEMBERS', 'SỐ NHÂN SỰ')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3.5 px-4">{tr('STATUS', 'TRẠNG THÁI')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3.5 px-4">{tr('LAST UPDATED', 'CẬP NHẬT GẦN NHẤT')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="nexora-table-action-cell py-3.5 px-4 text-right">{tr('ACTIONS', 'THAO TÁC')}</CustomTable.HeaderCell>
+                  </CustomTable.Row>
+                </CustomTable.Head>
 
-                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+                <CustomTable.Body className="divide-y divide-slate-100 dark:divide-zinc-800/80">
                   {isLoading ? (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-400">
+                    <CustomTable.Row>
+                      <CustomTable.Cell colSpan={7} className="py-12 text-center text-slate-400">
                         <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-blue-500" />
-                        <span>Đang tải danh sách phòng ban...</span>
-                      </td>
-                    </tr>
+                        <span>{tr('Loading departments...', 'Đang tải danh sách phòng ban...')}</span>
+                      </CustomTable.Cell>
+                    </CustomTable.Row>
                   ) : paginatedDepartments.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="py-12 text-center text-slate-400">
-                        Không tìm thấy phòng ban nào phù hợp.
-                      </td>
-                    </tr>
+                    <CustomTable.Row>
+                      <CustomTable.Cell colSpan={7} className="py-12 text-center text-slate-400">
+                        {tr('No matching departments found.', 'Không tìm thấy phòng ban nào phù hợp.')}
+                      </CustomTable.Cell>
+                    </CustomTable.Row>
                   ) : (
                     paginatedDepartments.map((dept) => {
                       const isDetailActive = activeDeptDetail?.id === dept.id;
                       const DeptIcon = dept.icon;
 
                       return (
-                        <tr
+                        <CustomTable.Row
                           key={dept.id}
                           className={`hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors ${
                             isDetailActive ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
                           }`}
                         >
                           {/* 1. TÊN PHÒNG BAN */}
-                          <td className="py-3.5 px-4">
+                          <CustomTable.Cell className="py-3.5 px-4">
                             <div className="flex items-center gap-3">
                               <div
                                 className={`w-8 h-8 rounded-full ${dept.iconBg} text-white flex items-center justify-center shrink-0 shadow-2xs`}
@@ -533,15 +532,15 @@ export const DepartmentsPage: React.FC = () => {
                                 {dept.name}
                               </span>
                             </div>
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 2. MÃ PHÒNG BAN */}
-                          <td className="py-3.5 px-4 font-mono text-slate-700 dark:text-zinc-300 font-semibold">
+                          <CustomTable.Cell className="py-3.5 px-4 font-mono text-slate-700 dark:text-zinc-300 font-semibold">
                             {dept.code}
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 3. TRƯỞNG PHÒNG */}
-                          <td className="py-3.5 px-4">
+                          <CustomTable.Cell className="py-3.5 px-4">
                             {dept.manager.hasManager ? (
                               <div className="flex items-center gap-2">
                                 <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[10px] flex items-center justify-center shrink-0">
@@ -552,25 +551,25 @@ export const DepartmentsPage: React.FC = () => {
                                     {dept.manager.name}
                                   </span>
                                   <span className="text-[10px] text-slate-400 dark:text-zinc-500 block leading-none">
-                                    Trưởng phòng
+                                    {tr('Manager', 'Trưởng phòng')}
                                   </span>
                                 </div>
                               </div>
                             ) : (
                               <div className="flex items-center gap-1.5 text-slate-400">
                                 <UserIcon className="w-4 h-4" />
-                                <span>Chưa phân công</span>
+                                <span>{tr('Unassigned', 'Chưa phân công')}</span>
                               </div>
                             )}
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 4. SỐ NHÂN SỰ */}
-                          <td className="py-3.5 px-4 font-normal text-slate-700 dark:text-zinc-300">
+                          <CustomTable.Cell className="py-3.5 px-4 font-normal text-slate-700 dark:text-zinc-300">
                             {dept.memberCount}
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 5. TRẠNG THÁI */}
-                          <td className="py-3.5 px-4">
+                          <CustomTable.Cell className="py-3.5 px-4">
                             <div className="flex items-center gap-1.5 text-xs font-medium">
                               <span
                                 className={`w-1.5 h-1.5 rounded-full ${
@@ -593,63 +592,63 @@ export const DepartmentsPage: React.FC = () => {
                                 {dept.statusText}
                               </span>
                             </div>
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 6. CẬP NHẬT GẦN NHẤT */}
-                          <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-400 font-normal">
+                          <CustomTable.Cell className="py-3.5 px-4 text-slate-600 dark:text-zinc-400 font-normal">
                             {dept.updatedAt}
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 7. THAO TÁC (⋯) */}
-                          <td className="py-3.5 px-4 text-right">
+                          <CustomTable.Cell className="nexora-table-action-cell py-3.5 px-4 text-right">
                             <TableRowActions
                               align="right"
                               items={[
                                 {
-                                  label: 'Xem chi tiết',
+                                  label: tr('View details', 'Xem chi tiết'),
                                   icon: <UserCheck className="w-3.5 h-3.5" />,
                                   onClick: () => setActiveDeptDetail(dept),
                                 },
                                 {
-                                  label: 'Chỉnh sửa phòng ban',
+                                  label: tr('Edit department', 'Chỉnh sửa phòng ban'),
                                   icon: <Edit2 className="w-3.5 h-3.5" />,
                                   onClick: () => handleOpenEdit(dept.raw),
                                 },
                                 {
-                                  label: 'Quản lý thành viên',
+                                  label: tr('Manage members', 'Quản lý thành viên'),
                                   icon: <Users className="w-3.5 h-3.5" />,
-                                  onClick: () => showToast(`Quản lý nhân sự của ${dept.name}`, 'info'),
+                                  onClick: () => showToast(tr(`Manage members of ${dept.name}`, `Quản lý nhân sự của ${dept.name}`), 'info'),
                                 },
                                 {
-                                  label: 'Lưu trữ phòng ban',
+                                  label: tr('Archive department', 'Lưu trữ phòng ban'),
                                   icon: <Trash2 className="w-3.5 h-3.5" />,
                                   danger: true,
                                   onClick: () => handleArchive(dept.raw),
                                 },
                               ]}
                             />
-                          </td>
-                        </tr>
+                          </CustomTable.Cell>
+                        </CustomTable.Row>
                       );
                     })
                   )}
-                </tbody>
-              </table>
+                </CustomTable.Body>
+              </CustomTable.Table>
             </div>
 
             {/* Pagination Footer matching 09.Màn hình phòng ban.png */}
-            <div className="py-3 px-4 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-4 flex-wrap text-xs text-slate-600 dark:text-zinc-400">
+            <div className="nexora-table-footer py-3 px-4 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-4 flex-wrap text-xs text-slate-600 dark:text-zinc-400">
               <div>
-                Hiển thị{' '}
+                {tr('Showing', 'Hiển thị')}{' '}
                 <span className="font-semibold text-slate-900 dark:text-zinc-100">
                   {filteredDepartments.length === 0 ? 0 : (page - 1) * pageSize + 1} -{' '}
                   {Math.min(page * pageSize, filteredDepartments.length)}
                 </span>{' '}
-                của{' '}
+                {tr('of', 'của')}{' '}
                 <span className="font-semibold text-slate-900 dark:text-zinc-100">
                   {filteredDepartments.length}
                 </span>{' '}
-                phòng ban
+                {tr('departments', 'phòng ban')}
               </div>
 
               <div className="flex items-center gap-3">
@@ -710,7 +709,7 @@ export const DepartmentsPage: React.FC = () => {
         {/* 2. RIGHT COLUMN: Side Drawer Chi tiết phòng ban matching 09.png */}
         {/* ==================================================================== */}
         {activeDeptDetail && (
-          <Modal isOpen={Boolean(activeDeptDetail)} onClose={() => setActiveDeptDetail(null)} title={`Phòng ${activeDeptDetail.name}`} maxWidth="lg">
+          <Modal isOpen={Boolean(activeDeptDetail)} onClose={() => setActiveDeptDetail(null)} title={tr(`Department ${activeDeptDetail.name}`, `Phòng ${activeDeptDetail.name}`)} maxWidth="lg">
             <div className="max-h-[72vh] overflow-y-auto">
 
             {/* Drawer Body */}
@@ -737,19 +736,19 @@ export const DepartmentsPage: React.FC = () => {
               {/* Section 1: Thông tin tổng quan */}
               <div className="space-y-3 pt-2 border-t border-slate-100 dark:border-zinc-800">
                 <h5 className="font-bold text-xs text-slate-900 dark:text-zinc-100 uppercase tracking-wider">
-                  Thông tin tổng quan
+                  {tr('Overview', 'Thông tin tổng quan')}
                 </h5>
 
                 <div className="space-y-2.5 text-slate-600 dark:text-zinc-400">
                   <div className="flex justify-between items-center">
-                    <span>Mã phòng ban</span>
+                    <span>{tr('Department code', 'Mã phòng ban')}</span>
                     <span className="font-mono font-semibold text-slate-900 dark:text-zinc-100">
                       {activeDeptDetail.code}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span>Trưởng phòng</span>
+                    <span>{tr('Manager', 'Trưởng phòng')}</span>
                     <div className="flex items-center gap-2">
                       <div className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center">
                         {activeDeptDetail.manager.name.slice(0, 2).toUpperCase()}
@@ -761,16 +760,16 @@ export const DepartmentsPage: React.FC = () => {
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span>Phòng ban trực thuộc</span>
+                    <span>{tr('Subdepartments', 'Phòng ban trực thuộc')}</span>
                     <span className="text-slate-900 dark:text-zinc-100 font-medium">
-                      {activeDeptDetail.subDepartmentCount} phòng ban
+                      {activeDeptDetail.subDepartmentCount} {tr('departments', 'phòng ban')}
                     </span>
                   </div>
 
                   <div className="flex justify-between items-center">
-                    <span>Số nhân sự</span>
+                    <span>{tr('Members', 'Số nhân sự')}</span>
                     <span className="text-slate-900 dark:text-zinc-100 font-medium">
-                      {activeDeptDetail.memberCount} người
+                      {activeDeptDetail.memberCount} {tr('people', 'người')}
                     </span>
                   </div>
                 </div>
@@ -779,7 +778,7 @@ export const DepartmentsPage: React.FC = () => {
               {/* Section 2: Hoạt động gần đây matching 09.png */}
               <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
                 <h5 className="font-bold text-xs text-slate-900 dark:text-zinc-100 uppercase tracking-wider">
-                  Hoạt động gần đây
+                  {tr('Recent activity', 'Hoạt động gần đây')}
                 </h5>
 
                 <div className="space-y-3 pl-1">
@@ -788,9 +787,9 @@ export const DepartmentsPage: React.FC = () => {
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-zinc-200">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        <span>Cập nhật thông tin phòng ban</span>
+                        <span>{tr('Updated department information', 'Cập nhật thông tin phòng ban')}</span>
                       </div>
-                      <span className="text-[10px] text-slate-400 block">Bởi: Lê Ngọc Huy</span>
+                      <span className="text-[10px] text-slate-400 block">{tr('By: Lê Ngọc Huy', 'Bởi: Lê Ngọc Huy')}</span>
                     </div>
                   </div>
 
@@ -799,20 +798,20 @@ export const DepartmentsPage: React.FC = () => {
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-zinc-200">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        <span>Thêm nhân sự Nguyễn Văn Phát vào phòng ban</span>
+                        <span>{tr('Added Nguyễn Văn Phát to the department', 'Thêm nhân sự Nguyễn Văn Phát vào phòng ban')}</span>
                       </div>
-                      <span className="text-[10px] text-slate-400 block">Bởi: Lê Ngọc Huy</span>
+                      <span className="text-[10px] text-slate-400 block">{tr('By: Lê Ngọc Huy', 'Bởi: Lê Ngọc Huy')}</span>
                     </div>
                   </div>
 
                   <div className="flex items-start gap-2.5">
-                    <span className="font-mono text-[10px] text-slate-400 pt-0.5 w-8 shrink-0">Hôm qua</span>
+                    <span className="font-mono text-[10px] text-slate-400 pt-0.5 w-8 shrink-0">{tr('Yesterday', 'Hôm qua')}</span>
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-zinc-200">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        <span>Cập nhật cơ cấu tổ chức phòng ban</span>
+                        <span>{tr('Updated department structure', 'Cập nhật cơ cấu tổ chức phòng ban')}</span>
                       </div>
-                      <span className="text-[10px] text-slate-400 block">Bởi: SuperAdmin</span>
+                      <span className="text-[10px] text-slate-400 block">{tr('By: SuperAdmin', 'Bởi: SuperAdmin')}</span>
                     </div>
                   </div>
 
@@ -821,9 +820,9 @@ export const DepartmentsPage: React.FC = () => {
                     <div className="space-y-0.5">
                       <div className="flex items-center gap-1.5 font-medium text-slate-800 dark:text-zinc-200">
                         <span className="w-1.5 h-1.5 rounded-full bg-blue-500" />
-                        <span>Tạo phòng ban {activeDeptDetail.name}</span>
+                        <span>{tr('Created department', 'Tạo phòng ban')} {activeDeptDetail.name}</span>
                       </div>
-                      <span className="text-[10px] text-slate-400 block">Bởi: SuperAdmin</span>
+                      <span className="text-[10px] text-slate-400 block">{tr('By: SuperAdmin', 'Bởi: SuperAdmin')}</span>
                     </div>
                   </div>
                 </div>
@@ -832,7 +831,7 @@ export const DepartmentsPage: React.FC = () => {
               {/* Section 3: Nhiệm vụ & chức năng matching 09.png */}
               <div className="space-y-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
                 <h5 className="font-bold text-xs text-slate-900 dark:text-zinc-100 uppercase tracking-wider">
-                  Nhiệm vụ & chức năng
+                  {tr('Responsibilities', 'Nhiệm vụ & chức năng')}
                 </h5>
 
                 <ul className="space-y-1.5 text-slate-600 dark:text-zinc-400 list-disc list-inside">
@@ -851,15 +850,15 @@ export const DepartmentsPage: React.FC = () => {
                   className="py-2 px-3 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200 flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                 >
                   <Edit2 className="w-3.5 h-3.5" />
-                  <span>Chỉnh sửa</span>
+                  <span>{tr('Edit', 'Chỉnh sửa')}</span>
                 </button>
 
                 <button
-                  onClick={() => showToast(`Quản lý nhân sự của ${activeDeptDetail.name}`, 'info')}
+                  onClick={() => showToast(tr(`Manage members of ${activeDeptDetail.name}`, `Quản lý nhân sự của ${activeDeptDetail.name}`), 'info')}
                   className="py-2 px-3 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200 flex items-center justify-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
                 >
                   <Users className="w-3.5 h-3.5" />
-                  <span>Quản lý thành viên</span>
+                  <span>{tr('Manage members', 'Quản lý thành viên')}</span>
                 </button>
               </div>
 
@@ -889,9 +888,9 @@ export const DepartmentsPage: React.FC = () => {
         isOpen={Boolean(deptToArchive)}
         onClose={() => setDeptToArchive(null)}
         onConfirm={handleConfirmArchive}
-        title="Lưu trữ phòng ban"
-        message={`Bạn có chắc chắn muốn lưu trữ phòng ban "${deptToArchive?.name}" không?`}
-        confirmText="Lưu trữ"
+        title={tr('Archive department', 'Lưu trữ phòng ban')}
+        message={tr(`Archive department "${deptToArchive?.name}"?`, `Bạn có chắc chắn muốn lưu trữ phòng ban "${deptToArchive?.name}" không?`)}
+        confirmText={tr('Archive', 'Lưu trữ')}
         type="warning"
         isLoading={archiveMutation.isPending}
       />

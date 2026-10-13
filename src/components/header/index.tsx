@@ -50,8 +50,8 @@ export const Header: React.FC = () => {
           type="button"
           onClick={toggleMobileSidebar}
           className="lg:hidden p-2 rounded-lg text-slate-500 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-[#121929] transition-colors cursor-pointer"
-          title={isMobileSidebarOpen ? 'Đóng menu' : 'Mở menu'}
-          aria-label={isMobileSidebarOpen ? 'Đóng menu' : 'Mở menu'}
+          title={isMobileSidebarOpen ? t('closeMenu') : t('openMenu')}
+          aria-label={isMobileSidebarOpen ? t('closeMenu') : t('openMenu')}
           aria-expanded={isMobileSidebarOpen}
         >
           <Menu className="w-[18px] h-[18px]" />
@@ -62,7 +62,7 @@ export const Header: React.FC = () => {
             <ChevronDown className="w-3.5 h-3.5 text-slate-400 group-hover:text-slate-600 dark:group-hover:text-zinc-200 transition-transform" />
           </div>
           <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-normal">
-            Công ty Cổ phần Nexora
+            {t('company')}
           </p>
         </div>
       </div>
@@ -73,12 +73,12 @@ export const Header: React.FC = () => {
           <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
           <input
             type="text"
-            placeholder="Tìm kiếm hoặc gõ lệnh..."
+            placeholder={t('searchPlaceholder')}
             value={globalSearch}
             onChange={(e) => setGlobalSearch(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === 'Enter' && globalSearch.trim()) {
-                showToast(`Tìm kiếm: "${globalSearch}"`, 'info');
+                showToast(t('searchNotice', { query: globalSearch }), 'info');
               }
             }}
             className="w-full pl-8 pr-12 py-2 bg-[var(--nexora-surface-muted)] dark:bg-[#121929] border border-[var(--nexora-border)] dark:border-[#1d293d] rounded-lg text-xs text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 transition-colors shadow-sm"
@@ -99,7 +99,7 @@ export const Header: React.FC = () => {
         <button
           onClick={toggleTheme}
           className="p-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-100 rounded-lg hover:bg-slate-100 dark:hover:bg-[#121929] transition-colors cursor-pointer"
-          title={isDark ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối'}
+          title={isDark ? t('common:theme.light') : t('common:theme.dark')}
         >
           {isDark ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-slate-600" />}
         </button>
@@ -108,9 +108,9 @@ export const Header: React.FC = () => {
         <div className="relative">
           <button
             type="button"
-            onClick={() => showToast('Bạn có 3 thông báo mới chưa đọc', 'info')}
+            onClick={() => showToast(t('unreadNotifications', { count: 3 }), 'info')}
             className="p-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-100 rounded-lg hover:bg-slate-100 dark:hover:bg-[#121929] transition-colors cursor-pointer relative"
-            title="Thông báo"
+            title={t('notifications')}
           >
             <Bell className="w-4 h-4" />
             <span className="w-4 h-4 rounded-full bg-rose-500 text-white font-bold text-[9px] flex items-center justify-center absolute -top-0.5 -right-0.5 shadow-xs">
@@ -121,9 +121,9 @@ export const Header: React.FC = () => {
 
         {/* Help Icon */}
         <button
-          onClick={() => showToast('Mở tài liệu hướng dẫn sử dụng NEXORA AI', 'info')}
+          onClick={() => showToast(t('helpNotice'), 'info')}
           className="p-1.5 text-slate-500 dark:text-zinc-400 hover:text-slate-800 dark:hover:text-zinc-100 rounded-lg hover:bg-slate-100 dark:hover:bg-[#121929] transition-colors cursor-pointer"
-          title="Trợ giúp"
+          title={t('help')}
         >
           <HelpCircle className="w-4 h-4" />
         </button>
@@ -151,7 +151,7 @@ export const Header: React.FC = () => {
           {isProfileOpen && (
             <div className="absolute right-0 top-full mt-1.5 z-50 p-1.5 shadow-xl bg-white dark:bg-[#0c1220] border border-slate-200 dark:border-[#1d293d] rounded-xl w-48 text-xs text-slate-700 dark:text-zinc-200 space-y-0.5 animate-in fade-in-50 zoom-in-95 duration-100">
               <div className="px-2.5 py-1.5 border-b border-slate-100 dark:border-zinc-800 font-medium">
-                <span className="text-slate-400 block text-[10px] uppercase font-bold">Tài khoản</span>
+                <span className="text-slate-400 block text-[10px] uppercase font-bold">{t('account')}</span>
                 <span className="font-bold text-slate-900 dark:text-zinc-100">{displayName}</span>
               </div>
               <button
@@ -163,7 +163,7 @@ export const Header: React.FC = () => {
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer transition-colors text-left"
               >
                 <UserIcon className="w-3.5 h-3.5 text-slate-500" />
-                <span>Quản lý tài khoản</span>
+                <span>{t('manageAccount')}</span>
               </button>
               <button
                 type="button"
@@ -174,7 +174,7 @@ export const Header: React.FC = () => {
                 className="w-full flex items-center gap-2 px-2.5 py-1.5 rounded-lg text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 cursor-pointer font-semibold transition-colors text-left"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>Đăng xuất</span>
+                <span>{t('signOut')}</span>
               </button>
             </div>
           )}

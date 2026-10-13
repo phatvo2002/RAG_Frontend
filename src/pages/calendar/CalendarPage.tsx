@@ -10,19 +10,20 @@ import {
 } from 'lucide-react';
 
 export const CalendarPage: React.FC = () => {
-  const { showToast } = useApp();
-  const [currentMonth] = useState('Tháng 05, 2024');
+  const { showToast, language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
+  const [currentMonth] = useState(new Date(2024, 4, 1));
   const [selectedDay, setSelectedDay] = useState(16);
   const [isDayDetailsOpen, setIsDayDetailsOpen] = useState(false);
 
   const daysInMonth = Array.from({ length: 31 }, (_, i) => i + 1);
 
   const getEventsForDay = (day: number) => {
-    if (day === 14) return [{ title: 'Họp khởi động dự án CRM', type: 'meeting', time: '14:00' }];
-    if (day === 16) return [{ title: 'Phát triển module Lịch & Phòng họp', type: 'task', time: '09:00' }];
-    if (day === 20) return [{ title: 'Họp Ban giám đốc tuần 20', type: 'meeting', time: '09:00' }];
-    if (day === 22) return [{ title: 'Kiểm thử hiệu năng RAG', type: 'task', time: '10:00' }];
-    if (day === 25) return [{ title: 'Bàn giao Phase 2 Beta', type: 'milestone', time: '17:00' }];
+    if (day === 14) return [{ title: tr('CRM project kickoff', 'Họp khởi động dự án CRM'), type: 'meeting', time: '14:00' }];
+    if (day === 16) return [{ title: tr('Develop Calendar & Meeting Room module', 'Phát triển module Lịch & Phòng họp'), type: 'task', time: '09:00' }];
+    if (day === 20) return [{ title: tr('Executive meeting, week 20', 'Họp Ban giám đốc tuần 20'), type: 'meeting', time: '09:00' }];
+    if (day === 22) return [{ title: tr('RAG performance testing', 'Kiểm thử hiệu năng RAG'), type: 'task', time: '10:00' }];
+    if (day === 25) return [{ title: tr('Phase 2 Beta handover', 'Bàn giao Phase 2 Beta'), type: 'milestone', time: '17:00' }];
     return [];
   };
 
@@ -36,26 +37,26 @@ export const CalendarPage: React.FC = () => {
           {/* Page Title & Subtitle */}
           <div className="space-y-1">
             <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
-              Lịch & Phòng họp
+              {tr('Calendar & Meeting Rooms', 'Lịch & Phòng họp')}
             </h1>
             <p className="text-xs text-slate-500 dark:text-zinc-400">
-              Lịch làm việc tập trung, đặt phòng họp và đồng bộ lịch họp AI
+              {tr('Centralized work calendar, meeting rooms, and AI meeting sync', 'Lịch làm việc tập trung, đặt phòng họp và đồng bộ lịch họp AI')}
             </p>
           </div>
 
           {/* Month Navigator Controls */}
           <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-bold text-slate-900 dark:text-zinc-100">{currentMonth}</h2>
+              <h2 className="text-lg font-bold text-slate-900 dark:text-zinc-100">{new Intl.DateTimeFormat(language === 'vi' ? 'vi-VN' : 'en-US', { month: 'long', year: 'numeric' }).format(currentMonth)}</h2>
               <div className="flex items-center border border-slate-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900 p-0.5 shadow-2xs">
                 <button
-                  onClick={() => showToast('Tháng trước', 'info')}
+                  onClick={() => showToast(tr('Previous month', 'Tháng trước'), 'info')}
                   className="p-1.5 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 rounded cursor-pointer"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </button>
                 <button
-                  onClick={() => showToast('Tháng sau', 'info')}
+                  onClick={() => showToast(tr('Next month', 'Tháng sau'), 'info')}
                   className="p-1.5 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-600 dark:text-zinc-300 rounded cursor-pointer"
                 >
                   <ChevronRight className="w-4 h-4" />
@@ -65,11 +66,11 @@ export const CalendarPage: React.FC = () => {
 
             <div className="flex items-center gap-2">
               <button
-                onClick={() => showToast('Thêm sự kiện mới', 'info')}
+                onClick={() => showToast(tr('Add new event', 'Thêm sự kiện mới'), 'info')}
                 className="px-3.5 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-semibold flex items-center gap-1.5 shadow-2xs shadow-blue-500/20 transition-colors cursor-pointer"
               >
                 <Plus className="w-4 h-4" />
-                <span>Thêm sự kiện</span>
+                <span>{tr('Add event', 'Thêm sự kiện')}</span>
               </button>
             </div>
           </div>
@@ -77,13 +78,7 @@ export const CalendarPage: React.FC = () => {
           {/* Calendar Grid 7 days */}
           <div className="bg-white dark:bg-zinc-900 rounded-lg border border-slate-200/80 dark:border-zinc-800 shadow-2xs overflow-hidden transition-colors">
             <div className="grid grid-cols-7 border-b border-slate-100 dark:border-zinc-800 bg-slate-50/70 dark:bg-zinc-800/80 text-slate-500 dark:text-zinc-400 font-bold text-xs text-center py-3 uppercase tracking-wider text-[11px]">
-              <div>T2</div>
-              <div>T3</div>
-              <div>T4</div>
-              <div>T5</div>
-              <div>T6</div>
-              <div className="text-blue-600 dark:text-blue-400">T7</div>
-              <div className="text-rose-600 dark:text-rose-400">CN</div>
+              {(language === 'vi' ? ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'] : ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']).map((day, index) => <div key={day} className={index === 5 ? 'text-blue-600 dark:text-blue-400' : index === 6 ? 'text-rose-600 dark:text-rose-400' : undefined}>{day}</div>)}
             </div>
 
             <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-zinc-800/80">
@@ -147,14 +142,14 @@ export const CalendarPage: React.FC = () => {
         </div>
 
         {/* Right Event Detail Sidebar */}
-        {isDayDetailsOpen && <Modal isOpen={isDayDetailsOpen} onClose={() => setIsDayDetailsOpen(false)} title={`Lịch trình ngày ${selectedDay}/05`} maxWidth="md">
+        {isDayDetailsOpen && <Modal isOpen={isDayDetailsOpen} onClose={() => setIsDayDetailsOpen(false)} title={tr(`Schedule for May ${selectedDay}`, `Lịch trình ngày ${selectedDay}/05`)} maxWidth="md">
         <div className="max-h-[70vh] overflow-y-auto p-1">
         <div className="bg-white dark:bg-zinc-950 p-3 flex flex-col gap-5 select-none text-xs transition-colors">
           <div>
             <span className="text-[11px] font-bold text-slate-400 dark:text-zinc-500 uppercase tracking-wider block">
-              Sự kiện ngày {selectedDay} Tháng 05
+              {tr(`Events on May ${selectedDay}`, `Sự kiện ngày ${selectedDay} Tháng 05`)}
             </span>
-            <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-sm mt-1">Lịch trình & Việc cần làm</h3>
+            <h3 className="font-bold text-slate-900 dark:text-zinc-100 text-sm mt-1">{tr('Schedule & tasks', 'Lịch trình & Việc cần làm')}</h3>
           </div>
 
           <div className="space-y-3">
@@ -175,7 +170,7 @@ export const CalendarPage: React.FC = () => {
               ))
             ) : (
               <div className="py-8 text-center text-slate-400 dark:text-zinc-500 text-xs">
-                Không có sự kiện hoặc cuộc họp nào trong ngày này.
+                {tr('No events or meetings on this day.', 'Không có sự kiện hoặc cuộc họp nào trong ngày này.')}
               </div>
             )}
           </div>

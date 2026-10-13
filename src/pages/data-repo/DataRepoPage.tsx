@@ -72,7 +72,8 @@ const buildFolderTree = (folders: FolderItem[]): FolderTreeNode[] => {
 };
 
 export const DataRepoPage: React.FC = () => {
-  const { showToast, currentUser } = useApp();
+  const { showToast, currentUser, language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const [selectedFolder, setSelectedFolder] = useState('all');
   const [repositoryView, setRepositoryView] = useState<'folders' | 'documents'>('folders');
   const [search, setSearch] = useState('');
@@ -142,9 +143,9 @@ export const DataRepoPage: React.FC = () => {
       setSelectedFolder(folder.id);
       setRepositoryView('documents');
       setDetailFolderId(null);
-      showToast(`Đã tải ${file.name} lên máy chủ. Tài liệu đang được Index RAG.`, 'success');
+      showToast(tr(`Uploaded ${file.name}. RAG indexing is in progress.`, `Đã tải ${file.name} lên máy chủ. Tài liệu đang được Index RAG.`), 'success');
     },
-    [showToast]
+    [showToast, language]
   );
 
   const handleDeleteDocument = async () => {
@@ -152,10 +153,10 @@ export const DataRepoPage: React.FC = () => {
 
     try {
       await deleteDocumentMutation.mutateAsync(documentToDelete.documentId);
-      showToast(`Đã xóa tài liệu ${documentToDelete.originalFileName || documentToDelete.title}.`, 'success');
+      showToast(tr(`Deleted document ${documentToDelete.originalFileName || documentToDelete.title}.`, `Đã xóa tài liệu ${documentToDelete.originalFileName || documentToDelete.title}.`), 'success');
       setDocumentToDelete(null);
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Không thể xóa tài liệu.', 'error');
+      showToast(error instanceof Error ? error.message : tr('Could not delete document.', 'Không thể xóa tài liệu.'), 'error');
     }
   };
 
@@ -228,21 +229,21 @@ export const DataRepoPage: React.FC = () => {
         return (
           <span className="inline-flex items-center gap-1.5 text-xs text-emerald-600 dark:text-emerald-400 font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-            Đã lập chỉ mục
+            {tr('Indexed', 'Đã lập chỉ mục')}
           </span>
         );
       case 'processing':
         return (
           <span className="inline-flex items-center gap-1.5 text-xs text-amber-500 font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-            Đang xử lý
+            {tr('Processing', 'Đang xử lý')}
           </span>
         );
       case 'needs_check':
         return (
           <span className="inline-flex items-center gap-1.5 text-xs text-rose-500 font-medium">
             <span className="w-1.5 h-1.5 rounded-full bg-rose-500" />
-            Cần kiểm tra
+            {tr('Needs review', 'Cần kiểm tra')}
           </span>
         );
       default:
@@ -255,7 +256,7 @@ export const DataRepoPage: React.FC = () => {
       case 'Hạn chế':
         return (
           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
-            Hạn chế
+            {tr('Restricted', 'Hạn chế')}
           </span>
         );
       default:
@@ -281,7 +282,7 @@ export const DataRepoPage: React.FC = () => {
 
   const formatDocumentDate = (value: string) => {
     if (!value) return '—';
-    return new Date(value).toLocaleString('vi-VN');
+    return new Date(value).toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US');
   };
 
   return (
@@ -294,7 +295,7 @@ export const DataRepoPage: React.FC = () => {
       <div className="px-4 py-3 bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-4 flex-wrap shrink-0">
         <div className="space-y-0.5">
           <div className="flex items-center gap-2 text-[11px] text-slate-400 dark:text-zinc-500">
-            <span>Trang chủ</span>
+            <span>{tr('Home', 'Trang chủ')}</span>
             <ChevronRight className="w-3 h-3" />
             <button
               type="button"
@@ -304,7 +305,7 @@ export const DataRepoPage: React.FC = () => {
               }}
               className={`cursor-pointer hover:text-blue-600 transition-colors ${isFolderView ? 'text-slate-700 dark:text-zinc-300 font-semibold' : ''}`}
             >
-              Kho tri thức RAG
+              {tr('RAG Knowledge Base', 'Kho tri thức RAG')}
             </button>
             {!isFolderView && activeFolder && (
               <>
@@ -314,12 +315,12 @@ export const DataRepoPage: React.FC = () => {
             )}
           </div>
           <h1 className="text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
-            {isFolderView ? 'Kho tri thức RAG' : activeFolder?.name || 'Tất cả tài liệu'}
+            {isFolderView ? tr('RAG Knowledge Base', 'Kho tri thức RAG') : activeFolder?.name || tr('All documents', 'Tất cả tài liệu')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-zinc-400">
             {isFolderView
-              ? `${folders.length} thư mục • ${folders.reduce((total, folder) => total + (folder.documentCount || 0), 0)} tài liệu • ${folders.reduce((total, folder) => total + (folder.failedCount || 0), 0)} cần kiểm tra`
-              : `${activeFolder ? (documentResult?.totalCount ?? 0) : 0} tài liệu • Quản lý bởi ${activeFolder ? 'phòng ban' : 'Nexora'}`}
+              ? tr(`${folders.length} folders • ${folders.reduce((total, folder) => total + (folder.documentCount || 0), 0)} documents • ${folders.reduce((total, folder) => total + (folder.failedCount || 0), 0)} need review`, `${folders.length} thư mục • ${folders.reduce((total, folder) => total + (folder.documentCount || 0), 0)} tài liệu • ${folders.reduce((total, folder) => total + (folder.failedCount || 0), 0)} cần kiểm tra`)
+              : tr(`${activeFolder ? (documentResult?.totalCount ?? 0) : 0} documents • Managed by ${activeFolder ? 'department' : 'Nexora'}`, `${activeFolder ? (documentResult?.totalCount ?? 0) : 0} tài liệu • Quản lý bởi ${activeFolder ? 'phòng ban' : 'Nexora'}`)}
           </p>
         </div>
 
@@ -331,14 +332,14 @@ export const DataRepoPage: React.FC = () => {
             aria-expanded={isActivityOpen}
           >
             <Activity className="w-3.5 h-3.5" />
-            <span className="hidden sm:inline">Hoạt động</span>
+            <span className="hidden sm:inline">{tr('Activity', 'Hoạt động')}</span>
           </button>
           <button
             onClick={() => setIsFolderModalOpen(true)}
             className="px-3 py-1.5 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
           >
             <FolderPlus className="w-3.5 h-3.5" />
-            <span>Tạo thư mục</span>
+            <span>{tr('Create folder', 'Tạo thư mục')}</span>
           </button>
 
           <button
@@ -346,7 +347,7 @@ export const DataRepoPage: React.FC = () => {
             className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
           >
             <Upload className="w-3.5 h-3.5" />
-            <span>Tải tài liệu</span>
+            <span>{tr('Upload document', 'Tải tài liệu')}</span>
           </button>
         </div>
       </div>
@@ -359,10 +360,10 @@ export const DataRepoPage: React.FC = () => {
         {/* ==================================================================== */}
         <aside className="hidden w-52 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-3.5 dark:border-zinc-800 dark:bg-zinc-950 lg:flex 2xl:w-56 2xl:p-4">
           <div className="mb-3 flex items-center justify-between">
-            <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">Cây thư mục</span>
+            <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">{tr('Folder tree', 'Cây thư mục')}</span>
             <div className="flex items-center gap-1">
-              <button type="button" onClick={() => setIsFolderModalOpen(true)} className="btn btn-ghost btn-xs btn-square" title="Tạo folder"><Plus className="h-3.5 w-3.5" /></button>
-              <button type="button" onClick={() => refetchFolders()} className="btn btn-ghost btn-xs btn-square" title="Làm mới"><RefreshCw className={`h-3.5 w-3.5 ${isFoldersLoading ? 'animate-spin' : ''}`} /></button>
+              <button type="button" onClick={() => setIsFolderModalOpen(true)} className="btn btn-ghost btn-xs btn-square" title={tr('Create folder', 'Tạo folder')}><Plus className="h-3.5 w-3.5" /></button>
+              <button type="button" onClick={() => refetchFolders()} className="btn btn-ghost btn-xs btn-square" title={tr('Refresh', 'Làm mới')}><RefreshCw className={`h-3.5 w-3.5 ${isFoldersLoading ? 'animate-spin' : ''}`} /></button>
             </div>
           </div>
           <button
@@ -370,7 +371,7 @@ export const DataRepoPage: React.FC = () => {
             onClick={() => { setSelectedFolder('all'); setRepositoryView('folders'); setDetailFolderId(null); }}
             className={`mb-2 flex items-center gap-2 rounded-lg px-2 py-2 text-left text-xs ${selectedFolder === 'all' && isFolderView ? 'bg-blue-50 font-semibold text-blue-600 dark:bg-blue-950/50 dark:text-blue-400' : 'text-slate-600 hover:bg-slate-50 dark:text-zinc-400 dark:hover:bg-zinc-900'}`}
           >
-            <Folder className="h-4 w-4 text-blue-600" /> Tất cả folder
+            <Folder className="h-4 w-4 text-blue-600" /> {tr('All folders', 'Tất cả folder')}
             <span className="ml-auto font-mono text-[10px]">{folders.length}</span>
           </button>
           <div className="space-y-0.5">
@@ -383,8 +384,8 @@ export const DataRepoPage: React.FC = () => {
                         type="button"
                         onClick={() => toggleFolderExpanded(item.id)}
                         className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                        aria-label={`${collapsedFolderIds.has(item.id) ? 'Mở rộng' : 'Thu gọn'} folder ${item.name}`}
-                        title={collapsedFolderIds.has(item.id) ? 'Mở rộng folder' : 'Thu gọn folder'}
+                        aria-label={`${collapsedFolderIds.has(item.id) ? tr('Expand', 'Mở rộng') : tr('Collapse', 'Thu gọn')} ${tr('folder', 'folder')} ${item.name}`}
+                        title={collapsedFolderIds.has(item.id) ? tr('Expand folder', 'Mở rộng folder') : tr('Collapse folder', 'Thu gọn folder')}
                         aria-expanded={!collapsedFolderIds.has(item.id)}
                       >
                         {collapsedFolderIds.has(item.id) ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -406,7 +407,7 @@ export const DataRepoPage: React.FC = () => {
               );
               return renderNode(node, 0);
             })}
-            {!isFoldersLoading && folderTree.length === 0 && <p className="px-2 py-4 text-center text-[11px] text-slate-400">Chưa có folder</p>}
+            {!isFoldersLoading && folderTree.length === 0 && <p className="px-2 py-4 text-center text-[11px] text-slate-400">{tr('No folders yet', 'Chưa có folder')}</p>}
           </div>
         </aside>
 
@@ -427,7 +428,7 @@ export const DataRepoPage: React.FC = () => {
                 !isFolderView && selectedFolder === 'all' ? 'text-blue-600 dark:text-blue-400' : 'hover:text-slate-800 dark:hover:text-zinc-200'
               }`}
             >
-              Tất cả tài liệu
+              {tr('All documents', 'Tất cả tài liệu')}
               {!isFolderView && selectedFolder === 'all' && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />}
             </button>
             <button
@@ -440,7 +441,7 @@ export const DataRepoPage: React.FC = () => {
                 isFolderView ? 'text-blue-600 dark:text-blue-400' : 'hover:text-slate-800 dark:hover:text-zinc-200'
               }`}
             >
-              Theo thư mục
+              {tr('By folder', 'Theo thư mục')}
               {isFolderView && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />}
             </button>
             <button
@@ -453,7 +454,7 @@ export const DataRepoPage: React.FC = () => {
               className="relative -mb-px min-h-10 px-1 hover:text-slate-800 dark:hover:text-zinc-200 transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-              Cần xử lý
+              {tr('Needs attention', 'Cần xử lý')}
             </button>
             <button
               type="button"
@@ -464,18 +465,18 @@ export const DataRepoPage: React.FC = () => {
               className="relative -mb-px min-h-10 px-1 hover:text-slate-800 dark:hover:text-zinc-200 transition-colors cursor-pointer flex items-center gap-1.5"
             >
               <Star className="w-3.5 h-3.5 text-amber-500" />
-              Đã lưu
+              {tr('Saved', 'Đã lưu')}
             </button>
           </div>
           
           {/* Toolbar Filters matching 02/03-knowledge-repository.png */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="nexora-table-filters flex items-center justify-between gap-3 flex-wrap">
             <div className="flex flex-1 flex-wrap items-center gap-2 min-w-[240px]">
               <div className="relative min-w-[220px] flex-1">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder={isFolderView ? 'Tìm kiếm thư mục...' : 'Tìm tài liệu, nội dung hoặc người cập nhật...'}
+                  placeholder={isFolderView ? tr('Search folders...', 'Tìm kiếm thư mục...') : tr('Search documents, content, or editor...', 'Tìm tài liệu, nội dung hoặc người cập nhật...')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs"
@@ -487,7 +488,7 @@ export const DataRepoPage: React.FC = () => {
                 onChange={(e) => setTypeFilter(e.target.value)}
                 className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
               >
-                <option value="all">Loại tài liệu</option>
+                <option value="all">{tr('Document type', 'Loại tài liệu')}</option>
                 <option value="pdf">PDF</option>
                 <option value="docx">DOCX</option>
                 <option value="txt">TXT</option>
@@ -500,7 +501,7 @@ export const DataRepoPage: React.FC = () => {
                   onChange={(e) => setFolderDepartmentFilter(e.target.value)}
                   className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
                 >
-                  <option value="all">Phòng ban</option>
+                  <option value="all">{tr('Department', 'Phòng ban')}</option>
                   {departments.map((department) => (
                     <option key={department.id} value={department.id}>{department.name}</option>
                   ))}
@@ -511,7 +512,7 @@ export const DataRepoPage: React.FC = () => {
                   onChange={(e) => setDeptFilter(e.target.value)}
                   className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
                 >
-                  <option value="all">Phòng ban</option>
+                  <option value="all">{tr('Department', 'Phòng ban')}</option>
                   {departments.map((department) => (
                     <option key={department.id} value={department.id}>{department.name}</option>
                   ))}
@@ -523,19 +524,19 @@ export const DataRepoPage: React.FC = () => {
                 onChange={(e) => setIndexFilter(e.target.value)}
                 className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
               >
-                <option value="all">Trạng thái chỉ mục</option>
-                <option value="READY">Đã lập chỉ mục</option>
-                <option value="PROCESSING">Đang xử lý</option>
-                <option value="QUEUED">Đang chờ xử lý</option>
-                <option value="FAILED">Cần kiểm tra</option>
+                <option value="all">{tr('Index status', 'Trạng thái chỉ mục')}</option>
+                <option value="READY">{tr('Indexed', 'Đã lập chỉ mục')}</option>
+                <option value="PROCESSING">{tr('Processing', 'Đang xử lý')}</option>
+                <option value="QUEUED">{tr('Queued', 'Đang chờ xử lý')}</option>
+                <option value="FAILED">{tr('Needs review', 'Cần kiểm tra')}</option>
               </select>}
 
               {!isFolderView && <button
-                onClick={() => showToast('Mở bộ lọc nâng cao', 'info')}
+                onClick={() => showToast(tr('Open advanced filters', 'Mở bộ lọc nâng cao'), 'info')}
                 className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800 text-slate-700 dark:text-zinc-300 rounded-lg text-xs font-medium flex items-center gap-1.5 shadow-2xs cursor-pointer"
               >
                 <Filter className="w-3.5 h-3.5" />
-                <span>Bộ lọc</span>
+                <span>{tr('Filters', 'Bộ lọc')}</span>
               </button>}
             </div>
           </div>
@@ -544,60 +545,60 @@ export const DataRepoPage: React.FC = () => {
           {isFolderView ? (
           <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
             <div className="px-4 py-2.5 bg-slate-50/60 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
-              <span>{isFoldersLoading ? 'Đang tải folder...' : `Hiển thị 1–${filteredFolderRows.length} trong ${folders.length}`}</span>
+              <span>{isFoldersLoading ? tr('Loading folders...', 'Đang tải folder...') : tr(`Showing 1–${filteredFolderRows.length} of ${folders.length}`, `Hiển thị 1–${filteredFolderRows.length} trong ${folders.length}`)}</span>
               <button
                 type="button"
-                onClick={() => showToast('Chọn cột hiển thị thư mục', 'info')}
+                onClick={() => showToast(tr('Choose folder columns', 'Chọn cột hiển thị thư mục'), 'info')}
                 className="px-2.5 py-1.5 border border-slate-200 dark:border-zinc-800 rounded-md bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 flex items-center gap-1.5 hover:border-blue-400 transition-colors cursor-pointer"
               >
                 <Grid className="w-3.5 h-3.5" />
-                <span>Cột hiển thị</span>
+                <span>{tr('Columns', 'Cột hiển thị')}</span>
               </button>
             </div>
 
             <div className="overflow-x-auto">
-              <table className="w-full min-w-[760px] text-left text-xs border-collapse">
-                <thead className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
-                  <tr>
-                    <th className="w-10 px-4 py-3 text-center"><input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700" /></th>
-                    <th className="px-3 py-3">TÊN THƯ MỤC <span className="text-blue-600">↑</span></th>
-                    <th className="w-28 px-3 py-3">SỐ TÀI LIỆU</th>
-                    <th className="w-28 px-3 py-3">DUNG LƯỢNG</th>
-                    <th className="w-40 px-3 py-3">PHÒNG BAN</th>
-                    <th className="w-40 px-3 py-3">CẬP NHẬT GẦN NHẤT</th>
-                    <th className="min-w-52 px-3 py-3">TRẠNG THÁI TÀI LIỆU</th>
-                    <th className="w-10 px-4 py-3 text-right">THAO TÁC</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+              <CustomTable.Table className="w-full min-w-[760px] text-left text-xs border-collapse">
+                <CustomTable.Head className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
+                  <CustomTable.Row>
+                    <CustomTable.HeaderCell className="w-10 px-4 py-3 text-center"><input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700" /></CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('FOLDER NAME', 'TÊN THƯ MỤC')} <span className="text-blue-600">↑</span></CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="w-28 px-3 py-3">{tr('DOCUMENTS', 'SỐ TÀI LIỆU')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="w-28 px-3 py-3">{tr('SIZE', 'DUNG LƯỢNG')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="w-40 px-3 py-3">{tr('DEPARTMENT', 'PHÒNG BAN')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="w-40 px-3 py-3">{tr('LAST UPDATED', 'CẬP NHẬT GẦN NHẤT')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="min-w-52 px-3 py-3">{tr('DOCUMENT STATUS', 'TRẠNG THÁI TÀI LIỆU')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="nexora-table-action-cell px-4 py-3 text-right">{tr('ACTIONS', 'THAO TÁC')}</CustomTable.HeaderCell>
+                  </CustomTable.Row>
+                </CustomTable.Head>
+                <CustomTable.Body className="divide-y divide-slate-100 dark:divide-zinc-800/80">
                   {isFoldersError ? (
-                    <tr>
-                      <td colSpan={8} className="py-10 text-center text-rose-600 dark:text-rose-400">
-                        <div className="mb-2 flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> Không thể tải danh sách folder.</div>
-                        <p className="mb-3 text-[11px] text-slate-400">{(foldersError as Error)?.message || 'Vui lòng kiểm tra kết nối API.'}</p>
-                        <button type="button" onClick={() => refetchFolders()} className="btn btn-xs btn-outline">Thử lại</button>
-                      </td>
-                    </tr>
+                    <CustomTable.Row>
+                      <CustomTable.Cell colSpan={8} className="py-10 text-center text-rose-600 dark:text-rose-400">
+                        <div className="mb-2 flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> {tr('Could not load folders.', 'Không thể tải danh sách folder.')}</div>
+                        <p className="mb-3 text-[11px] text-slate-400">{(foldersError as Error)?.message || tr('Check the API connection.', 'Vui lòng kiểm tra kết nối API.')}</p>
+                        <button type="button" onClick={() => refetchFolders()} className="btn btn-xs btn-outline">{tr('Retry', 'Thử lại')}</button>
+                      </CustomTable.Cell>
+                    </CustomTable.Row>
                   ) : isFoldersLoading ? (
-                    <tr><td colSpan={8} className="py-10 text-center text-slate-400"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin text-blue-500" />Đang tải danh sách folder...</td></tr>
+                    <CustomTable.Row><CustomTable.Cell colSpan={8} className="py-10 text-center text-slate-400"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin text-blue-500" />{tr('Loading folders...', 'Đang tải danh sách folder...')}</CustomTable.Cell></CustomTable.Row>
                   ) : filteredFolderRows.length === 0 ? (
-                    <tr><td colSpan={8} className="py-10 text-center text-slate-400">Không tìm thấy folder phù hợp.</td></tr>
+                    <CustomTable.Row><CustomTable.Cell colSpan={8} className="py-10 text-center text-slate-400">{tr('No matching folders found.', 'Không tìm thấy folder phù hợp.')}</CustomTable.Cell></CustomTable.Row>
                   ) : filteredFolderRows.map(({ folder, depth, hasChildren }) => (
-                    <tr
+                    <CustomTable.Row
                       key={folder.id}
                       onClick={() => openFolder(folder.id)}
                       className={`cursor-pointer transition-colors hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 ${selectedFolder === folder.id ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''}`}
                     >
-                      <td className="px-4 py-3 text-center"><input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" /></td>
-                      <td className="px-3 py-3">
+                      <CustomTable.Cell className="px-4 py-3 text-center"><input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" /></CustomTable.Cell>
+                      <CustomTable.Cell className="px-3 py-3">
                         <div className="flex items-center gap-1.5" style={{ paddingLeft: `${depth * 24}px` }}>
                           {hasChildren ? (
                             <button
                               type="button"
                               onClick={(event) => { event.stopPropagation(); toggleFolderExpanded(folder.id); }}
                               className="flex h-5 w-5 shrink-0 items-center justify-center rounded text-slate-400 hover:bg-slate-100 hover:text-slate-700 dark:hover:bg-zinc-800 dark:hover:text-zinc-200"
-                              aria-label={`${collapsedFolderIds.has(folder.id) ? 'Mở rộng' : 'Thu gọn'} folder ${folder.name}`}
-                              title={collapsedFolderIds.has(folder.id) ? 'Mở rộng folder' : 'Thu gọn folder'}
+                              aria-label={`${collapsedFolderIds.has(folder.id) ? tr('Expand', 'Mở rộng') : tr('Collapse', 'Thu gọn')} ${tr('folder', 'folder')} ${folder.name}`}
+                              title={collapsedFolderIds.has(folder.id) ? tr('Expand folder', 'Mở rộng folder') : tr('Collapse folder', 'Thu gọn folder')}
                               aria-expanded={!collapsedFolderIds.has(folder.id)}
                             >
                               {collapsedFolderIds.has(folder.id) ? <ChevronRight className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
@@ -614,42 +615,42 @@ export const DataRepoPage: React.FC = () => {
                             <span>{folder.name}</span>
                           </button>
                         </div>
-                      </td>
-                      <td className="px-3 py-3 text-slate-600 dark:text-zinc-400 font-medium">{folder.documentCount}</td>
-                      <td className="px-3 py-3 whitespace-nowrap text-slate-600 dark:text-zinc-400">{formatFolderSize(folder.totalSizeBytes || 0)}</td>
-                      <td className="px-3 py-3 text-slate-700 dark:text-zinc-300">{folder.departmentName}</td>
-                      <td className="px-3 py-3 whitespace-nowrap text-slate-500 dark:text-zinc-400 text-[11px]">{formatDocumentDate(folder.latestUpdatedAt)}</td>
-                      <td className="px-3 py-3">
+                      </CustomTable.Cell>
+                      <CustomTable.Cell className="px-3 py-3 text-slate-600 dark:text-zinc-400 font-medium">{folder.documentCount}</CustomTable.Cell>
+                      <CustomTable.Cell className="px-3 py-3 whitespace-nowrap text-slate-600 dark:text-zinc-400">{formatFolderSize(folder.totalSizeBytes || 0)}</CustomTable.Cell>
+                      <CustomTable.Cell className="px-3 py-3 text-slate-700 dark:text-zinc-300">{folder.departmentName}</CustomTable.Cell>
+                      <CustomTable.Cell className="px-3 py-3 whitespace-nowrap text-slate-500 dark:text-zinc-400 text-[11px]">{formatDocumentDate(folder.latestUpdatedAt)}</CustomTable.Cell>
+                      <CustomTable.Cell className="px-3 py-3">
                         {folder.documentCount === 0 ? (
-                          <span className="text-slate-400 dark:text-zinc-500">Chưa có tài liệu</span>
+                          <span className="text-slate-400 dark:text-zinc-500">{tr('No documents', 'Chưa có tài liệu')}</span>
                         ) : (
                           <div className="flex flex-wrap gap-1.5">
-                            {(folder.indexedCount ?? 0) > 0 && <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">{folder.indexedCount} đã lập chỉ mục</span>}
-                            {(folder.processingCount ?? 0) > 0 && <span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">{folder.processingCount} đang xử lý</span>}
-                            {(folder.failedCount ?? 0) > 0 && <span className="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-400">{folder.failedCount} cần kiểm tra</span>}
+                            {(folder.indexedCount ?? 0) > 0 && <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-medium text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-400">{folder.indexedCount} {tr('indexed', 'đã lập chỉ mục')}</span>}
+                            {(folder.processingCount ?? 0) > 0 && <span className="rounded-full bg-amber-50 px-2 py-1 text-[10px] font-medium text-amber-700 dark:bg-amber-950/50 dark:text-amber-400">{folder.processingCount} {tr('processing', 'đang xử lý')}</span>}
+                            {(folder.failedCount ?? 0) > 0 && <span className="rounded-full bg-rose-50 px-2 py-1 text-[10px] font-medium text-rose-700 dark:bg-rose-950/50 dark:text-rose-400">{folder.failedCount} {tr('need review', 'cần kiểm tra')}</span>}
                           </div>
                         )}
-                      </td>
-                      <td className="px-4 py-3 text-right">
+                      </CustomTable.Cell>
+                      <CustomTable.Cell className="nexora-table-action-cell px-4 py-3 text-right">
                         <TableRowActions
                           items={[
                             {
-                              label: 'Xem chi tiết',
+                              label: tr('View details', 'Xem chi tiết'),
                               icon: <Eye className="h-3.5 w-3.5" />,
                               onClick: () => setDetailFolderId(folder.id),
                             },
                           ]}
                         />
-                      </td>
-                    </tr>
+                      </CustomTable.Cell>
+                    </CustomTable.Row>
                   ))}
-                </tbody>
-              </table>
+                </CustomTable.Body>
+              </CustomTable.Table>
             </div>
 
-            <div className="px-4 py-3 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-              <span>{isFoldersLoading ? 'Đang tải folder...' : `Hiển thị 1–${filteredFolderRows.length} trong ${folders.length}`}</span>
-              <div className="flex items-center gap-2"><span>Số dòng mỗi trang</span><span className="px-2 py-1 border border-slate-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900">25⌄</span><button className="p-1 border border-slate-200 dark:border-zinc-800 rounded opacity-40" disabled><ChevronLeft className="w-3.5 h-3.5" /></button><span className="px-2 py-1 rounded bg-blue-600 text-white">1</span><button className="p-1 border border-slate-200 dark:border-zinc-800 rounded"><ChevronRight className="w-3.5 h-3.5" /></button></div>
+            <div className="nexora-table-footer px-4 py-3 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
+              <span>{isFoldersLoading ? tr('Loading folders...', 'Đang tải folder...') : tr(`Showing 1–${filteredFolderRows.length} of ${folders.length}`, `Hiển thị 1–${filteredFolderRows.length} trong ${folders.length}`)}</span>
+              <div className="flex items-center gap-2"><span>{tr('Rows per page', 'Số dòng mỗi trang')}</span><span className="px-2 py-1 border border-slate-200 dark:border-zinc-800 rounded bg-white dark:bg-zinc-900">25⌄</span><button className="p-1 border border-slate-200 dark:border-zinc-800 rounded opacity-40" disabled><ChevronLeft className="w-3.5 h-3.5" /></button><span className="px-2 py-1 rounded bg-blue-600 text-white">1</span><button className="p-1 border border-slate-200 dark:border-zinc-800 rounded"><ChevronRight className="w-3.5 h-3.5" /></button></div>
             </div>
           </CustomTable>
           ) : (
@@ -658,8 +659,8 @@ export const DataRepoPage: React.FC = () => {
             {/* Table Header Info Row */}
             <div className="px-4 py-2.5 bg-slate-50/60 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
               <span>
-                {isDocumentsLoading ? 'Đang tải tài liệu...' : `Hiển thị ${documentStart}–${documentEnd} trong ${documentResult?.totalCount ?? 0}`}
-                {isDocumentsFetching && !isDocumentsLoading ? ' · Đang cập nhật...' : ''}
+                {isDocumentsLoading ? tr('Loading documents...', 'Đang tải tài liệu...') : tr(`Showing ${documentStart}–${documentEnd} of ${documentResult?.totalCount ?? 0}`, `Hiển thị ${documentStart}–${documentEnd} trong ${documentResult?.totalCount ?? 0}`)}
+                {isDocumentsFetching && !isDocumentsLoading ? tr(' · Updating...', ' · Đang cập nhật...') : ''}
               </span>
               <div className="flex items-center gap-1">
                 <button
@@ -683,86 +684,86 @@ export const DataRepoPage: React.FC = () => {
 
             {/* Main Table */}
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
-                  <tr>
-                    <th className="w-10 px-4 py-3 text-center">
+              <CustomTable.Table className="w-full text-left text-xs border-collapse">
+                <CustomTable.Head className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
+                  <CustomTable.Row>
+                    <CustomTable.HeaderCell className="w-10 px-4 py-3 text-center">
                       <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700" />
-                    </th>
-                    <th className="px-3 py-3">TÊN TÀI LIỆU</th>
-                    <th className="px-3 py-3">THƯ MỤC</th>
-                    <th className="px-3 py-3">PHÒNG BAN</th>
-                    <th className="px-3 py-3">KÍCH THƯỚC</th>
-                    <th className="px-3 py-3">CẬP NHẬT ⇣</th>
-                    <th className="px-3 py-3">CHỈ MỤC</th>
-                    <th className="px-3 py-3">QUYỀN TRUY CẬP</th>
-                    <th className="w-10 px-4 py-3 text-right"></th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+                    </CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('DOCUMENT NAME', 'TÊN TÀI LIỆU')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('FOLDER', 'THƯ MỤC')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('DEPARTMENT', 'PHÒNG BAN')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('SIZE', 'KÍCH THƯỚC')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('UPDATED ⇣', 'CẬP NHẬT ⇣')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('INDEX', 'CHỈ MỤC')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('ACCESS', 'QUYỀN TRUY CẬP')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="w-10 px-4 py-3 text-right"></CustomTable.HeaderCell>
+                  </CustomTable.Row>
+                </CustomTable.Head>
+                <CustomTable.Body className="divide-y divide-slate-100 dark:divide-zinc-800/80">
                   {isDocumentsError ? (
-                    <tr>
-                      <td colSpan={9} className="py-10 text-center text-rose-600 dark:text-rose-400">
-                        <div className="mb-2 flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> Không thể tải danh sách tài liệu.</div>
-                        <p className="mb-3 text-[11px] text-slate-400">{(documentsError as Error)?.message || 'Vui lòng kiểm tra kết nối API.'}</p>
-                        <button type="button" onClick={() => refetchDocuments()} className="btn btn-xs btn-outline">Thử lại</button>
-                      </td>
-                    </tr>
+                    <CustomTable.Row>
+                      <CustomTable.Cell colSpan={9} className="py-10 text-center text-rose-600 dark:text-rose-400">
+                        <div className="mb-2 flex items-center justify-center gap-2"><AlertCircle className="h-4 w-4" /> {tr('Could not load documents.', 'Không thể tải danh sách tài liệu.')}</div>
+                        <p className="mb-3 text-[11px] text-slate-400">{(documentsError as Error)?.message || tr('Check the API connection.', 'Vui lòng kiểm tra kết nối API.')}</p>
+                        <button type="button" onClick={() => refetchDocuments()} className="btn btn-xs btn-outline">{tr('Retry', 'Thử lại')}</button>
+                      </CustomTable.Cell>
+                    </CustomTable.Row>
                   ) : isDocumentsLoading ? (
-                    <tr><td colSpan={9} className="py-10 text-center text-slate-400"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin text-blue-500" />Đang tải danh sách tài liệu...</td></tr>
+                    <CustomTable.Row><CustomTable.Cell colSpan={9} className="py-10 text-center text-slate-400"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin text-blue-500" />{tr('Loading documents...', 'Đang tải danh sách tài liệu...')}</CustomTable.Cell></CustomTable.Row>
                   ) : !activeFolder ? (
-                    <tr><td colSpan={9} className="py-10 text-center text-slate-400">Hãy chọn một folder để xem tài liệu.</td></tr>
+                    <CustomTable.Row><CustomTable.Cell colSpan={9} className="py-10 text-center text-slate-400">{tr('Select a folder to view documents.', 'Hãy chọn một folder để xem tài liệu.')}</CustomTable.Cell></CustomTable.Row>
                   ) : documentItems.length === 0 ? (
-                    <tr><td colSpan={9} className="py-10 text-center text-slate-400">Folder này chưa có tài liệu phù hợp.</td></tr>
+                    <CustomTable.Row><CustomTable.Cell colSpan={9} className="py-10 text-center text-slate-400">{tr('No matching documents in this folder.', 'Folder này chưa có tài liệu phù hợp.')}</CustomTable.Cell></CustomTable.Row>
                   ) : documentItems.map((doc) => {
                     const documentName = doc.originalFileName || doc.title;
                     const extension = documentName.split('.').pop()?.toLowerCase() || '';
                     const departmentName = departments.find((department) => department.id === doc.departmentId)?.name || '—';
                     return (
-                      <tr key={doc.documentId} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
-                        <td className="px-4 py-3 text-center">
+                      <CustomTable.Row key={doc.documentId} className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors">
+                        <CustomTable.Cell className="px-4 py-3 text-center">
                           <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" />
-                        </td>
-                        <td className="px-3 py-3 font-semibold text-slate-900 dark:text-zinc-100">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 font-semibold text-slate-900 dark:text-zinc-100">
                           <div className="flex items-center gap-2.5">
                             {getDocTypeBadge(extension)}
                             <span
-                              onClick={() => showToast(`Xem tài liệu ${documentName}`, 'info')}
+                              onClick={() => showToast(tr(`View document ${documentName}`, `Xem tài liệu ${documentName}`), 'info')}
                               className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors truncate max-w-[220px]"
                             >
                               {documentName}
                             </span>
                           </div>
-                        </td>
-                        <td className="px-3 py-3 text-slate-600 dark:text-zinc-400">{doc.folderName}</td>
-                        <td className="px-3 py-3 text-slate-700 dark:text-zinc-300 font-medium">{departmentName}</td>
-                        <td className="px-3 py-3 font-mono text-slate-500 text-[11px]">{formatDocumentSize(doc.sizeBytes)}</td>
-                        <td className="px-3 py-3 font-mono text-slate-500 text-[11px]">{formatDocumentDate(doc.updatedAt)}</td>
-                        <td className="px-3 py-3">{getIndexStatusBadge(doc.processingStatus)}</td>
-                        <td className="px-3 py-3 text-slate-400 dark:text-zinc-500">—</td>
-                        <td className="px-4 py-3 text-right">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 text-slate-600 dark:text-zinc-400">{doc.folderName}</CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 text-slate-700 dark:text-zinc-300 font-medium">{departmentName}</CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 font-mono text-slate-500 text-[11px]">{formatDocumentSize(doc.sizeBytes)}</CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 font-mono text-slate-500 text-[11px]">{formatDocumentDate(doc.updatedAt)}</CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">{getIndexStatusBadge(doc.processingStatus)}</CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 text-slate-400 dark:text-zinc-500">—</CustomTable.Cell>
+                        <CustomTable.Cell className="px-4 py-3 text-right">
                           <button
                             type="button"
                             onClick={() => setDocumentToDelete(doc)}
                             disabled={deleteDocumentMutation.isPending}
-                            aria-label={`Xóa tài liệu ${documentName}`}
-                            title="Xóa tài liệu"
+                            aria-label={tr(`Delete document ${documentName}`, `Xóa tài liệu ${documentName}`)}
+                            title={tr('Delete document', 'Xóa tài liệu')}
                             className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded cursor-pointer disabled:opacity-50"
                           >
                             <Trash2 className="w-4 h-4" />
                           </button>
-                        </td>
-                      </tr>
+                        </CustomTable.Cell>
+                      </CustomTable.Row>
                     );
                   })}
-                </tbody>
-              </table>
+                </CustomTable.Body>
+              </CustomTable.Table>
             </div>
 
             {/* Pagination Footer */}
-            <div className="px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
+            <div className="nexora-table-footer px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
               <div className="flex items-center gap-2">
-                <span>Số dòng mỗi trang</span>
+                <span>{tr('Rows per page', 'Số dòng mỗi trang')}</span>
                 <select
                   value={documentPageSize}
                   onChange={(event) => setDocumentPageSize(Number(event.target.value))}
@@ -808,7 +809,7 @@ export const DataRepoPage: React.FC = () => {
           
           {/* Header */}
           <div className="flex items-center justify-between">
-            <h3 className="font-bold text-xs text-slate-800 dark:text-zinc-200">Sức khỏe kho tri thức</h3>
+            <h3 className="font-bold text-xs text-slate-800 dark:text-zinc-200">{tr('Knowledge base health', 'Sức khỏe kho tri thức')}</h3>
             <span className="text-slate-400">⌃</span>
           </div>
 
@@ -817,7 +818,7 @@ export const DataRepoPage: React.FC = () => {
             {/* Storage Progress */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
-                <span>Dung lượng lưu trữ</span>
+                <span>{tr('Storage used', 'Dung lượng lưu trữ')}</span>
                 <span className="font-bold text-slate-800 dark:text-zinc-200">43%</span>
               </div>
               <p className="font-mono text-[11px] text-slate-400">215.6 GB / 500 GB</p>
@@ -829,7 +830,7 @@ export const DataRepoPage: React.FC = () => {
             {/* Indexed Progress */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
-                <span>Tài liệu đã lập chỉ mục</span>
+                <span>{tr('Indexed documents', 'Tài liệu đã lập chỉ mục')}</span>
                 <span className="font-bold text-emerald-600 dark:text-emerald-400">85%</span>
               </div>
               <p className="font-mono text-[11px] text-slate-400">1.062 / 1.248</p>
@@ -841,7 +842,7 @@ export const DataRepoPage: React.FC = () => {
             {/* Error Progress */}
             <div className="space-y-1.5">
               <div className="flex items-center justify-between text-slate-600 dark:text-zinc-400">
-                <span>Tài liệu lỗi chỉ mục</span>
+                <span>{tr('Indexing errors', 'Tài liệu lỗi chỉ mục')}</span>
                 <span className="font-bold text-rose-500">1%</span>
               </div>
               <p className="font-mono text-[11px] text-slate-400">12</p>
@@ -854,15 +855,15 @@ export const DataRepoPage: React.FC = () => {
           {/* Kết nối nguồn dữ liệu */}
           <div className="pt-2 border-t border-slate-100 dark:border-zinc-800/80 space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800 dark:text-zinc-200">Kết nối nguồn dữ liệu</span>
+              <span className="font-bold text-slate-800 dark:text-zinc-200">{tr('Data source connections', 'Kết nối nguồn dữ liệu')}</span>
               <button
-                onClick={() => showToast('Mở chi tiết kết nối dữ liệu', 'info')}
+                onClick={() => showToast(tr('Open data connection details', 'Mở chi tiết kết nối dữ liệu'), 'info')}
                 className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
-                Xem chi tiết
+                {tr('View details', 'Xem chi tiết')}
               </button>
             </div>
-            <p className="text-[11px] text-slate-500">5 / 6 kết nối hoạt động</p>
+            <p className="text-[11px] text-slate-500">{tr('5 / 6 connections active', '5 / 6 kết nối hoạt động')}</p>
             
             {/* Cloud Storage Source Icons */}
             <div className="flex items-center gap-2 pt-1">
@@ -882,7 +883,7 @@ export const DataRepoPage: React.FC = () => {
                 O
               </div>
               <button
-                onClick={() => showToast('Thêm kết nối kho lưu trữ đám mây', 'info')}
+                onClick={() => showToast(tr('Add a cloud storage connection', 'Thêm kết nối kho lưu trữ đám mây'), 'info')}
                 className="w-7 h-7 rounded-lg border border-dashed border-slate-300 dark:border-zinc-700 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer"
               >
                 <Plus className="w-3.5 h-3.5" />
@@ -893,12 +894,12 @@ export const DataRepoPage: React.FC = () => {
           {/* Tải lên gần đây */}
           <div className="pt-2 border-t border-slate-100 dark:border-zinc-800/80 space-y-2.5">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800 dark:text-zinc-200">Tải lên gần đây</span>
+              <span className="font-bold text-slate-800 dark:text-zinc-200">{tr('Recent uploads', 'Tải lên gần đây')}</span>
               <button
-                onClick={() => showToast('Mở toàn bộ tài liệu gần đây', 'info')}
+                onClick={() => showToast(tr('Open all recent documents', 'Mở toàn bộ tài liệu gần đây'), 'info')}
                 className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
-                Xem tất cả
+                {tr('View all', 'Xem tất cả')}
               </button>
             </div>
 
@@ -931,14 +932,14 @@ export const DataRepoPage: React.FC = () => {
 
           {/* Kiểm tra lỗi chỉ mục CTA */}
           <div className="pt-2 border-t border-slate-100 dark:border-zinc-800/80 space-y-2">
-            <span className="font-bold text-slate-800 dark:text-zinc-200 block">Kiểm tra lỗi chỉ mục</span>
-            <p className="text-[11px] text-slate-500">Phát hiện và đề xuất cách khắc phục lỗi chỉ mục.</p>
+            <span className="font-bold text-slate-800 dark:text-zinc-200 block">{tr('Check indexing errors', 'Kiểm tra lỗi chỉ mục')}</span>
+            <p className="text-[11px] text-slate-500">{tr('Detect indexing errors and suggest fixes.', 'Phát hiện và đề xuất cách khắc phục lỗi chỉ mục.')}</p>
             <button
-              onClick={() => showToast('Bắt đầu quét & kiểm tra lỗi chỉ mục Vector DB', 'success')}
+              onClick={() => showToast(tr('Scanning Vector DB indexing errors', 'Bắt đầu quét & kiểm tra lỗi chỉ mục Vector DB'), 'success')}
               className="w-full py-2 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-200 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
             >
               <ShieldCheck className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Kiểm tra ngay</span>
+              <span>{tr('Check now', 'Kiểm tra ngay')}</span>
             </button>
           </div>
 
@@ -947,12 +948,12 @@ export const DataRepoPage: React.FC = () => {
         {/* ==================================================================== */}
         {/* 4. RIGHT COLUMN: Hoạt động matching 02/03-knowledge-repository.png */}
         {/* ==================================================================== */}
-        {isActivityOpen && <Modal isOpen={isActivityOpen} onClose={() => setIsActivityOpen(false)} title="Hoạt động" maxWidth="lg">
+        {isActivityOpen && <Modal isOpen={isActivityOpen} onClose={() => setIsActivityOpen(false)} title={tr('Activity', 'Hoạt động')} maxWidth="lg">
           <div className="flex max-h-[72vh] flex-col space-y-4 overflow-y-auto p-1 text-xs">
 
           <div className="flex items-center gap-6 border-b border-slate-200 dark:border-zinc-800 text-xs font-semibold">
             <button type="button" onClick={() => setActivityTab('issues')} className={`relative -mb-px min-h-9 cursor-pointer ${activityTab === 'issues' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200'}`}>
-              Vấn đề lập chỉ mục
+              {tr('Indexing issues', 'Vấn đề lập chỉ mục')}
               {activityTab === 'issues' && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />}
             </button>
             <button
@@ -960,7 +961,7 @@ export const DataRepoPage: React.FC = () => {
               onClick={() => setActivityTab('recent')}
               className={`relative -mb-px min-h-9 cursor-pointer ${activityTab === 'recent' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200'}`}
             >
-              Tải lên gần đây
+              {tr('Recent uploads', 'Tải lên gần đây')}
               {activityTab === 'recent' && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />}
             </button>
           </div>
@@ -1001,19 +1002,19 @@ export const DataRepoPage: React.FC = () => {
                   </div>
                 );
               })}
-              {documentItems.length === 0 && <p className="py-3 text-slate-400">Chưa có tài liệu gần đây trong folder hiện tại.</p>}
+              {documentItems.length === 0 && <p className="py-3 text-slate-400">{tr('No recent documents in this folder.', 'Chưa có tài liệu gần đây trong folder hiện tại.')}</p>}
             </div>
           )}
 
           {activityTab === 'issues' && <div className="pt-2 border-t border-slate-200 dark:border-zinc-800 space-y-2">
             <div className="flex items-center justify-between">
-              <h4 className="font-bold text-sm text-slate-900 dark:text-zinc-100">Tải lên gần đây</h4>
+              <h4 className="font-bold text-sm text-slate-900 dark:text-zinc-100">{tr('Recent uploads', 'Tải lên gần đây')}</h4>
               <button
                 type="button"
-                onClick={() => showToast('Mở toàn bộ tài liệu gần đây', 'info')}
+                onClick={() => showToast(tr('Open all recent documents', 'Mở toàn bộ tài liệu gần đây'), 'info')}
                 className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
-                Xem tất cả
+                {tr('View all', 'Xem tất cả')}
               </button>
             </div>
             <div className="space-y-2">
@@ -1029,16 +1030,16 @@ export const DataRepoPage: React.FC = () => {
                 </div>
                 );
               })}
-              {documentItems.length === 0 && <p className="py-3 text-xs text-slate-400">Chưa có tài liệu trong folder hiện tại.</p>}
+              {documentItems.length === 0 && <p className="py-3 text-xs text-slate-400">{tr('No documents in this folder.', 'Chưa có tài liệu trong folder hiện tại.')}</p>}
             </div>
           </div>}
 
           {activityTab === 'issues' && <button
             type="button"
-            onClick={() => showToast('Mở toàn bộ hoạt động kho tri thức', 'info')}
+            onClick={() => showToast(tr('Open all knowledge base activity', 'Mở toàn bộ hoạt động kho tri thức'), 'info')}
             className="pt-2 text-left text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
           >
-            Xem tất cả hoạt động <span className="ml-1">→</span>
+            {tr('View all activity', 'Xem tất cả hoạt động')} <span className="ml-1">→</span>
           </button>}
           </div>
         </Modal>}
@@ -1079,11 +1080,11 @@ export const DataRepoPage: React.FC = () => {
         onClose={() => setDocumentToDelete(null)}
         onConfirm={handleDeleteDocument}
         isLoading={deleteDocumentMutation.isPending}
-        title="Xóa tài liệu"
+        title={tr('Delete document', 'Xóa tài liệu')}
         message={documentToDelete
-          ? `Bạn có chắc muốn xóa "${documentToDelete.originalFileName || documentToDelete.title}"? File gốc, nội dung các đoạn và vector RAG sẽ bị xóa.`
+          ? tr(`Delete "${documentToDelete.originalFileName || documentToDelete.title}"? The source file, content chunks, and RAG vectors will be removed.`, `Bạn có chắc muốn xóa "${documentToDelete.originalFileName || documentToDelete.title}"? File gốc, nội dung các đoạn và vector RAG sẽ bị xóa.`)
           : ''}
-        confirmText="Xóa tài liệu"
+        confirmText={tr('Delete document', 'Xóa tài liệu')}
       />
     </div>
   );

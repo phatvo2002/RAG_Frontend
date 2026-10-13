@@ -1,6 +1,7 @@
 import React from 'react';
 import { Modal } from './index';
 import { AlertTriangle, Trash2, Info, CheckCircle } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 export interface ConfirmModalProps {
   isOpen: boolean;
@@ -18,13 +19,15 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   isOpen,
   onClose,
   onConfirm,
-  title = 'Xác nhận hành động',
+  title,
   message,
-  confirmText = 'Xác nhận',
-  cancelText = 'Hủy',
+  confirmText,
+  cancelText,
   type = 'danger',
   isLoading = false,
 }) => {
+  const { i18n } = useTranslation();
+  const vi = i18n.language.startsWith('vi');
   if (!isOpen) return null;
 
   const typeConfig = {
@@ -53,7 +56,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
   const IconComponent = typeConfig.icon;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={title} maxWidth="md">
+    <Modal isOpen={isOpen} onClose={onClose} title={title ?? (vi ? 'Xác nhận hành động' : 'Confirm action')} maxWidth="md">
       <div className="space-y-4 text-xs">
         <div className="flex items-start gap-3.5 pt-1">
           <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${typeConfig.iconBg}`}>
@@ -71,7 +74,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             disabled={isLoading}
             className="btn btn-sm btn-ghost text-slate-700 dark:text-zinc-300 font-medium cursor-pointer"
           >
-            {cancelText}
+            {cancelText ?? (vi ? 'Hủy' : 'Cancel')}
           </button>
           <button
             type="button"
@@ -80,7 +83,7 @@ export const ConfirmModal: React.FC<ConfirmModalProps> = ({
             className={`btn btn-sm ${typeConfig.btnClass} font-semibold shadow-xs cursor-pointer gap-1.5`}
           >
             {isLoading && <span className="loading loading-spinner loading-xs" />}
-            <span>{confirmText}</span>
+            <span>{confirmText ?? (vi ? 'Xác nhận' : 'Confirm')}</span>
           </button>
         </div>
       </div>

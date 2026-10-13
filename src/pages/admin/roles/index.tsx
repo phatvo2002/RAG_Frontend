@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
-import { useTranslation } from 'react-i18next';
 import {
   useRolesQuery,
   useDeactivateRoleMutation,
@@ -42,8 +41,8 @@ interface EnrichedRole {
 }
 
 export const RolesPage: React.FC = () => {
-  const { showToast } = useApp();
-  const { t } = useTranslation(['admin', 'common', 'table']);
+  const { showToast, language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
 
   // Modal State
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
@@ -87,10 +86,10 @@ export const RolesPage: React.FC = () => {
     if (isInactive) {
       reactivateMutation.mutate(role.id, {
         onSuccess: () => {
-          showToast(`Đã kích hoạt lại vai trò "${role.name || role.role}" thành công!`, 'success');
+          showToast(tr(`Role "${role.name || role.role}" reactivated.`, `Đã kích hoạt lại vai trò "${role.name || role.role}" thành công!`), 'success');
         },
         onError: (err: any) => {
-          showToast(err.message || 'Không thể kích hoạt vai trò', 'error');
+          showToast(err.message || tr('Could not reactivate role', 'Không thể kích hoạt vai trò'), 'error');
         },
       });
     } else {
@@ -102,11 +101,11 @@ export const RolesPage: React.FC = () => {
     if (!roleToToggle) return;
     deactivateMutation.mutate(roleToToggle.id, {
       onSuccess: () => {
-        showToast(`Đã vô hiệu hóa vai trò "${roleToToggle.name || roleToToggle.role}" thành công!`, 'info');
+        showToast(tr(`Role "${roleToToggle.name || roleToToggle.role}" deactivated.`, `Đã vô hiệu hóa vai trò "${roleToToggle.name || roleToToggle.role}" thành công!`), 'info');
         setRoleToToggle(null);
       },
       onError: (err: any) => {
-        showToast(err.message || 'Không thể vô hiệu hóa vai trò', 'error');
+        showToast(err.message || tr('Could not deactivate role', 'Không thể vô hiệu hóa vai trò'), 'error');
         setRoleToToggle(null);
       },
     });
@@ -115,7 +114,7 @@ export const RolesPage: React.FC = () => {
   // Enrich Roles with visual properties matching 10.Màn hình nhóm quyền.png
   const enrichedRoles: EnrichedRole[] = useMemo(() => {
     return roles.map((r, index) => {
-      const name = r.name || r.role || 'Vai trò';
+      const name = r.name || r.role || tr('Role', 'Vai trò');
       const lower = name.toLowerCase();
       const code = r.code || lower.replace(/\s+/g, '_');
       
@@ -163,11 +162,11 @@ export const RolesPage: React.FC = () => {
         userCount,
         scope,
         isActive: !isInactive,
-        statusText: isInactive ? 'Tạm khóa' : 'Hoạt động',
+        statusText: isInactive ? tr('Inactive', 'Tạm khóa') : tr('Active', 'Hoạt động'),
         updatedAt,
       };
     });
-  }, [roles]);
+  }, [roles, language]);
 
   const metrics = useMemo(() => {
     const systemRoles = enrichedRoles.filter((role) => role.scope === 'Toàn hệ thống').length;
@@ -229,7 +228,7 @@ export const RolesPage: React.FC = () => {
     setScopeFilter('all');
     setStatusFilter('all');
     setPage(1);
-    showToast('Đã đặt lại bộ lọc', 'info');
+    showToast(tr('Filters reset', 'Đã đặt lại bộ lọc'), 'info');
   };
 
   return (
@@ -299,7 +298,7 @@ export const RolesPage: React.FC = () => {
         </div>
 
         {/* Filter Bar matching 10.Màn hình nhóm quyền.png */}
-        <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-2xs">
+        <div className="nexora-table-filters bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-2xs">
           <div className="grid grid-cols-1 sm:grid-cols-12 gap-3 items-end">
             
             {/* Search Input (5 cols) */}
@@ -390,10 +389,10 @@ export const RolesPage: React.FC = () => {
         {/* Roles Table matching 10.Màn hình nhóm quyền.png */}
         <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
           <div className="overflow-x-auto">
-            <table className="w-full text-left border-collapse text-xs">
-              <thead>
-                <tr className="bg-slate-50/80 dark:bg-zinc-950/80 border-b border-slate-200 dark:border-zinc-800 text-[11px] font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">
-                  <th className="py-3.5 px-4 w-10">
+            <CustomTable.Table className="w-full text-left border-collapse text-xs">
+              <CustomTable.Head>
+                <CustomTable.Row className="bg-slate-50/80 dark:bg-zinc-950/80 border-b border-slate-200 dark:border-zinc-800 text-[11px] font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">
+                  <CustomTable.HeaderCell className="py-3.5 px-4 w-10">
                     <input
                       type="checkbox"
                       checked={
@@ -403,54 +402,54 @@ export const RolesPage: React.FC = () => {
                       onChange={handleToggleSelectAll}
                       className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                     />
-                  </th>
-                  <th className="py-3.5 px-4">TÊN VAI TRÒ</th>
-                  <th className="py-3.5 px-4">NGƯỜI DÙNG</th>
-                  <th className="py-3.5 px-4">PHẠM VI</th>
-                  <th className="py-3.5 px-4">TRẠNG THÁI</th>
-                  <th className="py-3.5 px-4">CẬP NHẬT</th>
-                  <th className="py-3.5 px-4 text-right"></th>
-                </tr>
-              </thead>
+                  </CustomTable.HeaderCell>
+                  <CustomTable.HeaderCell className="py-3.5 px-4">TÊN VAI TRÒ</CustomTable.HeaderCell>
+                  <CustomTable.HeaderCell className="py-3.5 px-4">NGƯỜI DÙNG</CustomTable.HeaderCell>
+                  <CustomTable.HeaderCell className="py-3.5 px-4">PHẠM VI</CustomTable.HeaderCell>
+                  <CustomTable.HeaderCell className="py-3.5 px-4">TRẠNG THÁI</CustomTable.HeaderCell>
+                  <CustomTable.HeaderCell className="py-3.5 px-4">CẬP NHẬT</CustomTable.HeaderCell>
+                  <CustomTable.HeaderCell className="nexora-table-action-cell py-3.5 px-4 text-right"></CustomTable.HeaderCell>
+                </CustomTable.Row>
+              </CustomTable.Head>
 
-              <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+              <CustomTable.Body className="divide-y divide-slate-100 dark:divide-zinc-800/80">
                 {isLoading ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                  <CustomTable.Row>
+                    <CustomTable.Cell colSpan={7} className="py-12 text-center text-slate-400">
                       <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-blue-500" />
                       <span>Đang tải danh sách vai trò...</span>
-                    </td>
-                  </tr>
+                    </CustomTable.Cell>
+                  </CustomTable.Row>
                 ) : paginatedRoles.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="py-12 text-center text-slate-400">
+                  <CustomTable.Row>
+                    <CustomTable.Cell colSpan={7} className="py-12 text-center text-slate-400">
                       Không tìm thấy vai trò nào phù hợp.
-                    </td>
-                  </tr>
+                    </CustomTable.Cell>
+                  </CustomTable.Row>
                 ) : (
                   paginatedRoles.map((role) => {
                     const isSelected = selectedRoleIds.includes(role.id);
                     const RoleIcon = role.icon;
 
                     return (
-                      <tr
+                      <CustomTable.Row
                         key={role.id}
                         className={`hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors ${
                           isSelected || activeRoleDetail?.id === role.id ? 'bg-blue-50/50 dark:bg-blue-950/20' : ''
                         }`}
                       >
                         {/* Checkbox Column */}
-                        <td className="py-3.5 px-4">
+                        <CustomTable.Cell className="py-3.5 px-4">
                           <input
                             type="checkbox"
                             checked={isSelected}
                             onChange={() => handleToggleSelectRole(role.id)}
                             className="rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
                           />
-                        </td>
+                        </CustomTable.Cell>
 
                         {/* TÊN VAI TRÒ */}
-                        <td className="py-3.5 px-4">
+                        <CustomTable.Cell className="py-3.5 px-4">
                           <div className="flex items-center gap-3">
                             <div
                               className={`w-7 h-7 rounded-full ${role.iconBg} text-white flex items-center justify-center shrink-0 shadow-2xs`}
@@ -466,22 +465,22 @@ export const RolesPage: React.FC = () => {
                               </span>
                             </div>
                           </div>
-                        </td>
+                        </CustomTable.Cell>
 
                         {/* NGƯỜI DÙNG */}
-                        <td className="py-3.5 px-4">
+                        <CustomTable.Cell className="py-3.5 px-4">
                           <span className="font-semibold text-blue-600 dark:text-blue-400">
                             {role.userCount}
                           </span>
-                        </td>
+                        </CustomTable.Cell>
 
                         {/* PHẠM VI */}
-                        <td className="py-3.5 px-4 text-slate-700 dark:text-zinc-300 font-normal">
+                        <CustomTable.Cell className="py-3.5 px-4 text-slate-700 dark:text-zinc-300 font-normal">
                           {role.scope}
-                        </td>
+                        </CustomTable.Cell>
 
                         {/* TRẠNG THÁI */}
-                        <td className="py-3.5 px-4">
+                        <CustomTable.Cell className="py-3.5 px-4">
                           <div className="flex items-center gap-1.5 text-xs font-medium text-slate-700 dark:text-zinc-300">
                             <span
                               className={`w-1.5 h-1.5 rounded-full ${
@@ -490,15 +489,15 @@ export const RolesPage: React.FC = () => {
                             />
                             <span>{role.statusText}</span>
                           </div>
-                        </td>
+                        </CustomTable.Cell>
 
                         {/* CẬP NHẬT */}
-                        <td className="py-3.5 px-4 text-slate-600 dark:text-zinc-400 font-normal">
+                        <CustomTable.Cell className="py-3.5 px-4 text-slate-600 dark:text-zinc-400 font-normal">
                           {role.updatedAt}
-                        </td>
+                        </CustomTable.Cell>
 
                         {/* THAO TÁC */}
-                        <td className="py-3.5 px-4 text-right">
+                        <CustomTable.Cell className="nexora-table-action-cell py-3.5 px-4 text-right">
                           <TableRowActions
                             align="right"
                             items={[
@@ -525,17 +524,17 @@ export const RolesPage: React.FC = () => {
                               },
                             ]}
                           />
-                        </td>
-                      </tr>
+                        </CustomTable.Cell>
+                      </CustomTable.Row>
                     );
                   })
                 )}
-              </tbody>
-            </table>
+              </CustomTable.Body>
+            </CustomTable.Table>
           </div>
 
           {/* Table Footer matching 10.Màn hình nhóm quyền.png */}
-          <div className="py-3 px-4 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-4 flex-wrap text-xs text-slate-600 dark:text-zinc-400">
+          <div className="nexora-table-footer py-3 px-4 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-4 flex-wrap text-xs text-slate-600 dark:text-zinc-400">
             <div>
               Hiển thị{' '}
               <span className="font-semibold text-slate-900 dark:text-zinc-100">

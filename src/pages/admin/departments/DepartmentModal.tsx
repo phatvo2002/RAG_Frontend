@@ -20,7 +20,8 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
   departmentToEdit,
   onSuccessToast,
 }) => {
-  const { showToast } = useApp();
+  const { showToast, language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const isEditMode = Boolean(departmentToEdit);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -47,7 +48,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
           departmentYupSchema.validateSync(value, { abortEarly: false });
           return undefined;
         } catch (err: any) {
-          return err.message || 'Dữ liệu phòng ban không hợp lệ';
+          return err.message || tr('Invalid department information', 'Dữ liệu phòng ban không hợp lệ');
         }
       },
     },
@@ -75,12 +76,12 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
           },
           {
             onSuccess: (updatedDept) => {
-              toastCallback(`Cập nhật phòng ban "${updatedDept.name || value.name}" thành công!`, 'success');
+              toastCallback(tr(`Updated department "${updatedDept.name || value.name}".`, `Cập nhật phòng ban "${updatedDept.name || value.name}" thành công!`), 'success');
               form.reset();
               onClose();
             },
             onError: (err: any) => {
-              const errorMsg = err.data?.message || err.message || 'Không thể cập nhật phòng ban';
+              const errorMsg = err.data?.message || err.message || tr('Could not update department', 'Không thể cập nhật phòng ban');
               setServerError(errorMsg);
               showToast(errorMsg, 'error');
             },
@@ -91,12 +92,12 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
           payloadData,
           {
             onSuccess: (createdDept) => {
-              toastCallback(`Đã thêm phòng ban "${createdDept.name || value.name}" thành công!`, 'success');
+              toastCallback(tr(`Created department "${createdDept.name || value.name}".`, `Đã thêm phòng ban "${createdDept.name || value.name}" thành công!`), 'success');
               form.reset();
               onClose();
             },
             onError: (err: any) => {
-              const errorMsg = err.data?.message || err.message || 'Không thể tạo mới phòng ban';
+              const errorMsg = err.data?.message || err.message || tr('Could not create department', 'Không thể tạo mới phòng ban');
               setServerError(errorMsg);
               showToast(errorMsg, 'error');
             },
@@ -139,7 +140,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? 'Chỉnh sửa phòng ban' : 'Thêm phòng ban mới'}
+      title={isEditMode ? tr('Edit department', 'Chỉnh sửa phòng ban') : tr('Add department', 'Thêm phòng ban mới')}
       maxWidth="lg"
     >
       <form
@@ -163,7 +164,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
             <form.Field
               name="name"
               validators={{
-                onChange: ({ value }) => (!value?.trim() ? 'Tên phòng ban không được để trống' : undefined),
+                onChange: ({ value }) => (!value?.trim() ? tr('Department name is required', 'Tên phòng ban không được để trống') : undefined),
               }}
             >
               {(field) => {
@@ -173,7 +174,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                 return (
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                      Tên phòng ban <span className="text-rose-500">*</span>
+                      {tr('Department name', 'Tên phòng ban')} <span className="text-rose-500">*</span>
                     </label>
                     <div className="relative flex items-center">
                       <input
@@ -195,7 +196,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                             }
                           }
                         }}
-                        placeholder="VD: Phòng Công nghệ Thông tin"
+                        placeholder={tr('e.g. Information Technology', 'VD: Phòng Công nghệ Thông tin')}
                         className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
                           hasError ? 'input-error' : ''
                         }`}
@@ -218,7 +219,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
             <form.Field
               name="code"
               validators={{
-                onChange: ({ value }) => (!value?.trim() ? 'Mã phòng ban không được để trống' : undefined),
+                onChange: ({ value }) => (!value?.trim() ? tr('Department code is required', 'Mã phòng ban không được để trống') : undefined),
               }}
             >
               {(field) => {
@@ -228,7 +229,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                 return (
                   <div>
                     <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                      Mã code <span className="text-rose-500">*</span>
+                      {tr('Department code', 'Mã code')} <span className="text-rose-500">*</span>
                     </label>
                     <input
                       type="text"
@@ -236,7 +237,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value.toUpperCase())}
-                      placeholder="VD: CNTT"
+                      placeholder={tr('e.g. IT', 'VD: CNTT')}
                       className={`input input-bordered input-sm w-full px-3 text-xs uppercase font-mono bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
                         hasError ? 'input-error' : ''
                       }`}
@@ -259,7 +260,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
             {(field) => (
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Phòng ban cấp trên (Parent Department)
+                  {tr('Parent department', 'Phòng ban cấp trên (Parent Department)')}
                 </label>
                 <div className="relative flex items-center">
                   <select
@@ -269,7 +270,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                     onChange={(e) => field.handleChange(e.target.value)}
                     className="select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
                   >
-                    <option value="">-- Không có (Phòng ban gốc) --</option>
+                    <option value="">{tr('-- None (root department) --', '-- Không có (Phòng ban gốc) --')}</option>
                     {eligibleParentDepartments.map((dept) => {
                       const deptId = dept.id || dept.departmentId || '';
                       return (
@@ -289,7 +290,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
             {(field) => (
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Trưởng phòng / Quản lý (Manager)
+                  {tr('Department manager', 'Trưởng phòng / Quản lý (Manager)')}
                 </label>
                 <div className="relative flex items-center">
                   <select
@@ -299,7 +300,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                     onChange={(e) => field.handleChange(e.target.value)}
                     className="select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
                   >
-                    <option value="">-- Chưa phân công --</option>
+                    <option value="">{tr('-- Unassigned --', '-- Chưa phân công --')}</option>
                     {users.map((user) => {
                       const uId = user.id || (user as any).userId || '';
                       return (
@@ -322,7 +323,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
             {(field) => (
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Trạng thái (Status)
+                  {tr('Status', 'Trạng thái (Status)')}
                 </label>
                 <select
                   name={field.name}
@@ -331,8 +332,8 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                   onChange={(e) => field.handleChange(e.target.value)}
                   className="select select-bordered select-sm w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
                 >
-                  <option value="Active">Active (Đang hoạt động)</option>
-                  <option value="Inactive">Inactive (Tạm dừng)</option>
+                  <option value="Active">{tr('Active', 'Active (Đang hoạt động)')}</option>
+                  <option value="Inactive">{tr('Inactive', 'Inactive (Tạm dừng)')}</option>
                 </select>
               </div>
             )}
@@ -345,7 +346,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
 
               return (
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Số điện thoại liên hệ</label>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">{tr('Contact phone', 'Số điện thoại liên hệ')}</label>
                   <div className="relative flex items-center">
                     <input
                       type="text"
@@ -353,7 +354,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                       value={field.state.value || ''}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="VD: 0274 374 0530"
+                      placeholder={tr('e.g. 0274 374 0530', 'VD: 0274 374 0530')}
                       className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
                         hasError ? 'input-error' : ''
                       }`}
@@ -376,7 +377,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
         <form.Field name="address">
           {(field) => (
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Địa chỉ / Vị trí văn phòng</label>
+              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">{tr('Office address', 'Địa chỉ / Vị trí văn phòng')}</label>
               <div className="relative flex items-center">
                 <input
                   type="text"
@@ -384,7 +385,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
                   value={field.state.value || ''}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="VD: Tầng 4, Tòa nhà Trụ sở chính"
+                  placeholder={tr('e.g. 4th floor, headquarters', 'VD: Tầng 4, Tòa nhà Trụ sở chính')}
                   className="input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500"
                 />
                 <MapPin className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
@@ -397,14 +398,14 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
         <form.Field name="description">
           {(field) => (
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Mô tả chức năng</label>
+              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">{tr('Responsibilities', 'Mô tả chức năng')}</label>
               <textarea
                 rows={2}
                 name={field.name}
                 value={field.state.value || ''}
                 onBlur={field.handleBlur}
                 onChange={(e) => field.handleChange(e.target.value)}
-                placeholder="Mô tả ngắn về nhiệm vụ và phạm vi của phòng ban..."
+                placeholder={tr('Briefly describe this department’s responsibilities...', 'Mô tả ngắn về nhiệm vụ và phạm vi của phòng ban...')}
                 className="textarea textarea-bordered w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 resize-none"
               />
             </div>
@@ -418,7 +419,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
             onClick={onClose}
             className="btn btn-sm btn-ghost text-slate-700 dark:text-zinc-300 font-medium"
           >
-            Hủy
+            {tr('Cancel', 'Hủy')}
           </button>
           <button
             type="submit"
@@ -426,7 +427,7 @@ export const DepartmentModal: React.FC<DepartmentModalProps> = ({
             className="btn btn-sm btn-primary text-white font-medium shadow-xs"
           >
             {isPending && <span className="loading loading-spinner loading-xs" />}
-            <span>{isEditMode ? 'Lưu thay đổi' : 'Tạo phòng ban'}</span>
+            <span>{isEditMode ? tr('Save changes', 'Lưu thay đổi') : tr('Create department', 'Tạo phòng ban')}</span>
           </button>
         </div>
       </form>

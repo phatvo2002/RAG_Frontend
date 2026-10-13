@@ -20,7 +20,8 @@ interface ProjectModalProps {
 }
 
 export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) => {
-  const { addProject, showToast } = useApp();
+  const { addProject, showToast, language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const { data: fetchedDepartments = [] } = useDepartmentsQuery();
 
   const availableDepartments = useMemo(() => {
@@ -42,7 +43,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
           projectYupSchema.validateSync(value, { abortEarly: false });
           return undefined;
         } catch (err: any) {
-          return err.message || 'Dữ liệu dự án không hợp lệ';
+          return err.message || tr('Invalid project data', 'Dữ liệu dự án không hợp lệ');
         }
       },
     },
@@ -58,7 +59,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
         membersCount: 4,
       });
 
-      showToast(`Đã tạo dự án "${value.name}" thành công!`, 'success');
+      showToast(tr(`Project "${value.name}" created successfully!`, `Đã tạo dự án "${value.name}" thành công!`), 'success');
       form.reset();
       onClose();
     },
@@ -74,7 +75,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Tạo dự án mới">
+    <Modal isOpen={isOpen} onClose={onClose} title={tr('Create new project', 'Tạo dự án mới')}>
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -86,17 +87,17 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
         <form.Field
           name="name"
           validators={{
-            onChange: ({ value }) => (!value?.trim() ? 'Tên dự án không được để trống' : undefined),
+            onChange: ({ value }) => (!value?.trim() ? tr('Project name is required', 'Tên dự án không được để trống') : undefined),
           }}
         >
           {(field) => {
-            const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+            const errorMessage = field.state.meta.errors?.[0] ?? null;
             const hasError = Boolean(errorMessage);
 
             return (
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Tên dự án <span className="text-rose-500">*</span>
+                  {tr('Project name', 'Tên dự án')} <span className="text-rose-500">*</span>
                 </label>
                 <input
                   type="text"
@@ -104,7 +105,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
                   value={field.state.value}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="Ví dụ: Nâng cấp hệ thống AI RAG Phase 3"
+                  placeholder={tr('Example: Upgrade the AI RAG system for Phase 3', 'Ví dụ: Nâng cấp hệ thống AI RAG Phase 3')}
                   className={`w-full px-3 py-2 border rounded-lg text-xs focus:outline-none bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
                     hasError
                       ? 'border-rose-400 focus:border-rose-600 focus:bg-rose-50/10'
@@ -126,17 +127,17 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
           <form.Field
             name="lead"
             validators={{
-              onChange: ({ value }) => (!value?.trim() ? 'Quản lý dự án không được để trống' : undefined),
+              onChange: ({ value }) => (!value?.trim() ? tr('Project lead is required', 'Quản lý dự án không được để trống') : undefined),
             }}
           >
             {(field) => {
-              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const errorMessage = field.state.meta.errors?.[0] ?? null;
               const hasError = Boolean(errorMessage);
 
               return (
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Quản lý dự án (Project Lead) <span className="text-rose-500">*</span>
+                    {tr('Project lead', 'Quản lý dự án (Project Lead)')} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="text"
@@ -166,7 +167,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
             {(field) => (
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Phòng ban phụ trách <span className="text-rose-500">*</span>
+                  {tr('Responsible department', 'Phòng ban phụ trách')} <span className="text-rose-500">*</span>
                 </label>
                 <select
                   name={field.name}
@@ -190,17 +191,17 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
           <form.Field
             name="deadline"
             validators={{
-              onChange: ({ value }) => (!value ? 'Hạn hoàn thành không được để trống' : undefined),
+              onChange: ({ value }) => (!value ? tr('Due date is required', 'Hạn hoàn thành không được để trống') : undefined),
             }}
           >
             {(field) => {
-              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const errorMessage = field.state.meta.errors?.[0] ?? null;
               const hasError = Boolean(errorMessage);
 
               return (
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Hạn hoàn thành <span className="text-rose-500">*</span>
+                    {tr('Due date', 'Hạn hoàn thành')} <span className="text-rose-500">*</span>
                   </label>
                   <input
                     type="date"
@@ -231,7 +232,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
             {(field) => (
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Mô tả dự án
+                  {tr('Project description', 'Mô tả dự án')}
                 </label>
                 <textarea
                   rows={3}
@@ -239,7 +240,7 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
                   value={field.state.value || ''}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="Mô tả mục tiêu, yêu cầu công nghệ và phạm vi dự án..."
+                  placeholder={tr('Describe goals, technical requirements, and project scope...', 'Mô tả mục tiêu, yêu cầu công nghệ và phạm vi dự án...')}
                   className="w-full px-3 py-2 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs focus:outline-none focus:border-blue-600 bg-slate-50/50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 resize-none"
                 />
               </div>
@@ -253,13 +254,13 @@ export const ProjectModal: React.FC<ProjectModalProps> = ({ isOpen, onClose }) =
             onClick={onClose}
             className="px-3.5 py-1.5 border border-slate-200 dark:border-zinc-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-50 dark:hover:bg-zinc-800 transition-colors"
           >
-            Hủy
+            {tr('Cancel', 'Hủy')}
           </button>
           <button
             type="submit"
             className="px-4 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-xs transition-colors"
           >
-            Tạo dự án
+            {tr('Create project', 'Tạo dự án')}
           </button>
         </div>
       </form>

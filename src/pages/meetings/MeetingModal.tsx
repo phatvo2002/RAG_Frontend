@@ -5,6 +5,7 @@ import { useApp } from '@/context/AppContext';
 import { ApiError } from '@/api/client';
 import { meetingKeys, meetingsApi, type MeetingDetail, type MeetingUserOption } from '@/api/meetings.api';
 import { MeetingParticipantPicker } from './MeetingParticipantPicker';
+import { isScheduledMeetingExpired } from './meetingAvailability';
 
 interface MeetingModalProps {
   isOpen: boolean;
@@ -19,7 +20,8 @@ function toLocalInput(value: string): string {
 }
 
 export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, meetingId }) => {
-  const { currentUser, showToast } = useApp();
+  const { currentUser, showToast, language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: ['meeting-edit', meetingId],
@@ -60,7 +62,11 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, mee
   const submit = async (event: React.FormEvent) => {
     event.preventDefault();
     if (!title.trim() || !start || !end || new Date(start) >= new Date(end)) {
-      showToast('Vui lòng nhập tên và khoảng thời gian hợp lệ.', 'error');
+      showToast(tr('Enter a title and valid time range.', 'Vui lòng nhập tên và khoảng thời gian hợp lệ.'), 'error');
+      return;
+    }
+    if (meetingId && new Date(end).getTime() <= Date.now()) {
+      showToast(tr('The new end time must be in the future to open the room.', 'Thời gian kết thúc mới phải ở tương lai để mở phòng họp.'), 'error');
       return;
     }
     setBusy(true);
@@ -76,15 +82,15 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, mee
       }
       await queryClient.invalidateQueries({ queryKey: meetingKeys.list });
       if (meetingId) await queryClient.invalidateQueries({ queryKey: meetingKeys.detail(meetingId) });
-      showToast(meetingId ? 'Đã cập nhật cuộc họp.' : 'Đã tạo cuộc họp trực tuyến.', 'success');
+      showToast(meetingId ? tr('Meeting updated.', 'Đã cập nhật cuộc họp.') : tr('Online meeting created.', 'Đã tạo cuộc họp trực tuyến.'), 'success');
       onClose();
     } catch (error) {
       if (meetingId && error instanceof ApiError && error.status === 409) {
         setConflict(true);
         void detail.refetch();
-        showToast('Cuộc họp đã thay đổi. Hãy tải bản mới trước khi sửa tiếp.', 'error');
+        showToast(tr('This meeting has changed. Load the latest version before editing.', 'Cuộc họp đã thay đổi. Hãy tải bản mới trước khi sửa tiếp.'), 'error');
       } else {
-        showToast(error instanceof Error ? error.message : 'Không lưu được cuộc họp.', 'error');
+        showToast(error instanceof Error ? error.message : tr('Could not save the meeting.', 'Không lưu được cuộc họp.'), 'error');
       }
     } finally {
       setBusy(false);
@@ -92,33 +98,35 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({ isOpen, onClose, mee
   };
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title={meetingId ? 'Chỉnh sửa cuộc họp' : 'Tạo cuộc họp trực tuyến'} maxWidth="lg">
-      {meetingId && detail.isLoading && !detail.data ? <p>Đang tải cuộc họp...</p>
-        : meetingId && (detail.isError || !detail.data) ? <p>Không tải được thông tin cuộc họp.</p>
+    <Modal isOpen={isOpen} onClose={onClose} title={meetingId ? tr('Edit meeting', 'Chỉnh sửa cuộc họp') : tr('Create online meeting', 'Tạo cuộc họp trực tuyến')} maxWidth="lg">
+      {meetingId && detail.isLoading && !detail.data ? <p>{tr('Loading meeting...', 'Đang tải cuộc họp...')}</p>
+        : meetingId && (detail.isError || !detail.data) ? <p>{tr('Could not load meeting information.', 'Không tải được thông tin cuộc họp.')}</p>
           : <form onSubmit={submit} className="space-y-4 text-sm">
             {conflict && <div className="rounded border border-amber-300 bg-amber-50 p-3 text-amber-900">
-              Cuộc họp đã thay đổi. Bản nháp của bạn vẫn còn ở đây.
+              {tr('This meeting has changed. Your draft is still here.', 'Cuộc họp đã thay đổi. Bản nháp của bạn vẫn còn ở đây.')}
               <button type="button" onClick={async () => {
                 const latest = await detail.refetch();
                 if (latest.data) { fill(latest.data); setConflict(false); }
-              }} className="ml-2 font-semibold underline">Tải bản mới</button>
+              }} className="ml-2 font-semibold underline">{tr('Load latest version', 'Tải bản mới')}</button>
             </div>}
-            <label className="block">Tên cuộc họp
+            <label className="block">{tr('Meeting title', 'Tên cuộc họp')}
               <input required maxLength={300} value={title} onChange={event => setTitle(event.target.value)}
                 className="mt-1 w-full rounded border p-2 dark:bg-zinc-800" />
             </label>
             <div className="grid grid-cols-2 gap-3">
-              <label>Bắt đầu dự kiến<input required type="datetime-local" value={start}
+              <label>{tr('Scheduled start', 'Bắt đầu dự kiến')}<input required type="datetime-local" value={start}
                 onChange={event => setStart(event.target.value)} className="mt-1 w-full rounded border p-2 dark:bg-zinc-800" /></label>
-              <label>Kết thúc dự kiến<input required type="datetime-local" value={end}
+              <label>{tr('Scheduled end', 'Kết thúc dự kiến')}<input required type="datetime-local" value={end}
                 onChange={event => setEnd(event.target.value)} className="mt-1 w-full rounded border p-2 dark:bg-zinc-800" /></label>
             </div>
+            {detail.data && isScheduledMeetingExpired(detail.data, Date.now()) &&
+              <p className="text-amber-700 dark:text-amber-300">{tr('This meeting is overdue. Choose a new end time in the future.', 'Cuộc họp đã quá hạn. Hãy chọn thời gian kết thúc mới ở tương lai.')}</p>}
             {host && <MeetingParticipantPicker host={host} selected={participants} onChange={setParticipants} />}
             <div className="flex justify-end gap-2">
-              <button type="button" onClick={onClose} className="rounded border px-4 py-2">Hủy</button>
+              <button type="button" onClick={onClose} className="rounded border px-4 py-2">{tr('Cancel', 'Hủy')}</button>
               <button disabled={busy || conflict || !host || (Boolean(meetingId) && detail.data?.status !== 'Scheduled')}
                 type="submit" className="rounded bg-blue-600 px-4 py-2 text-white disabled:opacity-50">
-                {busy ? 'Đang lưu...' : meetingId ? 'Lưu thay đổi' : 'Tạo cuộc họp'}
+                {busy ? tr('Saving...', 'Đang lưu...') : meetingId ? tr('Save changes', 'Lưu thay đổi') : tr('Create meeting', 'Tạo cuộc họp')}
               </button>
             </div>
           </form>}

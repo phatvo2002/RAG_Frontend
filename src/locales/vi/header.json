@@ -37,6 +37,18 @@
       "sub": "Cấu hình hệ thống và phân quyền"
     }
   },
+  "company": "Công ty Cổ phần Nexora",
+  "openMenu": "Mở menu",
+  "closeMenu": "Đóng menu",
+  "searchPlaceholder": "Tìm kiếm hoặc gõ lệnh...",
+  "searchNotice": "Tìm kiếm: \"{{query}}\"",
+  "unreadNotifications": "Bạn có {{count}} thông báo mới chưa đọc",
+  "notifications": "Thông báo",
+  "helpNotice": "Mở tài liệu hướng dẫn sử dụng NEXORA AI",
+  "help": "Trợ giúp",
+  "account": "Tài khoản",
+  "manageAccount": "Quản lý tài khoản",
+  "signOut": "Đăng xuất",
   "buttons": {
     "goToDashboard": "Vào Dashboard Quản lý",
     "openAiChat": "Mở Trợ lý Chat AI"

@@ -529,7 +529,7 @@ export const LogsPage: React.FC = () => {
           </div>
 
           {/* 2-Row Filter Bar matching 11.Màn hình nhật ký hoạt động.png */}
-          <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-2xs space-y-2.5">
+          <div className="nexora-table-filters bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-3 shadow-2xs space-y-2.5">
             
             {/* Filter Row 1 */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 items-center">
@@ -677,59 +677,59 @@ export const LogsPage: React.FC = () => {
           {/* Main Activity Log Table matching 11.png */}
           <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
             <div className="overflow-x-auto">
-              <table className="w-full text-left border-collapse text-xs">
-                <thead>
-                  <tr className="bg-slate-50/80 dark:bg-zinc-950/80 border-b border-slate-200 dark:border-zinc-800 text-[11px] font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">
-                    <th className="py-3 px-3.5">THỜI GIAN</th>
-                    <th className="py-3 px-3.5">NGƯỜI DÙNG</th>
-                    <th className="py-3 px-3.5">HÀNH ĐỘNG</th>
-                    <th className="py-3 px-3.5">MODULE</th>
-                    <th className="py-3 px-3.5">ĐỐI TƯỢNG</th>
-                    <th className="py-3 px-3.5">IP / PHẢN HỒI</th>
-                    <th className="py-3 px-3.5">MỨC ĐỘ</th>
-                    <th className="py-3 px-3.5">TRẠNG THÁI</th>
-                    <th className="py-3 px-3.5 text-right">THAO TÁC</th>
-                  </tr>
-                </thead>
+              <CustomTable.Table className="w-full text-left border-collapse text-xs">
+                <CustomTable.Head>
+                  <CustomTable.Row className="bg-slate-50/80 dark:bg-zinc-950/80 border-b border-slate-200 dark:border-zinc-800 text-[11px] font-bold text-slate-600 dark:text-zinc-400 uppercase tracking-wider">
+                    <CustomTable.HeaderCell className="py-3 px-3.5">THỜI GIAN</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3 px-3.5">NGƯỜI DÙNG</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3 px-3.5">HÀNH ĐỘNG</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3 px-3.5">MODULE</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3 px-3.5">ĐỐI TƯỢNG</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3 px-3.5">IP / PHẢN HỒI</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3 px-3.5">MỨC ĐỘ</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="py-3 px-3.5">TRẠNG THÁI</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="nexora-table-action-cell py-3 px-3.5 text-right">THAO TÁC</CustomTable.HeaderCell>
+                  </CustomTable.Row>
+                </CustomTable.Head>
 
-                <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+                <CustomTable.Body className="divide-y divide-slate-100 dark:divide-zinc-800/80">
                   {isLoading ? (
-                    <tr>
-                      <td colSpan={9} className="py-12 text-center text-slate-400">
+                    <CustomTable.Row>
+                      <CustomTable.Cell colSpan={9} className="py-12 text-center text-slate-400">
                         <RefreshCw className="w-5 h-5 animate-spin mx-auto mb-2 text-blue-500" />
                         <span>Đang tải nhật ký hoạt động...</span>
-                      </td>
-                    </tr>
+                      </CustomTable.Cell>
+                    </CustomTable.Row>
                   ) : paginatedLogs.length === 0 ? (
-                    <tr>
-                      <td colSpan={9} className="py-12 text-center text-slate-400">
+                    <CustomTable.Row>
+                      <CustomTable.Cell colSpan={9} className="py-12 text-center text-slate-400">
                         Không tìm thấy nhật ký hoạt động nào phù hợp.
-                      </td>
-                    </tr>
+                      </CustomTable.Cell>
+                    </CustomTable.Row>
                   ) : (
                     paginatedLogs.map((log) => {
                       const isSelected = activeSelectedLog?.id === log.id;
                       const ActionIcon = log.actionIcon;
 
                       return (
-                        <tr
+                        <CustomTable.Row
                           key={log.id}
                           className={`hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors ${
                             isSelected ? 'bg-blue-50/60 dark:bg-blue-950/20' : ''
                           }`}
                         >
                           {/* 1. THỜI GIAN */}
-                          <td className="py-3 px-3.5 whitespace-nowrap">
+                          <CustomTable.Cell className="py-3 px-3.5 whitespace-nowrap">
                             <div className="flex items-center gap-2">
                               <ActionIcon className={`w-3.5 h-3.5 shrink-0 ${log.actionIconColor}`} />
                               <span className="font-mono text-slate-700 dark:text-zinc-300">
                                 {log.timeFormatted}
                               </span>
                             </div>
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 2. NGƯỜI DÙNG */}
-                          <td className="py-3 px-3.5 whitespace-nowrap">
+                          <CustomTable.Cell className="py-3 px-3.5 whitespace-nowrap">
                             <div className="flex items-center gap-2">
                               <div
                                 className={`w-6 h-6 rounded-full ${log.actor.avatarBg} text-white font-bold text-[10px] flex items-center justify-center shrink-0 shadow-2xs`}
@@ -745,27 +745,27 @@ export const LogsPage: React.FC = () => {
                                 </span>
                               </div>
                             </div>
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 3. HÀNH ĐỘNG */}
-                          <td className="py-3 px-3.5 whitespace-nowrap">
+                          <CustomTable.Cell className="py-3 px-3.5 whitespace-nowrap">
                             <div className="flex items-center gap-1.5 text-slate-800 dark:text-zinc-200 font-medium max-w-[200px] truncate">
                               <span className="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-zinc-800 font-mono text-[10px] font-bold text-blue-600 dark:text-blue-400">
                                 {log.raw.action}
                               </span>
                               <span className="truncate">{log.actionText}</span>
                             </div>
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 4. MODULE */}
-                          <td className="py-3 px-3.5 whitespace-nowrap text-slate-700 dark:text-zinc-300 font-normal">
+                          <CustomTable.Cell className="py-3 px-3.5 whitespace-nowrap text-slate-700 dark:text-zinc-300 font-normal">
                             <span className="px-2 py-0.5 rounded-md bg-slate-100 dark:bg-zinc-800/60 text-slate-700 dark:text-zinc-300 font-medium">
                               {log.moduleName}
                             </span>
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 5. ĐỐI TƯỢNG */}
-                          <td className="py-3 px-3.5 whitespace-nowrap">
+                          <CustomTable.Cell className="py-3 px-3.5 whitespace-nowrap">
                             <div className="max-w-[190px]">
                               <span
                                 className="font-mono text-slate-900 dark:text-zinc-100 block leading-tight truncate text-[11px]"
@@ -777,10 +777,10 @@ export const LogsPage: React.FC = () => {
                                 {log.target.type}
                               </span>
                             </div>
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 6. IP / PHẢN HỒI */}
-                          <td className="py-3 px-3.5 whitespace-nowrap">
+                          <CustomTable.Cell className="py-3 px-3.5 whitespace-nowrap">
                             <div>
                               <span className="font-mono text-slate-800 dark:text-zinc-200 block leading-tight">
                                 {log.clientInfo.ip}
@@ -789,10 +789,10 @@ export const LogsPage: React.FC = () => {
                                 {log.clientInfo.statusCode} {log.clientInfo.elapsedMs ? `• ${log.clientInfo.elapsedMs}ms` : ''}
                               </span>
                             </div>
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 7. MỨC ĐỘ */}
-                          <td className="py-3 px-3.5 whitespace-nowrap">
+                          <CustomTable.Cell className="py-3 px-3.5 whitespace-nowrap">
                             {log.riskLevel === 'Cao' && (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-rose-50 text-rose-600 dark:bg-rose-950/40 dark:text-rose-400 border border-rose-200 dark:border-rose-900/50">
                                 Cao
@@ -808,10 +808,10 @@ export const LogsPage: React.FC = () => {
                                 Thấp
                               </span>
                             )}
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 8. TRẠNG THÁI */}
-                          <td className="py-3 px-3.5 whitespace-nowrap">
+                          <CustomTable.Cell className="py-3 px-3.5 whitespace-nowrap">
                             {log.isSuccess ? (
                               <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-900/50">
                                 Thành công
@@ -821,10 +821,10 @@ export const LogsPage: React.FC = () => {
                                 Thất bại
                               </span>
                             )}
-                          </td>
+                          </CustomTable.Cell>
 
                           {/* 9. THAO TÁC */}
-                          <td className="py-3 px-3.5 text-right whitespace-nowrap">
+                          <CustomTable.Cell className="nexora-table-action-cell py-3 px-3.5 text-right whitespace-nowrap">
                             <TableRowActions
                               align="right"
                               items={[
@@ -845,17 +845,17 @@ export const LogsPage: React.FC = () => {
                                 },
                               ]}
                             />
-                          </td>
-                        </tr>
+                          </CustomTable.Cell>
+                        </CustomTable.Row>
                       );
                     })
                   )}
-                </tbody>
-              </table>
+                </CustomTable.Body>
+              </CustomTable.Table>
             </div>
 
             {/* Pagination Footer matching 11.png */}
-            <div className="py-3 px-4 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-4 flex-wrap text-xs text-slate-600 dark:text-zinc-400">
+            <div className="nexora-table-footer py-3 px-4 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-4 flex-wrap text-xs text-slate-600 dark:text-zinc-400">
               <div>
                 Hiển thị{' '}
                 <span className="font-semibold text-slate-900 dark:text-zinc-100">

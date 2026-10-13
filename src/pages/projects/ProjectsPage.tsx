@@ -117,7 +117,11 @@ const mockProjectsData: ProjectRow[] = [
 ];
 
 export const ProjectsPage: React.FC = () => {
-  const { showToast } = useApp();
+  const { showToast, language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
+  const groupLabel = (value: string) => ({ 'Đang triển khai': tr('In progress', 'Đang triển khai'), 'Lên kế hoạch': tr('Planning', 'Lên kế hoạch'), 'Đang đánh giá': tr('In review', 'Đang đánh giá') }[value] ?? value);
+  const healthLabel = (value: string) => ({ 'Tốt': tr('Good', 'Tốt'), 'Cảnh báo': tr('At risk', 'Cảnh báo') }[value] ?? value);
+  const riskLabel = (value: string) => ({ 'Cao': tr('High', 'Cao'), 'Trung bình': tr('Medium', 'Trung bình'), 'Thấp': tr('Low', 'Thấp') }[value] ?? value);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'catalog' | 'progress' | 'tasks'>('catalog');
   const [search, setSearch] = useState('');
@@ -146,7 +150,7 @@ export const ProjectsPage: React.FC = () => {
 
   const handleAskAI = (proj: ProjectRow) => {
     navigate({ to: '/chat' as any });
-    showToast(`Đã chuyển sang Trợ lý AI với ngữ cảnh ${proj.name}`, 'info');
+    showToast(tr(`Opened AI assistant with context ${proj.name}`, `Đã chuyển sang Trợ lý AI với ngữ cảnh ${proj.name}`), 'info');
   };
 
   return (
@@ -159,10 +163,10 @@ export const ProjectsPage: React.FC = () => {
       <div className="px-4 md:px-5 py-3 bg-white dark:bg-zinc-950 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-4 flex-wrap shrink-0">
         <div className="space-y-0.5">
           <h1 className="text-lg font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
-            Dự án & Công việc
+            {tr('Projects & Tasks', 'Dự án & Công việc')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-zinc-400">
-            Theo dõi mục tiêu, tiến độ và công việc liên quan trong một không gian
+            {tr('Track goals, progress, and related work in one place', 'Theo dõi mục tiêu, tiến độ và công việc liên quan trong một không gian')}
           </p>
         </div>
 
@@ -172,10 +176,10 @@ export const ProjectsPage: React.FC = () => {
             className="px-3.5 py-1.5 bg-blue-600 hover:bg-blue-700 text-white rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-xs transition-colors cursor-pointer"
           >
             <Plus className="w-3.5 h-3.5" />
-            <span>Tạo dự án</span>
+            <span>{tr('Create project', 'Tạo dự án')}</span>
           </button>
           <button
-            onClick={() => showToast('Tùy chọn nâng cao', 'info')}
+            onClick={() => showToast(tr('Advanced options', 'Tùy chọn nâng cao'), 'info')}
             className="p-1.5 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 text-slate-500 rounded-md hover:bg-slate-50 dark:hover:bg-zinc-800 cursor-pointer"
           >
             <MoreHorizontal className="w-4 h-4" />
@@ -201,7 +205,7 @@ export const ProjectsPage: React.FC = () => {
                   : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800'
               }`}
             >
-              <span>Danh mục</span>
+              <span>{tr('Catalog', 'Danh mục')}</span>
               {activeTab === 'catalog' && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
               )}
@@ -215,7 +219,7 @@ export const ProjectsPage: React.FC = () => {
                   : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800'
               }`}
             >
-              <span>Tiến độ</span>
+              <span>{tr('Progress', 'Tiến độ')}</span>
               {activeTab === 'progress' && (
                 <span className="absolute bottom-0 left-0 right-0 h-0.5 bg-blue-600 dark:bg-blue-400 rounded-full" />
               )}
@@ -229,22 +233,22 @@ export const ProjectsPage: React.FC = () => {
                   : 'text-slate-500 dark:text-zinc-400 hover:text-slate-800'
               }`}
             >
-              <span>Công việc</span>
+              <span>{tr('Tasks', 'Công việc')}</span>
             </button>
           </div>
 
           <div className="flex justify-end">
-            <button type="button" onClick={() => setIsProjectDetailOpen(true)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800">Chi tiết dự án đang chọn</button>
+            <button type="button" onClick={() => setIsProjectDetailOpen(true)} className="rounded-lg border border-slate-200 bg-white px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-zinc-200 dark:hover:bg-zinc-800">{tr('Selected project details', 'Chi tiết dự án đang chọn')}</button>
           </div>
 
           {/* Search & Filters Row */}
-          <div className="flex items-center justify-between gap-3 flex-wrap">
+          <div className="nexora-table-filters flex items-center justify-between gap-3 flex-wrap">
             <div className="flex items-center gap-2 flex-1 min-w-[220px]">
               <div className="relative flex-1">
                 <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5 pointer-events-none" />
                 <input
                   type="text"
-                  placeholder="Tìm dự án theo tên, mã..."
+                  placeholder={tr('Search projects by name or code...', 'Tìm dự án theo tên, mã...')}
                   value={search}
                   onChange={(e) => setSearch(e.target.value)}
                   className="w-full pl-9 pr-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-800 dark:text-zinc-200 placeholder:text-slate-400 focus:outline-none focus:border-blue-500 shadow-2xs"
@@ -256,10 +260,10 @@ export const ProjectsPage: React.FC = () => {
                 onChange={(e) => setStatusFilter(e.target.value)}
                 className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
               >
-                <option value="all">Trạng thái</option>
-                <option value="Đang triển khai">Đang triển khai</option>
-                <option value="Lên kế hoạch">Lên kế hoạch</option>
-                <option value="Đang đánh giá">Đang đánh giá</option>
+                <option value="all">{tr('Status', 'Trạng thái')}</option>
+                <option value="Đang triển khai">{groupLabel('Đang triển khai')}</option>
+                <option value="Lên kế hoạch">{groupLabel('Lên kế hoạch')}</option>
+                <option value="Đang đánh giá">{groupLabel('Đang đánh giá')}</option>
               </select>
 
               <select
@@ -267,12 +271,12 @@ export const ProjectsPage: React.FC = () => {
                 onChange={(e) => setDeptFilter(e.target.value)}
                 className="px-3 py-2 bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs text-slate-700 dark:text-zinc-300 focus:outline-none cursor-pointer shadow-2xs"
               >
-                <option value="all">Phòng ban</option>
+                <option value="all">{tr('Department', 'Phòng ban')}</option>
                 <option value="PMO">PMO</option>
                 <option value="IT">IT</option>
-                <option value="Kinh doanh">Kinh doanh</option>
-                <option value="Hành chính">Hành chính</option>
-                <option value="Ban Điều hành">Ban Điều hành</option>
+                <option value="Kinh doanh">{tr('Sales', 'Kinh doanh')}</option>
+                <option value="Hành chính">{tr('Administration', 'Hành chính')}</option>
+                <option value="Ban Điều hành">{tr('Executive Board', 'Ban Điều hành')}</option>
               </select>
             </div>
 
@@ -289,22 +293,22 @@ export const ProjectsPage: React.FC = () => {
           {/* Grouped Project Table Card matching 04-project-task-workbench.png */}
           <CustomTable<any> columns={[]} data={[]} className="bg-white dark:bg-zinc-900">
             <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs border-collapse">
-                <thead className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
-                  <tr>
-                    <th className="w-8 px-3 py-3 text-center"></th>
-                    <th className="px-3 py-3">DỰ ÁN</th>
-                    <th className="px-3 py-3">CHỦ SỞ HỮU</th>
-                    <th className="px-3 py-3">SỨC KHỎE</th>
-                    <th className="px-3 py-3">TIẾN ĐỘ</th>
-                    <th className="px-3 py-3">MỐC HIỆN TẠI</th>
-                    <th className="px-3 py-3">HẠN HOÀN THÀNH</th>
-                    <th className="px-3 py-3 text-center">CÔNG VIỆC MỞ</th>
-                    <th className="px-3 py-3">RỦI RO</th>
-                    <th className="w-8 px-3 py-3 text-right"></th>
-                  </tr>
-                </thead>
-                <tbody>
+              <CustomTable.Table className="w-full text-left text-xs border-collapse">
+                <CustomTable.Head className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
+                  <CustomTable.Row>
+                    <CustomTable.HeaderCell className="w-8 px-3 py-3 text-center"></CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('PROJECT', 'DỰ ÁN')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('OWNER', 'CHỦ SỞ HỮU')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('HEALTH', 'SỨC KHỎE')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('PROGRESS', 'TIẾN ĐỘ')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('CURRENT MILESTONE', 'MỐC HIỆN TẠI')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('DUE DATE', 'HẠN HOÀN THÀNH')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3 text-center">{tr('OPEN TASKS', 'CÔNG VIỆC MỞ')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-3 py-3">{tr('RISK', 'RỦI RO')}</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="w-8 px-3 py-3 text-right"></CustomTable.HeaderCell>
+                  </CustomTable.Row>
+                </CustomTable.Head>
+                <CustomTable.Body>
                   {(Object.keys(groupedProjects) as (keyof typeof groupedProjects)[]).map((grpName) => {
                     const list = groupedProjects[grpName];
                     if (list.length === 0) return null;
@@ -312,38 +316,38 @@ export const ProjectsPage: React.FC = () => {
                     return (
                       <React.Fragment key={grpName}>
                         {/* Group Header Row */}
-                        <tr className="bg-slate-50/50 dark:bg-zinc-900/80 border-y border-slate-200 dark:border-zinc-800">
-                          <td colSpan={10} className="px-4 py-2 font-bold text-xs text-slate-800 dark:text-zinc-200">
-                            {grpName} ({list.length})
-                          </td>
-                        </tr>
+                        <CustomTable.Row className="bg-slate-50/50 dark:bg-zinc-900/80 border-y border-slate-200 dark:border-zinc-800">
+                          <CustomTable.Cell colSpan={10} className="px-4 py-2 font-bold text-xs text-slate-800 dark:text-zinc-200">
+                            {groupLabel(grpName)} ({list.length})
+                          </CustomTable.Cell>
+                        </CustomTable.Row>
 
                         {list.map((proj) => {
                           const isSelected = selectedProjectId === proj.id;
                           return (
-                            <tr
+                            <CustomTable.Row
                               key={proj.id}
                               onClick={() => { setSelectedProjectId(proj.id); setIsProjectDetailOpen(true); }}
                               className={`border-b border-slate-100 dark:border-zinc-800/80 hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 cursor-pointer transition-colors ${
                                 isSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
                               }`}
                             >
-                              <td className="px-3 py-3 text-center">
+                              <CustomTable.Cell className="px-3 py-3 text-center">
                                 <Star
                                   className={`w-3.5 h-3.5 cursor-pointer ${
                                     proj.isStarred ? 'text-blue-600 fill-blue-600' : 'text-slate-300 dark:text-zinc-600'
                                   }`}
                                 />
-                              </td>
-                              <td className="px-3 py-3">
+                              </CustomTable.Cell>
+                              <CustomTable.Cell className="px-3 py-3">
                                 <div>
                                   <p className="font-semibold text-slate-900 dark:text-zinc-100 text-xs">
                                     {proj.name}
                                   </p>
                                   <p className="font-mono text-[10px] text-slate-400">{proj.code}</p>
                                 </div>
-                              </td>
-                              <td className="px-3 py-3">
+                              </CustomTable.Cell>
+                              <CustomTable.Cell className="px-3 py-3">
                                 <div className="flex items-center gap-2">
                                   <div className="w-6 h-6 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center shrink-0">
                                     {proj.owner.initials}
@@ -353,18 +357,18 @@ export const ProjectsPage: React.FC = () => {
                                     <p className="text-[10px] text-slate-400">{proj.owner.department}</p>
                                   </div>
                                 </div>
-                              </td>
-                              <td className="px-3 py-3">
+                              </CustomTable.Cell>
+                              <CustomTable.Cell className="px-3 py-3">
                                 <span
                                   className={`inline-flex items-center gap-1 font-semibold text-[11px] ${
                                     proj.health === 'Tốt' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-500'
                                   }`}
                                 >
                                   <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                  {proj.health}
+                                  {healthLabel(proj.health)}
                                 </span>
-                              </td>
-                              <td className="px-3 py-3">
+                              </CustomTable.Cell>
+                              <CustomTable.Cell className="px-3 py-3">
                                 <div className="space-y-1 w-24">
                                   <span className="font-bold text-xs text-slate-800 dark:text-zinc-200 font-mono">
                                     {proj.progress}%
@@ -376,52 +380,52 @@ export const ProjectsPage: React.FC = () => {
                                     />
                                   </div>
                                 </div>
-                              </td>
-                              <td className="px-3 py-3 text-slate-700 dark:text-zinc-300">
+                              </CustomTable.Cell>
+                              <CustomTable.Cell className="px-3 py-3 text-slate-700 dark:text-zinc-300">
                                 {proj.currentMilestone}
-                              </td>
-                              <td className="px-3 py-3 font-mono text-slate-500 text-[11px]">
+                              </CustomTable.Cell>
+                              <CustomTable.Cell className="px-3 py-3 font-mono text-slate-500 text-[11px]">
                                 {proj.deadline}
-                              </td>
-                              <td className="px-3 py-3 text-center">
+                              </CustomTable.Cell>
+                              <CustomTable.Cell className="px-3 py-3 text-center">
                                 <span className="font-bold text-blue-600 dark:text-blue-400 font-mono">
                                   {proj.openTasksCount}
                                 </span>
-                              </td>
-                              <td className="px-3 py-3">
+                              </CustomTable.Cell>
+                              <CustomTable.Cell className="px-3 py-3">
                                 <span className={`inline-flex items-center gap-1 text-[11px] font-medium ${
                                   proj.risk === 'Trung bình' ? 'text-amber-500' : 'text-emerald-600 dark:text-emerald-400'
                                 }`}>
                                   <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                                  {proj.risk}
+                                  {riskLabel(proj.risk)}
                                 </span>
-                              </td>
-                              <td className="px-3 py-3 text-right">
+                              </CustomTable.Cell>
+                              <CustomTable.Cell className="px-3 py-3 text-right">
                                 <button
                                   onClick={(e) => {
                                     e.stopPropagation();
-                                    showToast(`Tùy chọn ${proj.name}`, 'info');
+                                    showToast(tr(`Options for ${proj.name}`, `Tùy chọn ${proj.name}`), 'info');
                                   }}
                                   className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded cursor-pointer"
                                 >
                                   <MoreHorizontal className="w-4 h-4" />
                                 </button>
-                              </td>
-                            </tr>
+                              </CustomTable.Cell>
+                            </CustomTable.Row>
                           );
                         })}
                       </React.Fragment>
                     );
                   })}
-                </tbody>
-              </table>
+                </CustomTable.Body>
+              </CustomTable.Table>
             </div>
 
             {/* Pagination */}
-            <div className="px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
-              <span>Hiển thị 1–{filteredProjects.length} trong {mockProjectsData.length} dự án</span>
+            <div className="nexora-table-footer px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500">
+              <span>{tr('Showing', 'Hiển thị')} 1–{filteredProjects.length} {tr('of', 'trong')} {mockProjectsData.length} {tr('projects', 'dự án')}</span>
               <div className="flex items-center gap-3">
-                <span>10 / trang</span>
+                <span>10 / {tr('page', 'trang')}</span>
                 <span>1 / 1</span>
                 <div className="flex items-center gap-1">
                   <button className="p-1 border border-slate-200 dark:border-zinc-800 rounded hover:bg-slate-50 disabled:opacity-40" disabled>
@@ -438,7 +442,7 @@ export const ProjectsPage: React.FC = () => {
           {/* Section: Mốc thời gian tổng quan matching 04-project-task-workbench.png */}
           <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 shadow-2xs space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Mốc thời gian tổng quan</h3>
+              <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">{tr('Timeline overview', 'Mốc thời gian tổng quan')}</h3>
               <div className="flex items-center gap-1 bg-slate-100 dark:bg-zinc-800 rounded-lg p-0.5 text-xs">
                 <button
                   onClick={() => setTimelineView('list')}
@@ -446,7 +450,7 @@ export const ProjectsPage: React.FC = () => {
                     timelineView === 'list' ? 'bg-white dark:bg-zinc-700 text-blue-600 shadow-2xs' : 'text-slate-500'
                   }`}
                 >
-                  Danh sách
+                  {tr('List', 'Danh sách')}
                 </button>
                 <button
                   onClick={() => setTimelineView('roadmap')}
@@ -454,7 +458,7 @@ export const ProjectsPage: React.FC = () => {
                     timelineView === 'roadmap' ? 'bg-white dark:bg-zinc-700 text-blue-600 shadow-2xs' : 'text-slate-500'
                   }`}
                 >
-                  Lộ trình
+                  {tr('Roadmap', 'Lộ trình')}
                 </button>
               </div>
             </div>
@@ -470,7 +474,7 @@ export const ProjectsPage: React.FC = () => {
                   <span className="font-mono text-[11px] text-slate-400 font-medium">20/04/2024</span>
                   <div className="w-3.5 h-3.5 rounded-full bg-white dark:bg-zinc-900 border-2 border-slate-400" />
                   <div className="text-[11px]">
-                    <p className="font-bold text-slate-800 dark:text-zinc-200">Khởi động dự án</p>
+                    <p className="font-bold text-slate-800 dark:text-zinc-200">{tr('Project kickoff', 'Khởi động dự án')}</p>
                     <p className="text-[10px] text-slate-400">ERP Nexora</p>
                   </div>
                 </div>
@@ -480,7 +484,7 @@ export const ProjectsPage: React.FC = () => {
                   <span className="font-mono text-[11px] text-slate-400 font-medium">24/05/2024</span>
                   <div className="w-3.5 h-3.5 rounded-full bg-white dark:bg-zinc-900 border-2 border-slate-400" />
                   <div className="text-[11px]">
-                    <p className="font-bold text-slate-800 dark:text-zinc-200">Thiết kế hệ thống</p>
+                    <p className="font-bold text-slate-800 dark:text-zinc-200">{tr('System design', 'Thiết kế hệ thống')}</p>
                     <p className="text-[10px] text-slate-400">ERP Nexora</p>
                   </div>
                 </div>
@@ -490,7 +494,7 @@ export const ProjectsPage: React.FC = () => {
                   <span className="font-mono text-[11px] text-blue-600 dark:text-blue-400 font-bold">23/05/2024</span>
                   <div className="w-4 h-4 rounded-full bg-blue-600 border-2 border-white dark:border-zinc-900 ring-2 ring-blue-400" />
                   <div className="text-[11px]">
-                    <p className="font-bold text-blue-600 dark:text-blue-400">Kiểm thử tích hợp</p>
+                    <p className="font-bold text-blue-600 dark:text-blue-400">{tr('Integration testing', 'Kiểm thử tích hợp')}</p>
                     <p className="text-[10px] text-slate-400 font-semibold">ERP Nexora</p>
                   </div>
                 </div>
@@ -500,7 +504,7 @@ export const ProjectsPage: React.FC = () => {
                   <span className="font-mono text-[11px] text-slate-400 font-medium">30/06/2024</span>
                   <div className="w-3.5 h-3.5 rounded-full bg-white dark:bg-zinc-900 border-2 border-slate-400" />
                   <div className="text-[11px]">
-                    <p className="font-bold text-slate-800 dark:text-zinc-200">Đào tạo người dùng</p>
+                    <p className="font-bold text-slate-800 dark:text-zinc-200">{tr('User training', 'Đào tạo người dùng')}</p>
                     <p className="text-[10px] text-slate-400">ERP Nexora</p>
                   </div>
                 </div>
@@ -523,14 +527,14 @@ export const ProjectsPage: React.FC = () => {
         {/* ==================================================================== */}
         {/* 2. RIGHT 1/3 COLUMN: Chi Tiết Dự Án (Project Detail Panel) 320px */}
         {/* ==================================================================== */}
-        {isProjectDetailOpen && <Modal isOpen={isProjectDetailOpen} onClose={() => setIsProjectDetailOpen(false)} title={`Chi tiết dự án: ${selectedProject.name}`} maxWidth="xl">
+        {isProjectDetailOpen && <Modal isOpen={isProjectDetailOpen} onClose={() => setIsProjectDetailOpen(false)} title={tr(`Project details: ${selectedProject.name}`, `Chi tiết dự án: ${selectedProject.name}`)} maxWidth="xl">
         <div className="max-h-[72vh] overflow-y-auto p-1">
         <div className="bg-white dark:bg-zinc-950 flex flex-col space-y-5 p-2 text-xs">
           
           {/* Header */}
           <div className="flex items-center justify-between">
             <h3 className="font-bold text-xs text-slate-800 dark:text-zinc-200 uppercase tracking-wider">
-              Chi tiết dự án
+              {tr('Project details', 'Chi tiết dự án')}
             </h3>
             <span className="text-slate-400">⌃</span>
           </div>
@@ -540,18 +544,18 @@ export const ProjectsPage: React.FC = () => {
             <div className="flex items-start justify-between gap-2">
               <h4 className="font-bold text-sm text-slate-900 dark:text-zinc-100">{selectedProject.name}</h4>
               <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 shrink-0">
-                {selectedProject.group}
+                {groupLabel(selectedProject.group)}
               </span>
             </div>
 
             <div className="space-y-2 text-xs">
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Mã dự án</span>
+                <span className="text-slate-400">{tr('Project code', 'Mã dự án')}</span>
                 <span className="font-mono font-semibold text-slate-700 dark:text-zinc-300">{selectedProject.code}</span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Chủ sở hữu</span>
+                <span className="text-slate-400">{tr('Owner', 'Chủ sở hữu')}</span>
                 <div className="flex items-center gap-1.5">
                   <div className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center">
                     {selectedProject.owner.initials}
@@ -564,15 +568,15 @@ export const ProjectsPage: React.FC = () => {
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">Hạn hoàn thành</span>
+                <span className="text-slate-400">{tr('Due date', 'Hạn hoàn thành')}</span>
                 <span className="text-slate-700 dark:text-zinc-300 font-medium">
-                  {selectedProject.deadline} <span className="text-[10px] text-slate-400">(Còn 37 ngày)</span>
+                  {selectedProject.deadline} <span className="text-[10px] text-slate-400">{tr('(37 days left)', '(Còn 37 ngày)')}</span>
                 </span>
               </div>
 
               <div className="space-y-1 pt-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-slate-400">Tiến độ tổng thể</span>
+                  <span className="text-slate-400">{tr('Overall progress', 'Tiến độ tổng thể')}</span>
                   <span className="font-bold text-slate-800 dark:text-zinc-200 font-mono">{selectedProject.progress}%</span>
                 </div>
                 <div className="w-full bg-slate-100 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden">
@@ -584,7 +588,7 @@ export const ProjectsPage: React.FC = () => {
 
           {/* Thành viên dự án (6) */}
           <div className="space-y-2 pb-3 border-b border-slate-100 dark:border-zinc-800">
-            <span className="font-bold text-slate-800 dark:text-zinc-200 block text-xs">Thành viên dự án (6)</span>
+            <span className="font-bold text-slate-800 dark:text-zinc-200 block text-xs">{tr('Project members', 'Thành viên dự án')} (6)</span>
             <div className="flex items-center gap-1.5">
               {['VH', 'NT', 'PT', 'LH', 'VH', 'AD'].map((init, idx) => (
                 <div
@@ -595,7 +599,7 @@ export const ProjectsPage: React.FC = () => {
                 </div>
               ))}
               <button
-                onClick={() => showToast('Thêm thành viên vào dự án', 'info')}
+                onClick={() => showToast(tr('Add a project member', 'Thêm thành viên vào dự án'), 'info')}
                 className="w-7 h-7 rounded-full border border-dashed border-slate-300 dark:border-zinc-700 text-slate-400 hover:text-slate-600 flex items-center justify-center cursor-pointer text-xs"
               >
                 +
@@ -606,10 +610,10 @@ export const ProjectsPage: React.FC = () => {
           {/* Mốc hiện tại */}
           <div className="space-y-2 pb-3 border-b border-slate-100 dark:border-zinc-800">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs">Mốc hiện tại</span>
+              <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs">{tr('Current milestone', 'Mốc hiện tại')}</span>
               <span className="inline-flex items-center gap-1 text-[11px] text-amber-500 font-medium">
                 <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
-                Đang thực hiện
+                {tr('In progress', 'Đang thực hiện')}
               </span>
             </div>
             <div className="p-3 bg-slate-50/70 dark:bg-zinc-900 rounded-lg space-y-1.5">
@@ -627,12 +631,12 @@ export const ProjectsPage: React.FC = () => {
           {/* Công việc sắp tới */}
           <div className="space-y-2.5 pb-3 border-b border-slate-100 dark:border-zinc-800">
             <div className="flex items-center justify-between">
-              <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs">Công việc sắp tới</span>
+              <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs">{tr('Upcoming tasks', 'Công việc sắp tới')}</span>
               <button
                 onClick={() => navigate({ to: '/tasks' as any })}
                 className="text-[11px] text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
               >
-                Xem tất cả
+                {tr('View all', 'Xem tất cả')}
               </button>
             </div>
 
@@ -640,7 +644,7 @@ export const ProjectsPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" className="rounded border-slate-300" defaultChecked />
-                  <span className="text-slate-700 dark:text-zinc-300 font-medium">Chuẩn bị kịch bản UAT</span>
+                  <span className="text-slate-700 dark:text-zinc-300 font-medium">{tr('Prepare UAT scenarios', 'Chuẩn bị kịch bản UAT')}</span>
                 </label>
                 <span className="text-slate-400 font-mono">24/05/2024</span>
               </div>
@@ -648,7 +652,7 @@ export const ProjectsPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" className="rounded border-slate-300" />
-                  <span className="text-slate-700 dark:text-zinc-300 font-medium">Thực thi kiểm thử UAT</span>
+                  <span className="text-slate-700 dark:text-zinc-300 font-medium">{tr('Execute UAT tests', 'Thực thi kiểm thử UAT')}</span>
                 </label>
                 <span className="text-slate-400 font-mono">27/05/2024</span>
               </div>
@@ -656,7 +660,7 @@ export const ProjectsPage: React.FC = () => {
               <div className="flex items-center justify-between">
                 <label className="flex items-center gap-2 cursor-pointer">
                   <input type="checkbox" className="rounded border-slate-300" />
-                  <span className="text-slate-700 dark:text-zinc-300 font-medium">Tổng hợp & xử lý lỗi</span>
+                  <span className="text-slate-700 dark:text-zinc-300 font-medium">{tr('Summarize and resolve defects', 'Tổng hợp & xử lý lỗi')}</span>
                 </label>
                 <span className="text-slate-400 font-mono">31/05/2024</span>
               </div>
@@ -665,7 +669,7 @@ export const ProjectsPage: React.FC = () => {
 
           {/* Cập nhật gần nhất */}
           <div className="space-y-2 pb-3">
-            <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs block">Cập nhật gần nhất</span>
+            <span className="font-bold text-slate-800 dark:text-zinc-200 text-xs block">{tr('Latest update', 'Cập nhật gần nhất')}</span>
             <div className="p-3 bg-slate-50/70 dark:bg-zinc-900 rounded-lg space-y-1.5 text-[11px]">
               <div className="flex items-center gap-2">
                 <div className="w-5 h-5 rounded-full bg-blue-600 text-white font-bold text-[9px] flex items-center justify-center">
@@ -675,7 +679,7 @@ export const ProjectsPage: React.FC = () => {
                 <span className="text-[10px] text-slate-400">• 23/05/2024 10:24</span>
               </div>
               <p className="text-slate-600 dark:text-zinc-400 leading-relaxed pl-7">
-                Hoàn thành 65% hạng mục kiểm thử tích hợp. Đã phát hiện 12 lỗi mức trung bình.
+                {tr('Integration testing is 65% complete. Twelve medium-severity defects were found.', 'Hoàn thành 65% hạng mục kiểm thử tích hợp. Đã phát hiện 12 lỗi mức trung bình.')}
               </p>
             </div>
           </div>
@@ -687,14 +691,14 @@ export const ProjectsPage: React.FC = () => {
                 onClick={() => navigate({ to: '/tasks' as any })}
                 className="py-2 px-3 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
               >
-                <span>Mở công việc</span>
+                <span>{tr('Open tasks', 'Mở công việc')}</span>
               </button>
               <button
-                onClick={() => showToast('Cập nhật tiến độ dự án', 'info')}
+                onClick={() => showToast(tr('Update project progress', 'Cập nhật tiến độ dự án'), 'info')}
                 className="py-2 px-3 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-300 flex items-center justify-center gap-1.5 shadow-2xs cursor-pointer"
               >
                 <Edit2 className="w-3 h-3" />
-                <span>Cập nhật tiến độ</span>
+                <span>{tr('Update progress', 'Cập nhật tiến độ')}</span>
               </button>
             </div>
 
@@ -703,7 +707,7 @@ export const ProjectsPage: React.FC = () => {
               className="w-full py-2.5 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-400 rounded-lg text-xs font-semibold flex items-center justify-center gap-2 transition-colors cursor-pointer"
             >
               <Sparkles className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
-              <span>Hỏi AI về dự án</span>
+              <span>{tr('Ask AI about this project', 'Hỏi AI về dự án')}</span>
             </button>
           </div>
 

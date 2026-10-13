@@ -1112,25 +1112,25 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
             {/* Table */}
             <CustomTable<any> columns={[]} data={[]} className="rounded-none border-0 shadow-none bg-white dark:bg-zinc-900">
             <div className="overflow-x-auto">
-              <table className="table table-sm table-zebra w-full text-xs">
-                <thead>
-                  <tr className="bg-slate-100/80 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-300 text-[11px]">
-                    <th className="w-10 text-center">#</th>
-                    <th>Mã nhân viên</th>
-                    <th>Tên nhân viên</th>
-                    <th>Công việc / Vị trí</th>
-                    <th>Phòng ban</th>
-                    <th>Số điện thoại / Email</th>
-                    <th className="w-16 text-center">Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
+              <CustomTable.Table className="table table-sm table-zebra w-full text-xs">
+                <CustomTable.Head>
+                  <CustomTable.Row className="bg-slate-100/80 dark:bg-zinc-800/80 text-slate-600 dark:text-zinc-300 text-[11px]">
+                    <CustomTable.HeaderCell className="w-10 text-center">#</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell>Mã nhân viên</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell>Tên nhân viên</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell>Công việc / Vị trí</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell>Phòng ban</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell>Số điện thoại / Email</CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="w-16 text-center">Hành động</CustomTable.HeaderCell>
+                  </CustomTable.Row>
+                </CustomTable.Head>
+                <CustomTable.Body>
                   {paginatedMembers.length === 0 ? (
-                    <tr>
-                      <td colSpan={7} className="text-center py-6 text-slate-400 dark:text-zinc-500">
+                    <CustomTable.Row>
+                      <CustomTable.Cell colSpan={7} className="text-center py-6 text-slate-400 dark:text-zinc-500">
                         Chưa có nhân viên nào trong nhóm quyền này
-                      </td>
-                    </tr>
+                      </CustomTable.Cell>
+                    </CustomTable.Row>
                   ) : (
                     paginatedMembers.map((member, idx) => {
                       const stt = (page - 1) * pageSize + idx + 1;
@@ -1143,14 +1143,14 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
                         .toUpperCase();
 
                       return (
-                        <tr key={member.userId} className="hover">
-                          <td className="text-center font-semibold text-slate-500 dark:text-zinc-400">
+                        <CustomTable.Row key={member.userId} className="hover">
+                          <CustomTable.Cell className="text-center font-semibold text-slate-500 dark:text-zinc-400">
                             {stt}
-                          </td>
-                          <td className="font-mono text-slate-600 dark:text-zinc-300 font-semibold">
+                          </CustomTable.Cell>
+                          <CustomTable.Cell className="font-mono text-slate-600 dark:text-zinc-300 font-semibold">
                             {member.userName || member.email.split('@')[0]}
-                          </td>
-                          <td>
+                          </CustomTable.Cell>
+                          <CustomTable.Cell>
                             <div className="flex items-center gap-2">
                               <div className="w-6 h-6 rounded-full bg-blue-100 dark:bg-blue-950/80 text-blue-600 dark:text-blue-400 text-[10px] font-bold flex items-center justify-center">
                                 {initials}
@@ -1159,17 +1159,17 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
                                 {memberDisplayName}
                               </span>
                             </div>
-                          </td>
-                          <td className="text-slate-600 dark:text-zinc-300">
+                          </CustomTable.Cell>
+                          <CustomTable.Cell className="text-slate-600 dark:text-zinc-300">
                             {roleName || 'Nhân viên'}
-                          </td>
-                          <td className="text-slate-600 dark:text-zinc-300">
+                          </CustomTable.Cell>
+                          <CustomTable.Cell className="text-slate-600 dark:text-zinc-300">
                             {member.department || department || 'Công nghệ thông tin'}
-                          </td>
-                          <td className="text-slate-500 dark:text-zinc-400 font-mono text-[11px]">
+                          </CustomTable.Cell>
+                          <CustomTable.Cell className="text-slate-500 dark:text-zinc-400 font-mono text-[11px]">
                             {member.phoneNumber || member.email}
-                          </td>
-                          <td className="text-center">
+                          </CustomTable.Cell>
+                          <CustomTable.Cell className="text-center">
                             <button
                               type="button"
                               onClick={() => handleRemoveMember(member)}
@@ -1178,17 +1178,17 @@ export const RoleDetailModal: React.FC<RoleDetailModalProps> = ({
                             >
                               <X className="w-3.5 h-3.5 stroke-[2.5]" />
                             </button>
-                          </td>
-                        </tr>
+                          </CustomTable.Cell>
+                        </CustomTable.Row>
                       );
                     })
                   )}
-                </tbody>
-              </table>
+                </CustomTable.Body>
+              </CustomTable.Table>
             </div>
 
             {/* Table Pagination Controls */}
-            <div className="bg-white dark:bg-zinc-900 p-2.5 border-t border-slate-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs">
+            <div className="nexora-table-footer bg-white dark:bg-zinc-900 p-2.5 border-t border-slate-100 dark:border-zinc-800 flex flex-wrap items-center justify-between gap-3 text-xs">
               <div className="flex items-center gap-1.5">
                 <button
                   type="button"

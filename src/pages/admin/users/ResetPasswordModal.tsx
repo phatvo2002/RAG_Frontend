@@ -4,6 +4,7 @@ import { Modal } from '@/components/disclosure';
 import { User, resetPasswordYupSchema, ResetPasswordFormData } from '@/types';
 import { useResetPasswordMutation } from '@/api/users.api';
 import { Lock, Eye, EyeOff, KeyRound, AlertCircle } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -18,6 +19,8 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   user,
   onSuccessToast,
 }) => {
+  const { language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
 
@@ -34,7 +37,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
           resetPasswordYupSchema.validateSync(value, { abortEarly: false });
           return undefined;
         } catch (err: any) {
-          return err.message || 'Dữ liệu mật khẩu không hợp lệ';
+          return err.message || tr('Invalid password', 'Dữ liệu mật khẩu không hợp lệ');
         }
       },
     },
@@ -49,12 +52,12 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
         },
         {
           onSuccess: () => {
-            onSuccessToast(`Đã đặt lại mật khẩu cho tài khoản ${user.name} thành công!`);
+            onSuccessToast(tr(`Password reset for ${user.name}.`, `Đã đặt lại mật khẩu cho tài khoản ${user.name} thành công!`));
             form.reset();
             onClose();
           },
           onError: (err: any) => {
-            setServerError(err.message || 'Không thể đặt lại mật khẩu');
+            setServerError(err.message || tr('Could not reset password', 'Không thể đặt lại mật khẩu'));
           },
         }
       );
@@ -75,7 +78,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={`Đặt lại mật khẩu: ${user.name}`}
+      title={tr(`Reset password: ${user.name}`, `Đặt lại mật khẩu: ${user.name}`)}
       maxWidth="sm"
     >
       <form
@@ -89,7 +92,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
         <div className="p-3 bg-amber-50 dark:bg-zinc-800/80 border border-amber-200 dark:border-zinc-700 rounded-box text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed flex items-start gap-2">
           <KeyRound className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
           <span>
-            Bạn đang đặt lại mật khẩu cho tài khoản <strong>{user.email}</strong>. Sau khi hoàn tất, mật khẩu cũ sẽ bị vô hiệu hóa.
+            {tr('You are resetting the password for', 'Bạn đang đặt lại mật khẩu cho tài khoản')} <strong>{user.email}</strong>. {tr('The old password will no longer work.', 'Sau khi hoàn tất, mật khẩu cũ sẽ bị vô hiệu hóa.')}
           </span>
         </div>
 
@@ -106,9 +109,9 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
           validators={{
             onChange: ({ value }) =>
               !value
-                ? 'Vui lòng nhập mật khẩu mới'
+                ? tr('Enter a new password', 'Vui lòng nhập mật khẩu mới')
                 : value.length < 6
-                ? 'Mật khẩu phải có ít nhất 6 ký tự'
+                ? tr('Password must have at least 6 characters', 'Mật khẩu phải có ít nhất 6 ký tự')
                 : undefined,
           }}
         >
@@ -119,7 +122,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
             return (
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Mật khẩu mới <span className="text-rose-500">*</span>
+                  {tr('New password', 'Mật khẩu mới')} <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <input
@@ -128,7 +131,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="Nhập tối thiểu 6 ký tự"
+                    placeholder={tr('Enter at least 6 characters', 'Nhập tối thiểu 6 ký tự')}
                     className={`input input-bordered input-sm w-full pl-9 pr-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
                       hasError ? 'input-error' : ''
                     }`}
@@ -159,9 +162,9 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
           validators={{
             onChangeListenTo: ['newPassword'],
             onChange: ({ value, fieldApi }) => {
-              if (!value) return 'Vui lòng xác nhận lại mật khẩu mới';
+              if (!value) return tr('Confirm the new password', 'Vui lòng xác nhận lại mật khẩu mới');
               if (value !== fieldApi.form.getFieldValue('newPassword')) {
-                return 'Mật khẩu xác nhận không khớp';
+                return tr('Passwords do not match', 'Mật khẩu xác nhận không khớp');
               }
               return undefined;
             },
@@ -174,7 +177,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
             return (
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Xác nhận mật khẩu mới <span className="text-rose-500">*</span>
+                  {tr('Confirm new password', 'Xác nhận mật khẩu mới')} <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <input
@@ -183,7 +186,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
                     value={field.state.value}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="Nhập lại mật khẩu mới"
+                    placeholder={tr('Re-enter the new password', 'Nhập lại mật khẩu mới')}
                     className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
                       hasError ? 'input-error' : ''
                     }`}
@@ -207,7 +210,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
             onClick={onClose}
             className="btn btn-sm btn-ghost text-slate-700 dark:text-zinc-300 font-medium"
           >
-            Hủy
+            {tr('Cancel', 'Hủy')}
           </button>
           <button
             type="submit"
@@ -217,7 +220,7 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
             {resetMutation.isPending && (
               <span className="loading loading-spinner loading-xs" />
             )}
-            <span>Xác nhận đổi mật khẩu</span>
+            <span>{tr('Reset password', 'Xác nhận đổi mật khẩu')}</span>
           </button>
         </div>
       </form>

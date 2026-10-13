@@ -137,7 +137,10 @@ const mockProjectTimelines = [
 ];
 
 export const DashboardPage: React.FC = () => {
-  const { showToast } = useApp();
+  const { showToast, language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
+  const statusLabel = (value: string) => ({ 'Cần phản hồi': tr('Needs response', 'Cần phản hồi'), 'Đang thực hiện': tr('In progress', 'Đang thực hiện'), 'Chưa bắt đầu': tr('Not started', 'Chưa bắt đầu') }[value] ?? value);
+  const priorityLabel = (value: string) => ({ 'Cao': tr('High', 'Cao'), 'Trung bình': tr('Medium', 'Trung bình'), 'Thấp': tr('Low', 'Thấp') }[value] ?? value);
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<'all' | 'overdue' | 'feedback' | 'doing'>('all');
 
@@ -176,10 +179,10 @@ export const DashboardPage: React.FC = () => {
         {/* Page Title & Subtitle matching 01-executive-dashboard.png */}
         <div className="space-y-1">
           <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
-            Tổng quan điều hành
+            {tr('Executive overview', 'Tổng quan điều hành')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-zinc-400">
-            Ưu tiên, tiến độ và rủi ro cần chú ý hôm nay
+            {tr('Today’s priorities, progress, and risks', 'Ưu tiên, tiến độ và rủi ro cần chú ý hôm nay')}
           </p>
         </div>
 
@@ -188,10 +191,10 @@ export const DashboardPage: React.FC = () => {
           {/* Card 1 */}
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-2xs flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Dự án đang chạy</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">{tr('Active projects', 'Dự án đang chạy')}</span>
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">12</div>
               <div className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <span>↑ 2 so với tuần trước</span>
+                <span>{tr('↑ 2 vs. last week', '↑ 2 so với tuần trước')}</span>
               </div>
             </div>
             <div className="w-11 h-11 rounded-lg bg-blue-50 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -202,10 +205,10 @@ export const DashboardPage: React.FC = () => {
           {/* Card 2 */}
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-2xs flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Công việc cần xử lý</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">{tr('Tasks requiring action', 'Công việc cần xử lý')}</span>
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">28</div>
               <div className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <span>↑ 6 so với hôm qua</span>
+                <span>{tr('↑ 6 vs. yesterday', '↑ 6 so với hôm qua')}</span>
               </div>
             </div>
             <div className="w-11 h-11 rounded-lg bg-blue-50 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -216,10 +219,10 @@ export const DashboardPage: React.FC = () => {
           {/* Card 3 */}
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-2xs flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Tài liệu đã lập chỉ mục</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">{tr('Indexed documents', 'Tài liệu đã lập chỉ mục')}</span>
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">8.356</div>
               <div className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 flex items-center gap-1">
-                <span>↑ 312 so với tuần trước</span>
+                <span>{tr('↑ 312 vs. last week', '↑ 312 so với tuần trước')}</span>
               </div>
             </div>
             <div className="w-11 h-11 rounded-lg bg-blue-50 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -230,10 +233,10 @@ export const DashboardPage: React.FC = () => {
           {/* Card 4 */}
           <div className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-2xs flex items-center justify-between">
             <div className="space-y-1">
-              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Cuộc họp hôm nay</span>
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">{tr('Meetings today', 'Cuộc họp hôm nay')}</span>
               <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">5</div>
               <div className="text-[11px] font-medium text-rose-500 flex items-center gap-1">
-                <span>↓ 1 so với hôm qua</span>
+                <span>{tr('↓ 1 vs. yesterday', '↓ 1 so với hôm qua')}</span>
               </div>
             </div>
             <div className="w-11 h-11 rounded-lg bg-blue-50 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
@@ -251,12 +254,12 @@ export const DashboardPage: React.FC = () => {
             {/* Section: Ưu tiên hôm nay */}
             <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-2xs overflow-hidden">
               <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between flex-wrap gap-3">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Ưu tiên hôm nay</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">{tr('Today’s priorities', 'Ưu tiên hôm nay')}</h3>
                 <button
                   onClick={() => navigate({ to: '/tasks' as any })}
                   className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
-                  Xem tất cả
+                  {tr('View all', 'Xem tất cả')}
                 </button>
               </div>
 
@@ -271,7 +274,7 @@ export const DashboardPage: React.FC = () => {
                         : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'
                     }`}
                   >
-                    Tất cả (28)
+                    {tr('All', 'Tất cả')} (28)
                   </button>
                   <button
                     onClick={() => setActiveTab('overdue')}
@@ -281,7 +284,7 @@ export const DashboardPage: React.FC = () => {
                         : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'
                     }`}
                   >
-                    Quá hạn (7)
+                    {tr('Overdue', 'Quá hạn')} (7)
                   </button>
                   <button
                     onClick={() => setActiveTab('feedback')}
@@ -291,7 +294,7 @@ export const DashboardPage: React.FC = () => {
                         : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'
                     }`}
                   >
-                    Cần phản hồi (12)
+                    {tr('Needs response', 'Cần phản hồi')} (12)
                   </button>
                   <button
                     onClick={() => setActiveTab('doing')}
@@ -301,53 +304,53 @@ export const DashboardPage: React.FC = () => {
                         : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'
                     }`}
                   >
-                    Đang thực hiện (9)
+                    {tr('In progress', 'Đang thực hiện')} (9)
                   </button>
                 </div>
 
                 <button
-                  onClick={() => showToast('Mở bộ lọc nâng cao', 'info')}
+                  onClick={() => showToast(tr('Open advanced filters', 'Mở bộ lọc nâng cao'), 'info')}
                   className="px-2.5 py-1 bg-white dark:bg-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-700 border border-slate-200 dark:border-zinc-700 rounded-md text-xs font-medium text-slate-700 dark:text-zinc-300 flex items-center gap-1.5 cursor-pointer shadow-2xs"
                 >
                   <Filter className="w-3 h-3" />
-                  <span>Bộ lọc</span>
+                  <span>{tr('Filters', 'Bộ lọc')}</span>
                 </button>
               </div>
 
               {/* Tasks Table */}
               <CustomTable<any> columns={[]} data={[]} className="border-0 shadow-none rounded-none">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
-                    <tr>
-                      <th className="w-10 px-4 py-3 text-center">
+                <CustomTable.Table className="w-full text-left text-xs border-collapse">
+                  <CustomTable.Head className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
+                    <CustomTable.Row>
+                      <CustomTable.HeaderCell className="w-10 px-4 py-3 text-center">
                         <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700" />
-                      </th>
-                      <th className="px-3 py-3">CÔNG VIỆC</th>
-                      <th className="px-3 py-3">DỰ ÁN</th>
-                      <th className="px-3 py-3">HẠN HOÀN THÀNH</th>
-                      <th className="px-3 py-3">ƯU TIÊN</th>
-                      <th className="px-3 py-3">TRẠNG THÁI</th>
-                      <th className="px-3 py-3">GIAO CHO</th>
-                      <th className="w-10 px-4 py-3 text-right"></th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+                      </CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">{tr('TASK', 'CÔNG VIỆC')}</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">{tr('PROJECT', 'DỰ ÁN')}</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">{tr('DUE DATE', 'HẠN HOÀN THÀNH')}</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">{tr('PRIORITY', 'ƯU TIÊN')}</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">{tr('STATUS', 'TRẠNG THÁI')}</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">{tr('ASSIGNEE', 'GIAO CHO')}</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="w-10 px-4 py-3 text-right"></CustomTable.HeaderCell>
+                    </CustomTable.Row>
+                  </CustomTable.Head>
+                  <CustomTable.Body className="divide-y divide-slate-100 dark:divide-zinc-800/80">
                     {filteredTasks.map((task) => (
-                      <tr
+                      <CustomTable.Row
                         key={task.id}
                         className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
                       >
-                        <td className="px-4 py-3 text-center">
+                        <CustomTable.Cell className="px-4 py-3 text-center">
                           <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" />
-                        </td>
-                        <td className="px-3 py-3 font-semibold text-slate-900 dark:text-zinc-100">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 font-semibold text-slate-900 dark:text-zinc-100">
                           {task.name}
-                        </td>
-                        <td className="px-3 py-3 text-slate-600 dark:text-zinc-400">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 text-slate-600 dark:text-zinc-400">
                           {task.project}
-                        </td>
-                        <td className="px-3 py-3">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
                           <span
                             className={`font-semibold ${
                               task.isToday
@@ -355,21 +358,21 @@ export const DashboardPage: React.FC = () => {
                                 : 'text-slate-600 dark:text-zinc-400'
                             }`}
                           >
-                            {task.deadline}
+                            {task.deadline === 'Hôm nay' ? tr('Today', 'Hôm nay') : task.deadline === 'Ngày mai' ? tr('Tomorrow', 'Ngày mai') : task.deadline}
                           </span>
-                        </td>
-                        <td className="px-3 py-3">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
                           <span className={`inline-flex items-center gap-1 font-medium ${getPriorityColor(task.priority)}`}>
                             <span className="w-1.5 h-1.5 rounded-full bg-current" />
-                            {task.priority}
+                            {priorityLabel(task.priority)}
                           </span>
-                        </td>
-                        <td className="px-3 py-3">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
                           <span className={`px-2 py-0.5 rounded text-[10px] font-semibold ${getStatusBadge(task.status)}`}>
-                            {task.status}
+                            {statusLabel(task.status)}
                           </span>
-                        </td>
-                        <td className="px-3 py-3">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
                           <div className="flex items-center gap-1.5">
                             <div className={`w-5 h-5 rounded-full ${task.assignee.avatarBg} text-white font-bold text-[9px] flex items-center justify-center shrink-0`}>
                               {task.assignee.username.slice(0, 2).toUpperCase()}
@@ -378,25 +381,25 @@ export const DashboardPage: React.FC = () => {
                               {task.assignee.username}
                             </span>
                           </div>
-                        </td>
-                        <td className="px-4 py-3 text-right">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-4 py-3 text-right">
                           <button
-                            onClick={() => showToast(`Tùy chọn ${task.name}`, 'info')}
+                            onClick={() => showToast(tr(`Options for ${task.name}`, `Tùy chọn ${task.name}`), 'info')}
                             className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-200 rounded cursor-pointer"
                           >
                             <MoreHorizontal className="w-4 h-4" />
                           </button>
-                        </td>
-                      </tr>
+                        </CustomTable.Cell>
+                      </CustomTable.Row>
                     ))}
-                  </tbody>
-                </table>
+                  </CustomTable.Body>
+                </CustomTable.Table>
               </div>
               </CustomTable>
 
               {/* Table Pagination */}
-              <div className="px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
-                <span>Hiển thị 1–{filteredTasks.length} trong 28</span>
+              <div className="nexora-table-footer px-4 py-3 bg-white dark:bg-zinc-900 border-t border-slate-200 dark:border-zinc-800 flex items-center justify-between text-xs text-slate-500 dark:text-zinc-400">
+                <span>{tr(`Showing 1–${filteredTasks.length} of 28`, `Hiển thị 1–${filteredTasks.length} trong 28`)}</span>
                 <div className="flex items-center gap-3">
                   <div className="flex items-center gap-1">
                     <span>10 / trang</span>
@@ -417,19 +420,19 @@ export const DashboardPage: React.FC = () => {
             {/* Section: Tổng quan tiến độ dự án (Gantt timeline) */}
             <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between flex-wrap gap-2">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Tổng quan tiến độ dự án</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">{tr('Project progress overview', 'Tổng quan tiến độ dự án')}</h3>
                 <div className="flex items-center gap-3 text-xs">
                   <span className="flex items-center gap-1 text-slate-600 dark:text-zinc-400">
                     <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                    Đúng tiến độ
+                    {tr('On track', 'Đúng tiến độ')}
                   </span>
                   <span className="flex items-center gap-1 text-slate-600 dark:text-zinc-400">
                     <span className="w-2 h-2 rounded-full bg-amber-500" />
-                    Chậm nhẹ
+                    {tr('Slightly delayed', 'Chậm nhẹ')}
                   </span>
                   <span className="flex items-center gap-1 text-slate-600 dark:text-zinc-400">
                     <span className="w-2 h-2 rounded-full bg-rose-500" />
-                    Chậm nghiêm trọng
+                    {tr('Significantly delayed', 'Chậm nghiêm trọng')}
                   </span>
                 </div>
               </div>
@@ -437,11 +440,11 @@ export const DashboardPage: React.FC = () => {
               {/* Timeline Header Grid */}
               <div className="space-y-3 pt-2 text-xs">
                 <div className="grid grid-cols-12 text-[11px] font-semibold text-slate-400 border-b border-slate-100 dark:border-zinc-800/80 pb-2">
-                  <div className="col-span-3">DỰ ÁN</div>
+                  <div className="col-span-3">{tr('PROJECT', 'DỰ ÁN')}</div>
                   <div className="col-span-3 text-center border-l border-slate-100 dark:border-zinc-800">04/2024</div>
                   <div className="col-span-3 text-center border-l border-slate-100 dark:border-zinc-800">05/2024</div>
                   <div className="col-span-2 text-center border-l border-slate-100 dark:border-zinc-800">06/2024</div>
-                  <div className="col-span-1 text-right">TIẾN ĐỘ</div>
+                  <div className="col-span-1 text-right">{tr('PROGRESS', 'TIẾN ĐỘ')}</div>
                 </div>
 
                 {/* Project Rows */}
@@ -469,12 +472,12 @@ export const DashboardPage: React.FC = () => {
               </div>
 
               <div className="pt-2 border-t border-slate-100 dark:border-zinc-800/60 flex items-center justify-between text-xs text-slate-400">
-                <span>Dữ liệu minh họa</span>
+                <span>{tr('Illustrative data', 'Dữ liệu minh họa')}</span>
                 <button
                   onClick={() => navigate({ to: '/projects' as any })}
                   className="font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
-                  Xem tất cả dự án
+                  {tr('View all projects', 'Xem tất cả dự án')}
                 </button>
               </div>
             </div>
@@ -487,12 +490,12 @@ export const DashboardPage: React.FC = () => {
             {/* Box 1: Cảnh báo & rủi ro */}
             <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Cảnh báo & rủi ro</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">{tr('Alerts & risks', 'Cảnh báo & rủi ro')}</h3>
                 <button
-                  onClick={() => showToast('Xem danh mục rủi ro hệ thống', 'info')}
+                  onClick={() => showToast(tr('View system risk register', 'Xem danh mục rủi ro hệ thống'), 'info')}
                   className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
-                  Xem tất cả
+                  {tr('View all', 'Xem tất cả')}
                 </button>
               </div>
 
@@ -504,7 +507,7 @@ export const DashboardPage: React.FC = () => {
                     <div className="min-w-0">
                       <h4 className="font-bold text-xs text-slate-900 dark:text-zinc-100">Dự án ERP Nexora</h4>
                       <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-                        Nguy cơ trễ hạn giai đoạn Kiểm thử tích hợp (UAT)
+                        {tr('Integration testing (UAT) may be delayed', 'Nguy cơ trễ hạn giai đoạn Kiểm thử tích hợp (UAT)')}
                       </p>
                     </div>
                   </div>
@@ -520,12 +523,12 @@ export const DashboardPage: React.FC = () => {
                     <div className="min-w-0">
                       <h4 className="font-bold text-xs text-slate-900 dark:text-zinc-100">Ứng dụng CRM</h4>
                       <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-                        Phụ thuộc chờ phản hồi từ phòng Kinh doanh
+                        {tr('Waiting for a response from Sales', 'Phụ thuộc chờ phản hồi từ phòng Kinh doanh')}
                       </p>
                     </div>
                   </div>
                   <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400 rounded shrink-0">
-                    Trung bình
+                    {tr('Medium', 'Trung bình')}
                   </span>
                 </div>
 
@@ -536,12 +539,12 @@ export const DashboardPage: React.FC = () => {
                     <div className="min-w-0">
                       <h4 className="font-bold text-xs text-slate-900 dark:text-zinc-100">Data Warehouse</h4>
                       <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-                        Tiến độ nhập dữ liệu chậm 15% so với kế hoạch
+                        {tr('Data entry is 15% behind schedule', 'Tiến độ nhập dữ liệu chậm 15% so với kế hoạch')}
                       </p>
                     </div>
                   </div>
                   <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400 rounded shrink-0">
-                    Trung bình
+                    {tr('Medium', 'Trung bình')}
                   </span>
                 </div>
 
@@ -550,14 +553,14 @@ export const DashboardPage: React.FC = () => {
                   <div className="flex items-start gap-2.5 min-w-0">
                     <Info className="w-4 h-4 text-blue-500 shrink-0 mt-0.5" />
                     <div className="min-w-0">
-                      <h4 className="font-bold text-xs text-slate-900 dark:text-zinc-100">Chính sách bảo mật</h4>
+                      <h4 className="font-bold text-xs text-slate-900 dark:text-zinc-100">{tr('Security policy', 'Chính sách bảo mật')}</h4>
                       <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
-                        Cập nhật chính sách mới — cần xác nhận
+                        {tr('New policy update requires confirmation', 'Cập nhật chính sách mới — cần xác nhận')}
                       </p>
                     </div>
                   </div>
                   <span className="px-2 py-0.5 text-[10px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-950 dark:text-blue-400 rounded shrink-0">
-                    Thông tin
+                    {tr('Info', 'Thông tin')}
                   </span>
                 </div>
               </div>
@@ -566,12 +569,12 @@ export const DashboardPage: React.FC = () => {
             {/* Box 2: Hoạt động gần đây */}
             <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 shadow-2xs space-y-4">
               <div className="flex items-center justify-between">
-                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Hoạt động gần đây</h3>
+                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">{tr('Recent activity', 'Hoạt động gần đây')}</h3>
                 <button
                   onClick={() => navigate({ to: '/admin/logs' as any })}
                   className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
-                  Xem tất cả
+                  {tr('View all', 'Xem tất cả')}
                 </button>
               </div>
 
@@ -583,7 +586,7 @@ export const DashboardPage: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-700 dark:text-zinc-300">
-                      <strong>lenhu</strong> đã hoàn thành công việc <strong>"Phân tích yêu cầu nghiệp vụ"</strong>
+                      <strong>lenhu</strong> {tr('completed task', 'đã hoàn thành công việc')} <strong>"{tr('Business requirements analysis', 'Phân tích yêu cầu nghiệp vụ')}"</strong>
                     </p>
                     <span className="text-[10px] text-slate-400">Dự án ERP Nexora</span>
                   </div>
@@ -596,7 +599,7 @@ export const DashboardPage: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-700 dark:text-zinc-300">
-                      <strong>phat1</strong> đã tải lên tài liệu <strong>"Đặc tả tính năng v1.2.pdf"</strong>
+                      <strong>phat1</strong> {tr('uploaded document', 'đã tải lên tài liệu')} <strong>"{tr('Feature specification v1.2.pdf', 'Đặc tả tính năng v1.2.pdf')}"</strong>
                     </p>
                     <span className="text-[10px] text-slate-400">Ứng dụng CRM</span>
                   </div>
@@ -609,9 +612,9 @@ export const DashboardPage: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-700 dark:text-zinc-300">
-                      Họp <strong>"Rà soát tiến độ dự án"</strong> đã được cập nhật
+                      {tr('Meeting', 'Họp')} <strong>"{tr('Project progress review', 'Rà soát tiến độ dự án')}"</strong> {tr('was updated', 'đã được cập nhật')}
                     </p>
-                    <span className="text-[10px] text-slate-400">Phòng họp A • 11:00 – 12:00</span>
+                    <span className="text-[10px] text-slate-400">{tr('Meeting Room A', 'Phòng họp A')} • 11:00 – 12:00</span>
                   </div>
                 </div>
 
@@ -622,9 +625,9 @@ export const DashboardPage: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-700 dark:text-zinc-300">
-                      Hệ thống tạo cảnh báo cho <strong>Dự án ERP Nexora</strong>
+                      {tr('System created an alert for', 'Hệ thống tạo cảnh báo cho')} <strong>{tr('Nexora ERP Project', 'Dự án ERP Nexora')}</strong>
                     </p>
-                    <span className="text-[10px] text-slate-400">Nguy cơ trễ hạn giai đoạn Kiểm thử tích hợp (UAT)</span>
+                    <span className="text-[10px] text-slate-400">{tr('Integration testing (UAT) may be delayed', 'Nguy cơ trễ hạn giai đoạn Kiểm thử tích hợp (UAT)')}</span>
                   </div>
                 </div>
 
@@ -635,7 +638,7 @@ export const DashboardPage: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <p className="text-slate-700 dark:text-zinc-300">
-                      <strong>vhieu</strong> đã phê duyệt ngân sách Q2/2024
+                      <strong>vhieu</strong> {tr('approved the Q2/2024 budget', 'đã phê duyệt ngân sách Q2/2024')}
                     </p>
                     <span className="text-[10px] text-slate-400">Dự án ERP Nexora</span>
                   </div>

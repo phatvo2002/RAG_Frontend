@@ -1,5 +1,5 @@
 import React from 'react';
-import { useTranslation, Trans } from 'react-i18next';
+import { useTranslation } from 'react-i18next';
 import { Search, X } from 'lucide-react';
 
 export interface BulkAction {
@@ -54,7 +54,8 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
   className = '',
   isIntegratedHeader = false,
 }) => {
-  const { t } = useTranslation(['table', 'common']);
+  const { t, i18n } = useTranslation(['table', 'common']);
+  const vi = i18n.language.startsWith('vi');
   const isBulkMode = selectedIds.length > 0;
   const placeholderText = searchPlaceholder || t('table:searchPlaceholder', { defaultValue: 'Tìm kiếm...' });
 
@@ -96,11 +97,11 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
             <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-normal hidden lg:inline-block ml-1">
               {filteredCount !== undefined && filteredCount !== totalCount ? (
                 <span>
-                  Đã lọc <strong className="font-semibold text-slate-700 dark:text-zinc-300">{filteredCount}</strong> / {totalCount}
+                  {vi ? 'Đã lọc' : 'Filtered'} <strong className="font-semibold text-slate-700 dark:text-zinc-300">{filteredCount}</strong> / {totalCount}
                 </span>
               ) : (
                 <span>
-                  Tổng <strong className="font-semibold text-slate-700 dark:text-zinc-300">{totalCount}</strong>
+                  {vi ? 'Tổng' : 'Total'} <strong className="font-semibold text-slate-700 dark:text-zinc-300">{totalCount}</strong>
                 </span>
               )}
             </span>
@@ -139,7 +140,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
         <div className="px-3.5 py-2 bg-zinc-900 text-white rounded-md border border-zinc-800 shadow-md flex items-center justify-between gap-3 text-xs animate-in slide-in-from-top-1 duration-150">
           <div className="flex items-center gap-2.5">
             <span className="px-1.5 py-0.5 rounded bg-zinc-800 text-[11px] font-semibold text-zinc-300 border border-zinc-700">
-              Đã chọn {selectedIds.length}
+              {vi ? 'Đã chọn' : 'Selected'} {selectedIds.length}
             </span>
             {onClearSelection && (
               <button
@@ -147,7 +148,7 @@ export const TableToolbar: React.FC<TableToolbarProps> = ({
                 onClick={onClearSelection}
                 className="text-[11px] text-zinc-400 hover:text-zinc-200 underline cursor-pointer"
               >
-                Bỏ chọn
+                {vi ? 'Bỏ chọn' : 'Clear selection'}
               </button>
             )}
           </div>

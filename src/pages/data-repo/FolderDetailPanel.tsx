@@ -15,6 +15,7 @@ import {
 } from '@/api/document-folders.api';
 import { User as AppUser } from '@/types';
 import { FolderModal } from './FolderModal';
+import { useApp } from '@/context/AppContext';
 
 interface FolderDetailPanelProps {
   folder: FolderItem;
@@ -24,10 +25,10 @@ interface FolderDetailPanelProps {
   onDeleted: () => void;
 }
 
-const formatDate = (value?: string | null) => {
-  if (!value) return 'Không thời hạn';
+const formatDate = (value?: string | null, language: 'en' | 'vi' = 'en') => {
+  if (!value) return language === 'vi' ? 'Không thời hạn' : 'No expiration';
   const date = new Date(value);
-  return Number.isNaN(date.getTime()) ? value : date.toLocaleString('vi-VN');
+  return Number.isNaN(date.getTime()) ? value : date.toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US');
 };
 
 export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
@@ -37,6 +38,8 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
   onClose,
   onDeleted,
 }) => {
+  const { language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const { data: folderDetail } = useDocumentFolderQuery(folder.id);
   const { data: grants = [], isLoading: isGrantsLoading, isError: isGrantsError } = useFolderAccessGrantsQuery(folder.id);
   const { data: departments = [] } = useDepartmentsQuery();
@@ -72,7 +75,7 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
     const departmentId = grantTargetType === 'department' ? grantDepartmentId : null;
     const userId = grantTargetType === 'user' ? grantUserId : null;
     if (!departmentId && !userId) {
-      setGrantError('Vui lòng chọn phòng ban hoặc người dùng.');
+      setGrantError(tr('Select a department or user.', 'Vui lòng chọn phòng ban hoặc người dùng.'));
       return;
     }
 
@@ -107,7 +110,7 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
       onError: (error: Error) => {
         setIsDeleteOpen(false);
         const status = (error as Error & { status?: number }).status;
-        setGrantError(status === 409 ? 'Folder còn tài liệu' : error.message || 'Không thể xóa folder.');
+        setGrantError(status === 409 ? tr('Folder still contains documents', 'Folder còn tài liệu') : error.message || tr('Could not delete folder.', 'Không thể xóa folder.'));
       },
     });
   };
@@ -146,10 +149,10 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
             </div>
             <div className="min-w-0">
               <h2 id="folder-detail-title" className="truncate text-sm font-bold text-slate-900 dark:text-zinc-100">{selectedFolder.name}</h2>
-              <p className="text-[11px] text-slate-400">Chi tiết folder</p>
+              <p className="text-[11px] text-slate-400">{tr('Folder details', 'Chi tiết folder')}</p>
             </div>
           </div>
-          <button type="button" onClick={onClose} className="btn btn-sm btn-ghost btn-circle" aria-label="Đóng chi tiết folder">
+          <button type="button" onClick={onClose} className="btn btn-sm btn-ghost btn-circle" aria-label={tr('Close folder details', 'Đóng chi tiết folder')}>
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -163,42 +166,42 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
           )}
 
           <dl className="space-y-2 rounded-lg border border-slate-200 p-3 dark:border-zinc-800">
-            <div className="flex justify-between gap-3"><dt className="text-slate-400">Phòng ban</dt><dd className="max-w-[220px] truncate text-right font-medium text-slate-700 dark:text-zinc-300">{selectedFolder.departmentId ? departmentNames.get(selectedFolder.departmentId) || 'Không xác định' : '—'}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-slate-400">{tr('Department', 'Phòng ban')}</dt><dd className="max-w-[220px] truncate text-right font-medium text-slate-700 dark:text-zinc-300">{selectedFolder.departmentId ? departmentNames.get(selectedFolder.departmentId) || tr('Unknown', 'Không xác định') : '—'}</dd></div>
             <div className="flex justify-between gap-3"><dt className="text-slate-400">Folder cha</dt><dd className="font-medium text-slate-700 dark:text-zinc-300">{folders.find((item) => item.id === selectedFolder.parentFolderId)?.name || 'Root'}</dd></div>
-            <div className="flex justify-between gap-3"><dt className="text-slate-400">Chủ sở hữu</dt><dd className="max-w-[220px] truncate text-right font-medium text-slate-700 dark:text-zinc-300">{selectedFolder.ownerUserId ? userNames.get(selectedFolder.ownerUserId) || 'Không xác định' : '—'}</dd></div>
+            <div className="flex justify-between gap-3"><dt className="text-slate-400">{tr('Owner', 'Chủ sở hữu')}</dt><dd className="max-w-[220px] truncate text-right font-medium text-slate-700 dark:text-zinc-300">{selectedFolder.ownerUserId ? userNames.get(selectedFolder.ownerUserId) || tr('Unknown', 'Không xác định') : '—'}</dd></div>
           </dl>
 
           {isOwner && (
             <div className="flex gap-2">
               <button type="button" onClick={() => setIsRenameOpen(true)} className="btn btn-sm btn-outline flex-1 gap-1.5">
-                <Edit2 className="h-3.5 w-3.5" /> Đổi tên
+                <Edit2 className="h-3.5 w-3.5" /> {tr('Rename', 'Đổi tên')}
               </button>
               <button type="button" onClick={() => setIsDeleteOpen(true)} className="btn btn-sm btn-outline btn-error gap-1.5">
-                <Trash2 className="h-3.5 w-3.5" /> Xóa
+                <Trash2 className="h-3.5 w-3.5" /> {tr('Delete', 'Xóa')}
               </button>
             </div>
           )}
 
           <section className="space-y-3">
             <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-900 dark:text-zinc-100">Quyền truy cập</h3>
-              {!isOwner && <span className="flex items-center gap-1 text-[11px] text-slate-400"><Lock className="h-3 w-3" /> Chỉ owner quản lý</span>}
+              <h3 className="font-bold text-slate-900 dark:text-zinc-100">{tr('Access rights', 'Quyền truy cập')}</h3>
+              {!isOwner && <span className="flex items-center gap-1 text-[11px] text-slate-400"><Lock className="h-3 w-3" /> {tr('Owner only', 'Chỉ owner quản lý')}</span>}
             </div>
 
             {isOwner && (
               <form onSubmit={handleCreateGrant} className="space-y-2 rounded-lg border border-blue-100 bg-blue-50/50 p-3 dark:border-blue-900/50 dark:bg-blue-950/20">
                 <div className="flex gap-2">
-                  <button type="button" onClick={() => setGrantTargetType('department')} className={`btn btn-xs flex-1 gap-1 ${grantTargetType === 'department' ? 'btn-primary text-white' : 'btn-ghost'}`}><Users className="h-3 w-3" /> Phòng ban</button>
-                  <button type="button" onClick={() => setGrantTargetType('user')} className={`btn btn-xs flex-1 gap-1 ${grantTargetType === 'user' ? 'btn-primary text-white' : 'btn-ghost'}`}><User className="h-3 w-3" /> Người dùng</button>
+                  <button type="button" onClick={() => setGrantTargetType('department')} className={`btn btn-xs flex-1 gap-1 ${grantTargetType === 'department' ? 'btn-primary text-white' : 'btn-ghost'}`}><Users className="h-3 w-3" /> {tr('Department', 'Phòng ban')}</button>
+                  <button type="button" onClick={() => setGrantTargetType('user')} className={`btn btn-xs flex-1 gap-1 ${grantTargetType === 'user' ? 'btn-primary text-white' : 'btn-ghost'}`}><User className="h-3 w-3" /> {tr('User', 'Người dùng')}</button>
                 </div>
                 {grantTargetType === 'department' ? (
                   <select value={grantDepartmentId} onChange={(event) => setGrantDepartmentId(event.target.value)} className="select select-bordered select-sm w-full bg-white text-xs dark:bg-zinc-900">
-                    <option value="">Chọn phòng ban</option>
+                    <option value="">{tr('Select department', 'Chọn phòng ban')}</option>
                     {departments.map((department) => <option key={department.id} value={department.id}>{department.name}</option>)}
                   </select>
                 ) : (
                   <select value={grantUserId} onChange={(event) => setGrantUserId(event.target.value)} className="select select-bordered select-sm w-full bg-white text-xs dark:bg-zinc-900">
-                    <option value="">Chọn người dùng</option>
+                    <option value="">{tr('Select user', 'Chọn người dùng')}</option>
                     {users.map((user) => <option key={user.id} value={user.id}>{user.name || user.email}</option>)}
                   </select>
                 )}
@@ -210,7 +213,7 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
                   <input type="datetime-local" value={expiresAt} onChange={(event) => setExpiresAt(event.target.value)} className="input input-bordered input-sm w-full bg-white text-xs dark:bg-zinc-900" />
                 </div>
                 <button type="submit" disabled={createGrantMutation.isPending} className="btn btn-sm btn-primary w-full gap-1.5 text-white">
-                  {createGrantMutation.isPending ? <span className="loading loading-spinner loading-xs" /> : <Plus className="h-3.5 w-3.5" />} Cấp quyền
+                  {createGrantMutation.isPending ? <span className="loading loading-spinner loading-xs" /> : <Plus className="h-3.5 w-3.5" />} {tr('Grant access', 'Cấp quyền')}
                 </button>
               </form>
             )}
@@ -218,9 +221,9 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
             {isGrantsLoading ? (
               <div className="py-5 text-center text-slate-400"><span className="loading loading-spinner loading-sm text-primary" /></div>
             ) : isGrantsError ? (
-              <p className="text-rose-600 dark:text-rose-400">Không thể tải danh sách quyền.</p>
+              <p className="text-rose-600 dark:text-rose-400">{tr('Could not load access grants.', 'Không thể tải danh sách quyền.')}</p>
             ) : grants.length === 0 ? (
-              <p className="rounded-lg bg-slate-50 p-3 text-slate-400 dark:bg-zinc-900">Folder chưa có quyền chia sẻ riêng.</p>
+              <p className="rounded-lg bg-slate-50 p-3 text-slate-400 dark:bg-zinc-900">{tr('This folder has no separate sharing grants.', 'Folder chưa có quyền chia sẻ riêng.')}</p>
             ) : (
               <div className="space-y-2">
                 {grants.map((grant) => (
@@ -229,10 +232,10 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
                       <p className="truncate font-semibold text-slate-800 dark:text-zinc-200">
                         {grant.departmentId ? departmentNames.get(grant.departmentId) || grant.departmentId : userNames.get(grant.userId || '') || grant.userId}
                       </p>
-                      <p className="mt-0.5 text-[11px] text-slate-400">{grant.departmentId ? 'Phòng ban' : 'Người dùng'} · {grant.accessLevel}</p>
-                      <p className="text-[11px] text-slate-400">Hiệu lực: {formatDate(grant.validFrom)} · {formatDate(grant.expiresAt)}</p>
+                      <p className="mt-0.5 text-[11px] text-slate-400">{grant.departmentId ? tr('Department', 'Phòng ban') : tr('User', 'Người dùng')} · {grant.accessLevel}</p>
+                      <p className="text-[11px] text-slate-400">{tr('Validity:', 'Hiệu lực:')} {formatDate(grant.validFrom, language)} · {formatDate(grant.expiresAt, language)}</p>
                     </div>
-                    {isOwner && <button type="button" onClick={() => setGrantToRevoke(grant)} className="btn btn-xs btn-ghost text-rose-600" aria-label="Thu hồi quyền"><Trash2 className="h-3.5 w-3.5" /></button>}
+                    {isOwner && <button type="button" onClick={() => setGrantToRevoke(grant)} className="btn btn-xs btn-ghost text-rose-600" aria-label={tr('Revoke access', 'Thu hồi quyền')}><Trash2 className="h-3.5 w-3.5" /></button>}
                   </div>
                 ))}
               </div>
@@ -243,8 +246,8 @@ export const FolderDetailPanel: React.FC<FolderDetailPanelProps> = ({
       </div>
 
       <FolderModal isOpen={isRenameOpen} onClose={() => setIsRenameOpen(false)} folders={folders} folderToRename={selectedFolder} />
-      <ConfirmModal isOpen={isDeleteOpen} onClose={() => setIsDeleteOpen(false)} onConfirm={handleDeleteFolder} isLoading={deleteFolderMutation.isPending} title="Xóa folder" message={`Bạn có chắc muốn xóa folder "${selectedFolder.name}" không? Folder còn tài liệu sẽ bị backend từ chối.`} confirmText="Xóa folder" />
-      <ConfirmModal isOpen={Boolean(grantToRevoke)} onClose={() => setGrantToRevoke(null)} onConfirm={handleRevokeGrant} isLoading={deleteGrantMutation.isPending} title="Thu hồi quyền folder" message="Bạn có chắc muốn thu hồi quyền truy cập này không?" confirmText="Thu hồi" />
+      <ConfirmModal isOpen={isDeleteOpen} onClose={() => setIsDeleteOpen(false)} onConfirm={handleDeleteFolder} isLoading={deleteFolderMutation.isPending} title={tr('Delete folder', 'Xóa folder')} message={tr(`Delete folder "${selectedFolder.name}"? The server will reject folders that still contain documents.`, `Bạn có chắc muốn xóa folder "${selectedFolder.name}" không? Folder còn tài liệu sẽ bị backend từ chối.`)} confirmText={tr('Delete folder', 'Xóa folder')} />
+      <ConfirmModal isOpen={Boolean(grantToRevoke)} onClose={() => setGrantToRevoke(null)} onConfirm={handleRevokeGrant} isLoading={deleteGrantMutation.isPending} title={tr('Revoke folder access', 'Thu hồi quyền folder')} message={tr('Revoke this access grant?', 'Bạn có chắc muốn thu hồi quyền truy cập này không?')} confirmText={tr('Revoke', 'Thu hồi')} />
     </>
   );
 };

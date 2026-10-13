@@ -125,10 +125,165 @@ textarea:focus-visible {
 }
 
 .nexora-table {
-  border-color: var(--nexora-border);
-  border-radius: var(--nexora-radius-table);
+  --table-surface: #ffffff;
+  --table-header: #f1f5fc;
+  --table-row-hover: #edf4ff;
+  --table-row-selected: #e8f1ff;
+  --table-border: #dce5f3;
+  --table-text: #192744;
+  --table-muted: #677b9b;
+  background: var(--table-surface) !important;
+  border: 1px solid var(--table-border) !important;
+  border-radius: 4px;
   box-shadow: var(--nexora-shadow-sm);
   overflow: hidden;
+}
+
+.dark .nexora-table {
+  --table-surface: #152131;
+  --table-header: #1d2c3e;
+  --table-row-hover: #223349;
+  --table-row-selected: #19334f;
+  --table-border: #30445c;
+  --table-text: #e5edf8;
+  --table-muted: #9bb0ce;
+}
+
+.nexora-table .nexora-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--table-surface);
+  color: var(--table-text);
+}
+
+.nexora-table .nexora-data-table thead {
+  background: var(--table-header) !important;
+  color: var(--table-muted) !important;
+}
+
+.nexora-table .nexora-data-table th {
+  height: 54px;
+  padding: 14px 22px !important;
+  border-bottom: 1px solid var(--table-border) !important;
+  border-right: 1px solid var(--table-border);
+  background: var(--table-header) !important;
+  color: var(--table-muted) !important;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.nexora-table .nexora-data-table td {
+  min-height: 76px;
+  padding: 18px 22px !important;
+  border-bottom: 1px solid var(--table-border) !important;
+  border-right: 1px solid var(--table-border);
+  color: var(--table-text);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.nexora-table .nexora-data-table .nexora-table-action-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.nexora-table .nexora-data-table th:last-child,
+.nexora-table .nexora-data-table td:last-child {
+  border-right: 0;
+}
+
+.nexora-table .nexora-data-table tbody tr {
+  background: var(--table-surface) !important;
+  transition: background-color 150ms ease;
+}
+
+.nexora-table .nexora-data-table tbody tr:hover {
+  background: var(--table-row-hover) !important;
+}
+
+.nexora-table .nexora-data-table tbody tr[class*="bg-blue"] {
+  background: var(--table-row-selected) !important;
+}
+
+.nexora-table .nexora-data-table tbody tr:last-child td {
+  border-bottom: 0 !important;
+}
+
+.nexora-table .nexora-data-table input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--nexora-accent);
+  cursor: pointer;
+}
+
+.nexora-table-footer {
+  min-height: 68px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--table-border, var(--nexora-border)) !important;
+  background: var(--table-surface, var(--nexora-surface)) !important;
+  color: var(--table-muted, var(--nexora-ink-muted));
+}
+
+.dark .nexora-table-footer {
+  background: var(--table-surface, #152131) !important;
+  border-color: var(--table-border, #30445c) !important;
+}
+
+.nexora-table-footer button {
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 4px;
+}
+
+.nexora-table-filters {
+  padding: 12px;
+  border: 1px solid var(--nexora-border);
+  border-radius: 4px;
+  background: var(--nexora-surface-muted);
+}
+
+.dark .nexora-table-filters {
+  background: #1a2839 !important;
+  border-color: #30445c !important;
+}
+
+.nexora-table-filters input:not([type='checkbox']),
+.nexora-table-filters select {
+  min-height: 46px;
+  background: var(--nexora-surface) !important;
+  border: 1px solid var(--nexora-border) !important;
+  color: var(--nexora-ink) !important;
+  border-radius: 4px !important;
+}
+
+.dark .nexora-table-filters input:not([type='checkbox']),
+.dark .nexora-table-filters select {
+  background: #111b2a !important;
+  border-color: #354960 !important;
+}
+
+.nexora-table-filters .relative > svg.absolute {
+  top: 50% !important;
+  transform: translateY(-50%);
+}
+
+@media (max-width: 640px) {
+  .nexora-table .nexora-data-table th,
+  .nexora-table .nexora-data-table td {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .nexora-table-footer {
+    flex-wrap: wrap;
+  }
 }
 
 .nexora-breadcrumb {

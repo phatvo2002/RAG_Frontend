@@ -6,22 +6,28 @@ import { ArrowLeft, Video } from 'lucide-react';
 import '@livekit/components-styles';
 import { meetingKeys, meetingsApi, useMeetingQuery, type MeetingJoinToken } from '@/api/meetings.api';
 import { useApp } from '@/context/AppContext';
+import { MeetingModal } from './MeetingModal';
+import { isScheduledMeetingExpired, useMeetingClock } from './meetingAvailability';
 
 export const MeetingRoomPage: React.FC = () => {
   const { meetingId } = useParams({ from: '/meetings/$meetingId' });
   const navigate = useNavigate();
   const queryClient = useQueryClient();
-  const { currentUser, showToast } = useApp();
+  const { currentUser, showToast, language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const meeting = useMeetingQuery(meetingId);
+  const now = useMeetingClock();
   const [connection, setConnection] = useState<MeetingJoinToken | null>(null);
+  const [isEditOpen, setIsEditOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const value = meeting.data;
   const isHost = value?.organizerUserId === currentUser.id;
-  const statusLabel = {
-    Scheduled: 'Chưa bắt đầu',
-    Live: 'Đang diễn ra',
-    Ending: 'Đang kết thúc',
-    Ended: 'Đã kết thúc',
+  const isExpired = value ? isScheduledMeetingExpired(value, now) : false;
+  const statusLabel = isExpired ? tr('Overdue', 'Quá hạn') : {
+    Scheduled: tr('Not started', 'Chưa bắt đầu'),
+    Live: tr('Live', 'Đang diễn ra'),
+    Ending: tr('Ending', 'Đang kết thúc'),
+    Ended: tr('Ended', 'Đã kết thúc'),
   }[value?.status ?? 'Scheduled'];
 
   const run = async (action: () => Promise<unknown>) => {
@@ -31,14 +37,14 @@ export const MeetingRoomPage: React.FC = () => {
       await queryClient.invalidateQueries({ queryKey: meetingKeys.detail(meetingId) });
       await queryClient.invalidateQueries({ queryKey: meetingKeys.list });
     } catch (error) {
-      showToast(error instanceof Error ? error.message : 'Thao tác không thành công.', 'error');
+      showToast(error instanceof Error ? error.message : tr('Action failed.', 'Thao tác không thành công.'), 'error');
     } finally {
       setBusy(false);
     }
   };
 
-  if (meeting.isLoading) return <div className="p-6">Đang tải cuộc họp...</div>;
-  if (meeting.isError || !value) return <div className="p-6">Không thể mở cuộc họp hoặc bạn không có quyền truy cập.</div>;
+  if (meeting.isLoading) return <div className="p-6">{tr('Loading meeting...', 'Đang tải cuộc họp...')}</div>;
+  if (meeting.isError || !value) return <div className="p-6">{tr('Could not open this meeting, or you do not have access.', 'Không thể mở cuộc họp hoặc bạn không có quyền truy cập.')}</div>;
 
   return (
     <div className="flex h-full min-h-0 flex-col overflow-y-auto bg-white px-4 py-6 text-[#0b1b33] sm:px-6 lg:px-8 dark:bg-[#0d1422] dark:text-zinc-100">
@@ -50,23 +56,23 @@ export const MeetingRoomPage: React.FC = () => {
             className="inline-flex items-center gap-1.5 text-base font-medium text-[#1769ee] hover:underline"
           >
             <ArrowLeft size={16} aria-hidden="true" />
-            Quay lại danh sách cuộc họp
+            {tr('Back to meetings', 'Quay lại danh sách cuộc họp')}
           </button>
           <h1 className="mt-3 truncate text-[28px] font-bold leading-tight">{value.title}</h1>
           <div className="mt-1 flex items-center gap-2 text-base text-[#60738e] dark:text-slate-400">
-            <span>{isHost ? 'Chủ phòng' : 'Người tham gia'}</span>
+            <span>{isHost ? tr('Host', 'Chủ phòng') : tr('Participant', 'Người tham gia')}</span>
             <span aria-hidden="true">·</span>
             <span className="rounded-md bg-[#eaf0f9] px-2 py-0.5 text-[#4b617e] dark:bg-[#1b2a43] dark:text-slate-300">{statusLabel}</span>
           </div>
         </div>
-        {isHost && value.status === 'Scheduled' && (
+        {isHost && value.status === 'Scheduled' && !isExpired && (
           <button
             type="button"
             disabled={busy}
             onClick={() => run(() => meetingsApi.start(meetingId))}
             className="rounded-md bg-[#155dfb] px-5 py-2.5 text-base font-medium text-white shadow-sm transition-colors hover:bg-[#0f4bd1] disabled:cursor-not-allowed disabled:opacity-50"
           >
-            Bắt đầu cuộc họp
+            {tr('Start meeting', 'Bắt đầu cuộc họp')}
           </button>
         )}
         {isHost && (value.status === 'Live' || value.status === 'Ending') && (
@@ -76,7 +82,7 @@ export const MeetingRoomPage: React.FC = () => {
             onClick={() => run(() => meetingsApi.end(meetingId))}
             className="rounded-md bg-rose-600 px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-50"
           >
-            {value.status === 'Ending' ? 'Thử kết thúc lại' : 'Kết thúc cho tất cả'}
+            {value.status === 'Ending' ? tr('Retry ending', 'Thử kết thúc lại') : tr('End for everyone', 'Kết thúc cho tất cả')}
           </button>
         )}
       </header>
@@ -87,15 +93,23 @@ export const MeetingRoomPage: React.FC = () => {
             <Video size={43} strokeWidth={1.7} aria-hidden="true" />
           </span>
           <h2 className="mt-6 text-[27px] font-bold leading-tight">
-            {value.status === 'Scheduled' ? (isHost ? 'Phòng họp sẵn sàng' : 'Đang chờ chủ phòng')
-              : value.status === 'Ending' ? 'Đang đóng phòng họp'
-                : value.status === 'Ended' ? 'Cuộc họp đã kết thúc' : 'Phòng họp đã bắt đầu'}
+            {isExpired ? tr('Meeting overdue', 'Cuộc họp đã quá hạn')
+              : value.status === 'Scheduled' ? (isHost ? tr('Meeting room ready', 'Phòng họp sẵn sàng') : tr('Waiting for the host', 'Đang chờ chủ phòng'))
+              : value.status === 'Ending' ? tr('Closing the meeting room', 'Đang đóng phòng họp')
+                : value.status === 'Ended' ? tr('Meeting ended', 'Cuộc họp đã kết thúc') : tr('Meeting started', 'Phòng họp đã bắt đầu')}
           </h2>
           <p className="mt-3 text-lg text-[#60738e] dark:text-slate-400">
-            {value.status === 'Scheduled' ? (isHost ? 'Bắt đầu để mở phòng họp.' : 'Cuộc họp sẽ bắt đầu khi chủ phòng mở phòng.')
-              : value.status === 'Ending' ? 'Vui lòng chờ trong giây lát.'
-                : value.status === 'Ended' ? 'Bạn có thể quay lại danh sách cuộc họp.' : 'Cho phép trình duyệt dùng camera và micro khi tham gia.'}
+            {isExpired ? (isHost ? tr('Update the schedule to open the room.', 'Cập nhật thời gian dự kiến để mở phòng họp.') : tr('The host must update the schedule before opening the room.', 'Chủ phòng cần cập nhật thời gian trước khi mở phòng họp.'))
+              : value.status === 'Scheduled' ? (isHost ? tr('Start the meeting to open the room.', 'Bắt đầu để mở phòng họp.') : tr('The meeting will start when the host opens the room.', 'Cuộc họp sẽ bắt đầu khi chủ phòng mở phòng.'))
+              : value.status === 'Ending' ? tr('Please wait a moment.', 'Vui lòng chờ trong giây lát.')
+                : value.status === 'Ended' ? tr('You can return to the meeting list.', 'Bạn có thể quay lại danh sách cuộc họp.') : tr('Allow browser access to your camera and microphone when joining.', 'Cho phép trình duyệt dùng camera và micro khi tham gia.')}
           </p>
+          {isExpired && isHost && (
+            <button type="button" onClick={() => setIsEditOpen(true)}
+              className="mt-6 rounded-md bg-[#155dfb] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0f4bd1]">
+              {tr('Update schedule', 'Cập nhật thời gian')}
+            </button>
+          )}
           {value.status === 'Live' && (
             <button
               type="button"
@@ -103,7 +117,7 @@ export const MeetingRoomPage: React.FC = () => {
               onClick={() => run(async () => { setConnection(await meetingsApi.join(meetingId)); })}
               className="mt-6 rounded-md bg-[#155dfb] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0f4bd1] disabled:cursor-not-allowed disabled:opacity-50"
             >
-              Vào phòng
+              {tr('Join room', 'Vào phòng')}
             </button>
           )}
         </section>
@@ -116,6 +130,7 @@ export const MeetingRoomPage: React.FC = () => {
           </LiveKitRoom>
         </div>
       )}
+      {isEditOpen && <MeetingModal meetingId={meetingId} isOpen={true} onClose={() => setIsEditOpen(false)} />}
     </div>
   );
 };

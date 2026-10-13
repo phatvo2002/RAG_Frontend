@@ -6,7 +6,8 @@ import { useUserPermissions } from '@/hooks/useUserPermissions';
 import { useCurrentOrganizationQuery, useUpdateOrganizationMutation } from '@/api/organizations.api';
 
 export const OrganizationsPage: React.FC = () => {
-  const { showToast } = useApp();
+  const { showToast, language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const { hasModuleAccess } = useUserPermissions();
   const { data: organization, isLoading, isError, error, refetch, isFetching } = useCurrentOrganizationQuery();
   const updateMutation = useUpdateOrganizationMutation();
@@ -30,7 +31,7 @@ export const OrganizationsPage: React.FC = () => {
     const trimmedName = name.trim();
     const trimmedResidency = dataResidency.trim();
     if (!trimmedName || trimmedName.length > 200 || trimmedResidency.length > 50) {
-      setFormError('Tên công ty cần có tối đa 200 ký tự; nơi lưu trữ dữ liệu tối đa 50 ký tự.');
+      setFormError(tr('Company name must be at most 200 characters; data residency at most 50 characters.', 'Tên công ty cần có tối đa 200 ký tự; nơi lưu trữ dữ liệu tối đa 50 ký tự.'));
       return;
     }
     try {
@@ -39,9 +40,9 @@ export const OrganizationsPage: React.FC = () => {
         data: { name: trimmedName, dataResidency: trimmedResidency || null },
       });
       setIsEditing(false);
-      showToast('Đã cập nhật thông tin công ty.', 'success');
+      showToast(tr('Company information updated.', 'Đã cập nhật thông tin công ty.'), 'success');
     } catch (caught) {
-      setFormError(caught instanceof Error ? caught.message : 'Không thể cập nhật thông tin công ty.');
+      setFormError(caught instanceof Error ? caught.message : tr('Could not update company information.', 'Không thể cập nhật thông tin công ty.'));
     }
   };
 
@@ -50,27 +51,27 @@ export const OrganizationsPage: React.FC = () => {
       <div className="mx-auto max-w-5xl space-y-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-medium text-blue-600 dark:text-blue-400">Danh mục / Tổ chức</p>
-            <h1 className="mt-1 text-2xl font-bold">Thông tin công ty</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">Thông tin của tổ chức hiện tại</p>
+            <p className="text-xs font-medium text-blue-600 dark:text-blue-400">{tr('Catalog / Organization', 'Danh mục / Tổ chức')}</p>
+            <h1 className="mt-1 text-2xl font-bold">{tr('Company information', 'Thông tin công ty')}</h1>
+            <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">{tr('Current organization details', 'Thông tin của tổ chức hiện tại')}</p>
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => refetch()} disabled={isFetching} className="btn btn-sm btn-outline gap-2">
-              <RefreshCw className="h-4 w-4" /> Tải lại
+              <RefreshCw className="h-4 w-4" /> {tr('Refresh', 'Tải lại')}
             </button>
             {organization && canUpdate && (
               <button type="button" onClick={() => setIsEditing(true)} className="btn btn-sm btn-primary gap-2">
-                <Pencil className="h-4 w-4" /> Chỉnh sửa
+                <Pencil className="h-4 w-4" /> {tr('Edit', 'Chỉnh sửa')}
               </button>
             )}
           </div>
         </div>
 
         {isLoading ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-sm dark:border-zinc-800 dark:bg-zinc-900">Đang tải thông tin công ty...</div>
+          <div className="rounded-xl border border-slate-200 bg-white p-8 text-sm dark:border-zinc-800 dark:bg-zinc-900">{tr('Loading company information...', 'Đang tải thông tin công ty...')}</div>
         ) : isError ? (
           <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
-            {error instanceof Error ? error.message : 'Không thể tải thông tin công ty.'}
+            {error instanceof Error ? error.message : tr('Could not load company information.', 'Không thể tải thông tin công ty.')}
           </div>
         ) : organization ? (
           <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
@@ -82,27 +83,27 @@ export const OrganizationsPage: React.FC = () => {
               </div>
             </div>
             <dl className="grid gap-5 text-sm sm:grid-cols-2">
-              <div><dt className="text-slate-500 dark:text-zinc-400">Tên công ty</dt><dd className="mt-1 font-medium">{organization.name}</dd></div>
-              <div><dt className="text-slate-500 dark:text-zinc-400">Mã tổ chức</dt><dd className="mt-1 font-medium">{organization.slug}</dd></div>
-              <div><dt className="text-slate-500 dark:text-zinc-400">Trạng thái</dt><dd className="mt-1 font-medium">{organization.status}</dd></div>
-              <div><dt className="text-slate-500 dark:text-zinc-400">Nơi lưu trữ dữ liệu</dt><dd className="mt-1 font-medium">{organization.dataResidency || 'Chưa thiết lập'}</dd></div>
+              <div><dt className="text-slate-500 dark:text-zinc-400">{tr('Company name', 'Tên công ty')}</dt><dd className="mt-1 font-medium">{organization.name}</dd></div>
+              <div><dt className="text-slate-500 dark:text-zinc-400">{tr('Organization code', 'Mã tổ chức')}</dt><dd className="mt-1 font-medium">{organization.slug}</dd></div>
+              <div><dt className="text-slate-500 dark:text-zinc-400">{tr('Status', 'Trạng thái')}</dt><dd className="mt-1 font-medium">{organization.status}</dd></div>
+              <div><dt className="text-slate-500 dark:text-zinc-400">{tr('Data residency', 'Nơi lưu trữ dữ liệu')}</dt><dd className="mt-1 font-medium">{organization.dataResidency || tr('Not set', 'Chưa thiết lập')}</dd></div>
             </dl>
           </section>
         ) : null}
       </div>
 
-      <Modal isOpen={isEditing && canUpdate} onClose={() => setIsEditing(false)} title="Cập nhật thông tin công ty" maxWidth="lg">
+      <Modal isOpen={isEditing && canUpdate} onClose={() => setIsEditing(false)} title={tr('Update company information', 'Cập nhật thông tin công ty')} maxWidth="lg">
         <form onSubmit={save} className="space-y-4 text-sm">
           {formError && <p role="alert" className="text-rose-600 dark:text-rose-400">{formError}</p>}
-          <label className="block font-medium">Tên công ty
+          <label className="block font-medium">{tr('Company name', 'Tên công ty')}
             <input className="input input-bordered mt-1 w-full" value={name} onChange={(event) => setName(event.target.value)} maxLength={200} required />
           </label>
-          <label className="block font-medium">Nơi lưu trữ dữ liệu
+          <label className="block font-medium">{tr('Data residency', 'Nơi lưu trữ dữ liệu')}
             <input className="input input-bordered mt-1 w-full" value={dataResidency} onChange={(event) => setDataResidency(event.target.value)} maxLength={50} />
           </label>
           <div className="flex justify-end gap-2 pt-2">
-            <button type="button" onClick={() => setIsEditing(false)} className="btn btn-sm btn-ghost">Hủy</button>
-            <button type="submit" disabled={updateMutation.isPending} className="btn btn-sm btn-primary">{updateMutation.isPending ? 'Đang lưu...' : 'Lưu thay đổi'}</button>
+            <button type="button" onClick={() => setIsEditing(false)} className="btn btn-sm btn-ghost">{tr('Cancel', 'Hủy')}</button>
+            <button type="submit" disabled={updateMutation.isPending} className="btn btn-sm btn-primary">{updateMutation.isPending ? tr('Saving...', 'Đang lưu...') : tr('Save changes', 'Lưu thay đổi')}</button>
           </div>
         </form>
       </Modal>

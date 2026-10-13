@@ -2,6 +2,7 @@
   "groups": {
     "operations": "VẬN HÀNH & DỮ LIỆU",
     "collaboration": "CỘNG TÁC",
+    "catalog": "DANH MỤC",
     "admin": "QUẢN TRỊ HỆ THỐNG"
   },
   "items": {
@@ -13,6 +14,7 @@
     "meetings": "Phòng họp",
     "calendar": "Lịch",
     "adminOverview": "Tổng quan",
+    "organizations": "Tổ chức",
     "adminUsers": "Người dùng",
     "adminDepartments": "Phòng ban",
     "adminRoles": "Vai trò & Quyền",
@@ -36,13 +38,16 @@
     }
   },
   "navMode": {
-    "openAiChat": "Mở Trợ lý Chat AI"
+    "openAiChat": "Mở Trợ lý Chat AI",
+    "managementSpace": "Không gian quản lý"
   },
   "user": {
     "logout": "Đăng xuất",
     "profile": "Thông tin tài khoản"
   },
   "collapse": "Thu gọn menu",
-  "expand": "Mở rộng menu"
+  "expand": "Mở rộng menu",
+  "closeMenu": "Đóng menu",
+  "navigation": "Điều hướng chính"
 }
 

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { AlertCircle } from 'lucide-react';
 import { Modal } from '@/components/disclosure';
 import { useDepartmentsQuery } from '@/api/departments.api';
+import { useApp } from '@/context/AppContext';
 import {
   FolderItem,
   useCreateDocumentFolderMutation,
@@ -25,6 +26,8 @@ export const FolderModal: React.FC<FolderModalProps> = ({
   defaultDepartmentId,
   defaultParentFolderId = null,
 }) => {
+  const { language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const { data: departments = [] } = useDepartmentsQuery();
   const createMutation = useCreateDocumentFolderMutation();
   const renameMutation = useRenameDocumentFolderMutation();
@@ -49,15 +52,15 @@ export const FolderModal: React.FC<FolderModalProps> = ({
     const trimmedName = name.trim();
 
     if (!trimmedName) {
-      setError('Tên folder không được để trống.');
+      setError(tr('Folder name is required.', 'Tên folder không được để trống.'));
       return;
     }
     if (trimmedName.length > 200) {
-      setError('Tên folder không được vượt quá 200 ký tự.');
+      setError(tr('Folder name must not exceed 200 characters.', 'Tên folder không được vượt quá 200 ký tự.'));
       return;
     }
     if (!isEditing && !departmentId) {
-      setError('Vui lòng chọn phòng ban.');
+      setError(tr('Select a department.', 'Vui lòng chọn phòng ban.'));
       return;
     }
 
@@ -86,7 +89,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditing ? 'Đổi tên folder' : 'Tạo folder mới'}
+      title={isEditing ? tr('Rename folder', 'Đổi tên folder') : tr('Create new folder', 'Tạo folder mới')}
       maxWidth="md"
     >
       <form onSubmit={handleSubmit} className="space-y-4 text-xs">
@@ -99,7 +102,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
 
         <div>
           <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
-            Tên folder <span className="text-rose-500">*</span>
+            {tr('Folder name', 'Tên folder')} <span className="text-rose-500">*</span>
           </label>
           <input
             value={name}
@@ -107,23 +110,23 @@ export const FolderModal: React.FC<FolderModalProps> = ({
             maxLength={200}
             autoFocus
             className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
-            placeholder="Ví dụ: Tài liệu nhân sự"
+            placeholder={tr('Example: HR documents', 'Ví dụ: Tài liệu nhân sự')}
           />
-          <p className="mt-1 text-[11px] text-slate-400">{name.length}/200 ký tự</p>
+          <p className="mt-1 text-[11px] text-slate-400">{name.length}/200 {tr('characters', 'ký tự')}</p>
         </div>
 
         {!isEditing && (
           <>
             <div>
               <label className="mb-1 block font-semibold text-slate-700 dark:text-zinc-300">
-                Phòng ban <span className="text-rose-500">*</span>
+                {tr('Department', 'Phòng ban')} <span className="text-rose-500">*</span>
               </label>
               <select
                 value={departmentId}
                 onChange={(event) => setDepartmentId(event.target.value)}
                 className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
               >
-                <option value="">Chọn phòng ban</option>
+                <option value="">{tr('Select department', 'Chọn phòng ban')}</option>
                 {departments.map((department) => (
                   <option key={department.id} value={department.id}>
                     {department.name}
@@ -139,7 +142,7 @@ export const FolderModal: React.FC<FolderModalProps> = ({
                 onChange={(event) => setParentFolderId(event.target.value)}
                 className="w-full rounded-lg border border-slate-200 bg-slate-50/50 px-3 py-2 text-xs text-slate-800 focus:border-blue-600 focus:outline-none dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100"
               >
-                <option value="">Folder cấp cao nhất</option>
+                <option value="">{tr('Top-level folder', 'Folder cấp cao nhất')}</option>
                 {folders
                   .filter((folder) => !departmentId || folder.departmentId === departmentId)
                   .map((folder) => (
@@ -154,17 +157,17 @@ export const FolderModal: React.FC<FolderModalProps> = ({
 
         {isEditing && (
           <p className="rounded-lg bg-slate-50 p-3 text-[11px] text-slate-500 dark:bg-zinc-800 dark:text-zinc-400">
-            Chỉ owner của folder mới có thể đổi tên.
+            {tr('Only the folder owner can rename it.', 'Chỉ owner của folder mới có thể đổi tên.')}
           </p>
         )}
 
         <div className="flex justify-end gap-2 border-t border-slate-100 pt-3 dark:border-zinc-800">
           <button type="button" onClick={onClose} disabled={isPending} className="btn btn-sm btn-ghost">
-            Hủy
+            {tr('Cancel', 'Hủy')}
           </button>
           <button type="submit" disabled={isPending} className="btn btn-sm btn-primary text-white">
             {isPending && <span className="loading loading-spinner loading-xs" />}
-            {isEditing ? 'Lưu tên folder' : 'Tạo folder'}
+            {isEditing ? tr('Save folder name', 'Lưu tên folder') : tr('Create folder', 'Tạo folder')}
           </button>
         </div>
       </form>

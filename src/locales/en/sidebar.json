@@ -2,6 +2,7 @@
   "groups": {
     "operations": "OPERATIONS & DATA",
     "collaboration": "COLLABORATION",
+    "catalog": "DIRECTORY",
     "admin": "SYSTEM ADMINISTRATION"
   },
   "items": {
@@ -13,6 +14,7 @@
     "meetings": "Meetings",
     "calendar": "Calendar",
     "adminOverview": "Overview",
+    "organizations": "Organizations",
     "adminUsers": "Users",
     "adminDepartments": "Departments",
     "adminRoles": "Roles & Permissions",
@@ -36,13 +38,16 @@
     }
   },
   "navMode": {
-    "openAiChat": "Open AI Chat Assistant"
+    "openAiChat": "Open AI Chat Assistant",
+    "managementSpace": "Management workspace"
   },
   "user": {
     "logout": "Sign Out",
     "profile": "User Profile"
   },
   "collapse": "Collapse menu",
-  "expand": "Expand menu"
+  "expand": "Expand menu",
+  "closeMenu": "Close menu",
+  "navigation": "Main navigation"
 }
 

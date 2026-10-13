@@ -5,6 +5,7 @@ import { uploadDocumentYupSchema, UploadDocumentFormData, validationMessages } f
 import { FolderItem, useDocumentFoldersQuery } from '@/api/document-folders.api';
 import { DocumentUploadResponse, useUploadDocumentMutation } from '@/api/documents.api';
 import { Upload, FileText, X, AlertCircle, Sparkles, Database } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
 
 interface UploadModalProps {
   isOpen: boolean;
@@ -17,6 +18,8 @@ const MAX_FILE_SIZE = 25 * 1024 * 1024;
 const SUPPORTED_EXTENSIONS = ['.pdf', '.txt', '.md', '.docx'];
 
 export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defaultFolderId, onUploaded }) => {
+  const { language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState<string | null>(null);
   const [folderId, setFolderId] = useState(defaultFolderId || '');
@@ -35,24 +38,24 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
           uploadDocumentYupSchema.validateSync(value, { abortEarly: false });
           return undefined;
         } catch (err: any) {
-          return err.message || 'Dữ liệu không hợp lệ';
+          return err.message || tr('Invalid data', 'Dữ liệu không hợp lệ');
         }
       },
     },
     onSubmit: async ({ value }) => {
       if (!file) {
-        setFileError(validationMessages.document.fileRequired);
+        setFileError(validationMessages.document.fileRequired());
         return;
       }
 
       if (!folderId) {
-        setFileError('Vui lòng chọn thư mục lưu tài liệu.');
+        setFileError(tr('Select a folder for the document.', 'Vui lòng chọn thư mục lưu tài liệu.'));
         return;
       }
 
       const selectedFolder = folders.find((folder) => folder.id === folderId);
       if (!selectedFolder) {
-        setFileError('Thư mục đã chọn không còn tồn tại. Vui lòng chọn lại.');
+        setFileError(tr('The selected folder no longer exists. Select another.', 'Thư mục đã chọn không còn tồn tại. Vui lòng chọn lại.'));
         return;
       }
 
@@ -74,7 +77,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
       } catch (error: any) {
         setIsProcessing(false);
         setCurrentStep(2);
-        setFileError(error?.message || 'Không thể tải tài liệu lên máy chủ.');
+        setFileError(error?.message || tr('Could not upload the document.', 'Không thể tải tài liệu lên máy chủ.'));
       }
     },
   });
@@ -93,10 +96,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
   const validateSelectedFile = (selectedFile: File): string | null => {
     const extension = `.${selectedFile.name.split('.').pop()?.toLowerCase() || ''}`;
     if (!SUPPORTED_EXTENSIONS.includes(extension)) {
-      return 'Chỉ hỗ trợ file PDF, TXT, MD hoặc DOCX.';
+      return tr('Only PDF, TXT, MD, and DOCX files are supported.', 'Chỉ hỗ trợ file PDF, TXT, MD hoặc DOCX.');
     }
     if (selectedFile.size <= 0 || selectedFile.size > MAX_FILE_SIZE) {
-      return 'Dung lượng file phải lớn hơn 0 và không vượt quá 25 MB.';
+      return tr('File size must be greater than 0 and no more than 25 MB.', 'Dung lượng file phải lớn hơn 0 và không vượt quá 25 MB.');
     }
     return null;
   };
@@ -134,7 +137,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Tải tài liệu vào Kho Tri thức RAG" maxWidth="lg">
+    <Modal isOpen={isOpen} onClose={onClose} title={tr('Upload document to RAG Knowledge Base', 'Tải tài liệu vào Kho Tri thức RAG')} maxWidth="lg">
       <form
         onSubmit={(e) => {
           e.preventDefault();
@@ -146,10 +149,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
         {/* DaisyUI Steps Visual Indicator */}
         <div className="py-1">
           <ul className="steps steps-horizontal w-full text-[11px] font-medium">
-            <li className={`step ${currentStep >= 1 ? 'step-primary' : ''}`}>Chọn tài liệu</li>
-            <li className={`step ${currentStep >= 2 ? 'step-primary' : ''}`}>Phân quyền</li>
+            <li className={`step ${currentStep >= 1 ? 'step-primary' : ''}`}>{tr('Select document', 'Chọn tài liệu')}</li>
+            <li className={`step ${currentStep >= 2 ? 'step-primary' : ''}`}>{tr('Access rights', 'Phân quyền')}</li>
             <li className={`step ${currentStep >= 3 ? 'step-primary' : ''}`}>Index Vector</li>
-            <li className={`step ${currentStep >= 4 ? 'step-primary' : ''}`}>Sẵn sàng RAG</li>
+            <li className={`step ${currentStep >= 4 ? 'step-primary' : ''}`}>{tr('RAG ready', 'Sẵn sàng RAG')}</li>
           </ul>
         </div>
 
@@ -173,9 +176,9 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
               <Upload className="w-6 h-6" />
             </div>
             <p className="text-xs font-bold text-slate-800 dark:text-zinc-200">
-              Kéo thả tập tin vào đây hoặc <span className="text-blue-600 dark:text-blue-400 underline">chọn từ máy tính</span>
+              {tr('Drop a file here or', 'Kéo thả tập tin vào đây hoặc')} <span className="text-blue-600 dark:text-blue-400 underline">{tr('browse your computer', 'chọn từ máy tính')}</span>
             </p>
-            <p className="text-[11px] text-slate-400 dark:text-zinc-500">Hỗ trợ PDF, TXT, MD, DOCX (tối đa 25MB)</p>
+            <p className="text-[11px] text-slate-400 dark:text-zinc-500">{tr('PDF, TXT, MD, DOCX supported (max 25 MB)', 'Hỗ trợ PDF, TXT, MD, DOCX (tối đa 25MB)')}</p>
           </label>
         </div>
 
@@ -210,7 +213,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
 
         <div>
           <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-            Thư mục lưu tài liệu <span className="text-rose-500">*</span>
+            {tr('Destination folder', 'Thư mục lưu tài liệu')} <span className="text-rose-500">*</span>
           </label>
           <select
             value={folderId}
@@ -221,7 +224,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
             disabled={isFoldersLoading || isProcessing}
             className="select select-bordered select-sm w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
           >
-            <option value="">{isFoldersLoading ? 'Đang tải thư mục...' : 'Chọn thư mục'}</option>
+            <option value="">{isFoldersLoading ? tr('Loading folders...', 'Đang tải thư mục...') : tr('Select folder', 'Chọn thư mục')}</option>
             {folders.map((folder) => (
               <option key={folder.id} value={folder.id}>{folder.name}</option>
             ))}
@@ -233,7 +236,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
           {(field) => (
             <div>
               <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                Phạm vi bảo mật & Phân quyền truy cập <span className="text-rose-500">*</span>
+                {tr('Security scope & access rights', 'Phạm vi bảo mật & Phân quyền truy cập')} <span className="text-rose-500">*</span>
               </label>
               <select
                 name={field.name}
@@ -242,10 +245,10 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
                 onChange={(e) => field.handleChange(e.target.value)}
                 className="select select-bordered select-sm w-full text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
               >
-                <option value="Toàn bộ công ty">Toàn bộ công ty (Public)</option>
-                <option value="Phòng Công nghệ Thông tin">Phòng Công nghệ Thông tin (Internal Dept)</option>
-                <option value="Dự án NEXORA">Dự án NEXORA (Project Specific)</option>
-                <option value="Ban Giám đốc">Ban Giám đốc (Confidential)</option>
+                <option value="Toàn bộ công ty">{tr('Entire company (Public)', 'Toàn bộ công ty (Public)')}</option>
+                <option value="Phòng Công nghệ Thông tin">{tr('IT Department (Internal)', 'Phòng Công nghệ Thông tin (Internal Dept)')}</option>
+                <option value="Dự án NEXORA">{tr('NEXORA Project (Project Specific)', 'Dự án NEXORA (Project Specific)')}</option>
+                <option value="Ban Giám đốc">{tr('Executive Board (Confidential)', 'Ban Giám đốc (Confidential)')}</option>
               </select>
             </div>
           )}
@@ -257,7 +260,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
             <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300">
               <span className="flex items-center gap-1.5 font-bold">
                 <Sparkles className="w-3.5 h-3.5 animate-spin" />
-                Đang phân đoạn chunking & sinh Embedding Vector...
+                {tr('Chunking and generating embedding vectors...', 'Đang phân đoạn chunking & sinh Embedding Vector...')}
               </span>
               <span className="font-mono text-[11px]">Qdrant</span>
             </div>
@@ -272,7 +275,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
             disabled={isProcessing}
             className="btn btn-sm btn-ghost text-slate-700 dark:text-zinc-300 font-medium"
           >
-            Hủy
+            {tr('Cancel', 'Hủy')}
           </button>
           <button
             type="submit"
@@ -282,12 +285,12 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
             {isProcessing ? (
               <>
                 <span className="loading loading-spinner loading-xs" />
-                <span>Đang xử lý RAG...</span>
+                <span>{tr('Processing RAG...', 'Đang xử lý RAG...')}</span>
               </>
             ) : (
               <>
                 <Database className="w-3.5 h-3.5" />
-                <span>Bắt đầu tải lên & Vectorize</span>
+                <span>{tr('Upload & vectorize', 'Bắt đầu tải lên & Vectorize')}</span>
               </>
             )}
           </button>

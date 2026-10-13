@@ -243,36 +243,36 @@ export const OverviewPage: React.FC = () => {
               {/* Tasks Table */}
               <CustomTable<any> columns={[]} data={[]} className="border-0 shadow-none rounded-none">
               <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
-                    <tr>
-                      <th className="w-10 px-4 py-3 text-center">
+                <CustomTable.Table className="w-full text-left text-xs border-collapse">
+                  <CustomTable.Head className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
+                    <CustomTable.Row>
+                      <CustomTable.HeaderCell className="w-10 px-4 py-3 text-center">
                         <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700" />
-                      </th>
-                      <th className="px-3 py-3">CÔNG VIỆC</th>
-                      <th className="px-3 py-3">DỰ ÁN</th>
-                      <th className="px-3 py-3">HẠN HOÀN THÀNH</th>
-                      <th className="px-3 py-3">ƯU TIÊN</th>
-                      <th className="px-3 py-3">TRẠNG THÁI</th>
-                      <th className="px-3 py-3">GIAO CHO</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+                      </CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">CÔNG VIỆC</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">DỰ ÁN</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">HẠN HOÀN THÀNH</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">ƯU TIÊN</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">TRẠNG THÁI</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">GIAO CHO</CustomTable.HeaderCell>
+                    </CustomTable.Row>
+                  </CustomTable.Head>
+                  <CustomTable.Body className="divide-y divide-slate-100 dark:divide-zinc-800/80">
                     {mockTasksPriority.map((task) => (
-                      <tr
+                      <CustomTable.Row
                         key={task.id}
                         className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
                       >
-                        <td className="px-4 py-3 text-center">
+                        <CustomTable.Cell className="px-4 py-3 text-center">
                           <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" />
-                        </td>
-                        <td className="px-3 py-3 font-semibold text-slate-900 dark:text-zinc-100">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 font-semibold text-slate-900 dark:text-zinc-100">
                           {task.name}
-                        </td>
-                        <td className="px-3 py-3 text-slate-600 dark:text-zinc-400">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 text-slate-600 dark:text-zinc-400">
                           {task.project}
-                        </td>
-                        <td className="px-3 py-3">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
                           <span
                             className={`font-semibold ${
                               task.isToday
@@ -282,19 +282,19 @@ export const OverviewPage: React.FC = () => {
                           >
                             {task.deadline}
                           </span>
-                        </td>
-                        <td className="px-3 py-3">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
                           <span className={`inline-flex items-center gap-1 font-medium ${task.priority === 'Cao' ? 'text-rose-500' : 'text-amber-500'}`}>
                             <span className="w-1.5 h-1.5 rounded-full bg-current" />
                             {task.priority}
                           </span>
-                        </td>
-                        <td className="px-3 py-3">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
                           <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
                             {task.status}
                           </span>
-                        </td>
-                        <td className="px-3 py-3">
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
                           <div className="flex items-center gap-1.5">
                             <div className={`w-5 h-5 rounded-full ${task.assignee.avatarBg} text-white font-bold text-[9px] flex items-center justify-center shrink-0`}>
                               {task.assignee.username.slice(0, 2).toUpperCase()}
@@ -303,11 +303,11 @@ export const OverviewPage: React.FC = () => {
                               {task.assignee.username}
                             </span>
                           </div>
-                        </td>
-                      </tr>
+                        </CustomTable.Cell>
+                      </CustomTable.Row>
                     ))}
-                  </tbody>
-                </table>
+                  </CustomTable.Body>
+                </CustomTable.Table>
               </div>
               </CustomTable>
             </div>

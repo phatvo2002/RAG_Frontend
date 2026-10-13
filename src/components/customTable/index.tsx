@@ -47,11 +47,7 @@ export interface PaginationConfig {
 export interface CustomTableProps<T> {
   title?: string;
   toolbar?: React.ReactNode;
-  /**
-   * Presentation-only content slot for legacy tables that still own their
-   * markup and business callbacks. The shared container remains responsible
-   * for the table surface without replacing the existing table engine.
-   */
+  /** Page-specific rows and callbacks rendered inside the shared table parts. */
   children?: React.ReactNode;
   columns: (ColumnDef<T, any> | Column<T>)[];
   data: T[];
@@ -89,7 +85,25 @@ export interface CustomTableProps<T> {
  * Enterprise SaaS Table Component Powered by @tanstack/react-table (v8)
  * Combines TanStack Table headless engine with unified container, low visual noise, and clean Enterprise typography.
  */
-export function CustomTable<T extends object>({
+const DataTable: React.FC<React.TableHTMLAttributes<HTMLTableElement>> = ({ className = '', ...props }) => (
+  <table {...props} className={`nexora-data-table w-full text-left border-collapse ${className}`} />
+);
+
+const DataTableHead: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> = (props) => <thead {...props} />;
+const DataTableBody: React.FC<React.HTMLAttributes<HTMLTableSectionElement>> = (props) => <tbody {...props} />;
+const DataTableRow: React.FC<React.HTMLAttributes<HTMLTableRowElement>> = (props) => <tr {...props} />;
+const DataTableHeaderCell: React.FC<React.ThHTMLAttributes<HTMLTableCellElement>> = (props) => <th {...props} />;
+const DataTableCell: React.FC<React.TdHTMLAttributes<HTMLTableCellElement>> = (props) => <td {...props} />;
+
+const DataTableFooter: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className = '', ...props }) => (
+  <div {...props} className={`nexora-table-footer ${className}`} />
+);
+
+const DataTableFilters: React.FC<React.HTMLAttributes<HTMLDivElement>> = ({ className = '', ...props }) => (
+  <div {...props} className={`nexora-table-filters ${className}`} />
+);
+
+function CustomTableBase<T extends object>({
   title,
   toolbar,
   children,
@@ -112,7 +126,8 @@ export function CustomTable<T extends object>({
   onRowClick,
   pagination,
 }: CustomTableProps<T>) {
-  const { t } = useTranslation(['table', 'common']);
+  const { i18n } = useTranslation(['table', 'common']);
+  const vi = i18n.language.startsWith('vi');
 
   // Convert Sorting to TanStack Table SortingState
   const [internalSorting, setInternalSorting] = useState<SortingState>(() => {
@@ -240,7 +255,7 @@ export function CustomTable<T extends object>({
   const totalItems = pagination?.totalItems ?? data.length;
   const startItem = totalItems === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalItems);
-  const containerClassName = `nexora-table w-full bg-white dark:bg-zinc-950 rounded-sm border border-slate-200 dark:border-zinc-800/90 shadow-2xs overflow-hidden transition-colors ${className}`;
+  const containerClassName = `nexora-table w-full shadow-2xs overflow-hidden transition-colors ${className}`;
 
   if (children) {
     return <div className={containerClassName}>{children}</div>;
@@ -256,7 +271,7 @@ export function CustomTable<T extends object>({
           <h3 className="text-xs font-semibold text-slate-800 dark:text-zinc-200 tracking-tight">{title}</h3>
           {totalItems > 0 && (
             <span className="text-[11px] text-slate-400 dark:text-zinc-500 font-normal">
-              {totalItems} mục
+              {totalItems} {vi ? 'mục' : 'items'}
             </span>
           )}
         </div>
@@ -264,18 +279,18 @@ export function CustomTable<T extends object>({
 
       {/* Main Table Content */}
       <div className="overflow-x-auto w-full">
-        <table className="w-full text-left border-collapse">
+        <DataTable>
           {/* Header via TanStack Table */}
-          <thead
+          <DataTableHead
             className={`bg-slate-50/70 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800/90 text-[11px] font-semibold text-slate-500 dark:text-zinc-400 uppercase tracking-wider select-none ${
               stickyHeader ? 'sticky top-0 z-10' : ''
             }`}
           >
             {table.getHeaderGroups().map((headerGroup) => (
-              <tr key={headerGroup.id}>
+              <DataTableRow key={headerGroup.id}>
                 {/* Select All Checkbox */}
                 {selectable && (
-                  <th className="w-10 px-3 py-3 text-center">
+                  <DataTableHeaderCell className="w-10 px-3 py-3 text-center">
                     <input
                       type="checkbox"
                       checked={isAllSelected}
@@ -285,7 +300,7 @@ export function CustomTable<T extends object>({
                       onChange={handleSelectAll}
                       className="w-3.5 h-3.5 rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-0 cursor-pointer"
                     />
-                  </th>
+                  </DataTableHeaderCell>
                 )}
 
                 {/* Headers */}
@@ -296,7 +311,7 @@ export function CustomTable<T extends object>({
                   const isSorted = header.column.getIsSorted();
 
                   return (
-                    <th
+                    <DataTableHeaderCell
                       key={header.id}
                       style={{ width: meta.width }}
                       className={`px-4 py-2.5 ${alignClass} ${meta.headerClassName || ''} ${meta.className || ''} ${
@@ -334,15 +349,15 @@ export function CustomTable<T extends object>({
                           </span>
                         )}
                       </div>
-                    </th>
+                    </DataTableHeaderCell>
                   );
                 })}
-              </tr>
+              </DataTableRow>
             ))}
-          </thead>
+          </DataTableHead>
 
           {/* Body via TanStack Table */}
-          <tbody className="divide-y divide-slate-100 dark:divide-zinc-900 text-xs">
+          <DataTableBody className="divide-y divide-slate-100 dark:divide-zinc-900 text-xs">
             {isLoading ? (
               <TableSkeleton
                 columnsCount={columns.length}
@@ -350,8 +365,8 @@ export function CustomTable<T extends object>({
                 selectable={selectable}
               />
             ) : data.length === 0 ? (
-              <tr>
-                <td colSpan={selectable ? columns.length + 1 : columns.length} className="py-8">
+              <DataTableRow>
+                <DataTableCell colSpan={selectable ? columns.length + 1 : columns.length} className="py-8">
                   <TableEmptyState
                     title={emptyState?.title}
                     description={emptyState?.description || emptyText}
@@ -359,8 +374,8 @@ export function CustomTable<T extends object>({
                     actionText={emptyState?.actionText}
                     onAction={emptyState?.onAction}
                   />
-                </td>
-              </tr>
+                </DataTableCell>
+              </DataTableRow>
             ) : (
               table.getRowModel().rows.map((row, rowIdx) => {
                 const key = keyExtractor(row.original, rowIdx);
@@ -368,7 +383,7 @@ export function CustomTable<T extends object>({
                 const isClickable = Boolean(onRowClick);
 
                 return (
-                  <tr
+                  <DataTableRow
                     key={row.id || key}
                     onClick={() => onRowClick?.(row.original, rowIdx)}
                     className={`${
@@ -381,7 +396,7 @@ export function CustomTable<T extends object>({
                   >
                     {/* Row Checkbox */}
                     {selectable && (
-                      <td
+                      <DataTableCell
                         className="w-10 px-3 py-3 text-center"
                         onClick={(e) => handleSelectRow(key, e)}
                       >
@@ -391,7 +406,7 @@ export function CustomTable<T extends object>({
                           onChange={() => {}}
                           className="w-3.5 h-3.5 rounded border-slate-300 dark:border-zinc-700 text-blue-600 focus:ring-0 cursor-pointer"
                         />
-                      </td>
+                      </DataTableCell>
                     )}
 
                     {/* Row Cells */}
@@ -401,33 +416,33 @@ export function CustomTable<T extends object>({
                       const paddingClass = compact ? 'px-3 py-2' : 'px-4 py-3';
 
                       return (
-                        <td
+                        <DataTableCell
                           key={cell.id}
                           className={`${alignClass} ${paddingClass} text-slate-700 dark:text-zinc-300 ${meta.className || ''}`}
                         >
                           {flexRender(cell.column.columnDef.cell, cell.getContext())}
-                        </td>
+                        </DataTableCell>
                       );
                     })}
-                  </tr>
+                  </DataTableRow>
                 );
               })
             )}
-          </tbody>
-        </table>
+          </DataTableBody>
+        </DataTable>
       </div>
 
       {/* Enterprise SaaS Minimalist Pagination Bar: "1–10 trong 128 | 10 / trang | ‹ ›" */}
       {pagination && (
-        <div className="px-4 py-2.5 border-t border-slate-200 dark:border-zinc-800/90 bg-white dark:bg-zinc-950 flex flex-wrap items-center justify-between gap-3 text-xs select-none transition-colors">
+        <DataTableFooter className="px-4 py-2.5 flex flex-wrap items-center justify-between gap-3 text-xs select-none transition-colors">
           {/* Left: 1–10 trong 128 */}
           <div className="text-slate-500 dark:text-zinc-400 font-normal">
             {totalItems > 0 ? (
               <span>
-                <strong className="font-semibold text-slate-700 dark:text-zinc-300">{startItem}–{endItem}</strong> trong <strong className="font-semibold text-slate-700 dark:text-zinc-300">{totalItems}</strong>
+                <strong className="font-semibold text-slate-700 dark:text-zinc-300">{startItem}–{endItem}</strong> {vi ? 'trong' : 'of'} <strong className="font-semibold text-slate-700 dark:text-zinc-300">{totalItems}</strong>
               </span>
             ) : (
-              <span>0 mục</span>
+              <span>0 {vi ? 'mục' : 'items'}</span>
             )}
           </div>
 
@@ -443,7 +458,7 @@ export function CustomTable<T extends object>({
                 >
                   {(pagination.pageSizeOptions || [10, 20, 50, 100]).map((opt) => (
                     <option key={opt} value={opt}>
-                      {opt} / trang
+                      {opt} / {vi ? 'trang' : 'page'}
                     </option>
                   ))}
                 </select>
@@ -460,7 +475,7 @@ export function CustomTable<T extends object>({
                 disabled={currentPage <= 1}
                 onClick={() => pagination.onPageChange(currentPage - 1)}
                 className="w-7 h-7 flex items-center justify-center rounded border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                title="Trang trước"
+                title={vi ? 'Trang trước' : 'Previous page'}
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
@@ -469,17 +484,28 @@ export function CustomTable<T extends object>({
                 disabled={currentPage >= pagination.totalPages}
                 onClick={() => pagination.onPageChange(currentPage + 1)}
                 className="w-7 h-7 flex items-center justify-center rounded border border-slate-200 dark:border-zinc-800 text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-900 disabled:opacity-30 disabled:cursor-not-allowed transition-colors cursor-pointer"
-                title="Trang sau"
+                title={vi ? 'Trang sau' : 'Next page'}
               >
                 <ChevronRight className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
-        </div>
+        </DataTableFooter>
       )}
     </div>
   );
 }
+
+export const CustomTable = Object.assign(CustomTableBase, {
+  Table: DataTable,
+  Head: DataTableHead,
+  Body: DataTableBody,
+  Row: DataTableRow,
+  HeaderCell: DataTableHeaderCell,
+  Cell: DataTableCell,
+  Footer: DataTableFooter,
+  Filters: DataTableFilters,
+});
 
 export { TableToolbar } from './TableToolbar';
 export { TableSkeleton } from './TableSkeleton';

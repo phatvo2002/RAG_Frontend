@@ -47,6 +47,26 @@ blocked
 
 ---
 
+# Design QA — AI chat redesign
+
+## Source and implementation
+
+- Source: user-provided `codex-clipboard-b427e4ae-a4d6-46ee-b457-970555dd8353.png` (1272 px wide), compared with the current chat screenshot `codex-clipboard-16e30e57-55bf-4a6d-9882-7a661cdc295f.png`.
+- Implementation: `src/pages/chat/ChatPage.tsx`, `ChatAnswerContent.tsx`, and `ChatSourcesPanel.tsx`.
+- Production build: `npm.cmd run build` passed after the final responsive breakpoint change.
+
+## Comparison
+
+- Implemented the dark conversation rail, document-style message thread, compact composer, and source rail at the reference width. On narrower screens, the source rail opens as a drawer.
+- Source entries and file-type filters are derived from the active answer's real API sources. The current API has no project-scoped context, saved conversations, feedback, or document excerpts, so those reference-only details were not fabricated.
+- No authenticated frontend/backend session was running locally. A rendered screenshot in the same conversation state could not be captured and compared for exact spacing, typography, or narrow-screen behavior.
+
+## Final result
+
+blocked
+
+---
+
 # Design QA — AI chat layout
 
 ## Source visual truth
@@ -107,6 +127,65 @@ blocked
 - The source image was inspected. The authenticated meeting calendar could not be captured locally because no frontend/backend session was running.
 - The rendered typography, spacing, colors, icons, and meeting cards therefore remain unverified against the screenshot.
 - Next check: open `/meetings` with meeting data at the source viewport, compare the week layout, then inspect month view and narrower widths.
+
+## Final result
+
+blocked
+
+---
+
+# Design QA — Dashboard sidebar alignment with AI chat
+
+## Source and implementation
+
+- Source: user-provided dashboard sidebar screenshot `codex-clipboard-dc06ccab-e029-4399-9bc1-a7fd5d0a1165.png` and the existing AI chat sidebar in `src/pages/chat/ChatPage.tsx`.
+- Implementation: `src/components/sidebar/index.tsx`.
+- Production build: `npm.cmd run build` passed.
+
+## Comparison
+
+- The dashboard sidebar now uses the chat sidebar's 238 px width, 62 px header, Segoe UI application font, navy surface, blue brand mark, muted text, and subdued active navigation style. Its collapsed version uses the same palette.
+- Navigation groups and permission filtering remain intact; the account footer opens the account page like the chat sidebar.
+- No authenticated local frontend session was running, so the rendered sidebar could not be captured in the same state as the screenshot for visual comparison.
+
+## Final result
+
+blocked
+
+---
+
+# Design QA — Meeting list and detail page
+
+## Source and implementation
+
+- Source: user-provided `codex-clipboard-f7f93e4a-8813-4727-bb88-833f98c2bb68.png` (meeting list with right detail panel).
+- Implementation: `src/pages/meetings/MeetingsPage.tsx` and `MeetingCalendarView.tsx`.
+- Production build: `npm.cmd run build` passed.
+
+## Comparison
+
+- The meeting route now opens in a list-and-detail layout with search, tabs, date and role filters, pagination, and a calendar toggle. The existing create, edit, and room navigation flows are retained.
+- All rows, participants, timestamps, and statuses come from the meeting API. The API does not supply physical locations, Teams links, discussion, checklist, notes, or minutes, so the design does not display fabricated versions of them.
+- An authenticated local frontend/backend session was not available for a same-state screenshot comparison. Exact rendered spacing, fonts, and responsive behavior remain visually unverified.
+
+## Final result
+
+blocked
+
+---
+
+# Design QA — Shared data tables
+
+## Source and implementation
+
+- Source: user-provided `codex-clipboard-bf96afd8-747b-4fa9-9273-9a5817646c8f.png` (dark data table with filters and pagination).
+- Implementation: shared table parts in `src/components/customTable/index.tsx`, table styling in `src/index.css`, and list-table markup across dashboard, projects, data repository, and admin pages.
+- `npx tsc --noEmit`, `npm run build`, and `git diff --check` passed.
+
+## Comparison
+
+- Static source review confirms all list tables use the shared `CustomTable` table, header, body, row, and cell components. Existing page-specific filters, selection, actions, and pagination callbacks remain in place.
+- The in-app Browser rejected access to the local Vite preview at `127.0.0.1:5173` because permission was declined. A rendered screenshot and interaction check could not be completed.
 
 ## Final result
 

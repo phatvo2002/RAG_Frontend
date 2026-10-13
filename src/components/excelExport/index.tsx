@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileSpreadsheet } from 'lucide-react';
 import { Button, ButtonProps } from '@/components/button';
+import { useTranslation } from 'react-i18next';
 
 export interface ExcelExportProps extends Omit<ButtonProps, 'onClick'> {
   filename?: string;
@@ -13,9 +14,10 @@ export const ExcelExport: React.FC<ExcelExportProps> = ({
   filename = 'export_data.xlsx',
   data,
   onExport,
-  buttonText = 'Xuất Excel',
+  buttonText,
   ...props
 }) => {
+  const { i18n } = useTranslation();
   const handleExport = () => {
     if (onExport) {
       onExport();
@@ -40,7 +42,7 @@ export const ExcelExport: React.FC<ExcelExportProps> = ({
       onClick={handleExport}
       {...props}
     >
-      {buttonText}
+      {buttonText ?? (i18n.language.startsWith('vi') ? 'Xuất Excel' : 'Export Excel')}
     </Button>
   );
 };

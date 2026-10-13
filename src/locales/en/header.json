@@ -37,6 +37,18 @@
       "sub": "Access Control, Security Policies & AI Infrastructure"
     }
   },
+  "company": "Nexora Corporation",
+  "openMenu": "Open menu",
+  "closeMenu": "Close menu",
+  "searchPlaceholder": "Search or enter a command...",
+  "searchNotice": "Search: \"{{query}}\"",
+  "unreadNotifications": "You have {{count}} unread notifications",
+  "notifications": "Notifications",
+  "helpNotice": "Open the NEXORA AI user guide",
+  "help": "Help",
+  "account": "Account",
+  "manageAccount": "Manage account",
+  "signOut": "Sign out",
   "buttons": {
     "goToDashboard": "Dashboard",
     "openAiChat": "Open AI Chat Assistant"

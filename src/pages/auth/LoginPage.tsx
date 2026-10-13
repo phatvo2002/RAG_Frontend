@@ -7,7 +7,8 @@ import { useNavigate } from '@tanstack/react-router';
 import { Mail, Lock, Eye, EyeOff, ArrowRight, AlertCircle } from 'lucide-react';
 
 export const LoginPage: React.FC = () => {
-  const { setCurrentUser, setIsAuthenticated, showToast } = useApp();
+  const { setCurrentUser, setIsAuthenticated, showToast, language, setLanguage } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const navigate = useNavigate();
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -25,7 +26,7 @@ export const LoginPage: React.FC = () => {
           loginYupSchema.validateSync(value, { abortEarly: false });
           return undefined;
         } catch (err: any) {
-          return err.message || 'Dữ liệu không hợp lệ';
+          return tr('Invalid form data', 'Dữ liệu không hợp lệ');
         }
       },
     },
@@ -41,12 +42,15 @@ export const LoginPage: React.FC = () => {
         {
           onSuccess: (result) => {
             setCurrentUser(result.user);
+            if (!localStorage.getItem('nexora_language') && (result.user.preferredLanguage === 'en' || result.user.preferredLanguage === 'vi')) {
+              setLanguage(result.user.preferredLanguage);
+            }
             setIsAuthenticated(true);
             navigate({ to: '/chat' as any });
-            showToast(`Đăng nhập thành công! Chào mừng trở lại ${result.user.name}`, 'success');
+            showToast(tr(`Signed in successfully! Welcome back, ${result.user.name}`, `Đăng nhập thành công! Chào mừng trở lại ${result.user.name}`), 'success');
           },
           onError: (error: any) => {
-            const msg = error.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin tài khoản.';
+            const msg = error.message || tr('Sign in failed. Please check your credentials.', 'Đăng nhập thất bại. Vui lòng kiểm tra lại thông tin tài khoản.');
             setServerError(msg);
             showToast(msg, 'error');
           },
@@ -56,7 +60,7 @@ export const LoginPage: React.FC = () => {
   });
 
   const handleMicrosoftLogin = () => {
-    showToast('Tính năng đăng nhập Single Sign-On (SSO) Microsoft đang được thiết lập', 'info');
+    showToast(tr('Microsoft Single Sign-On (SSO) is being set up.', 'Tính năng đăng nhập Single Sign-On (SSO) Microsoft đang được thiết lập'), 'info');
   };
 
   const isSubmitting = loginMutation.isPending;
@@ -151,7 +155,7 @@ export const LoginPage: React.FC = () => {
               NEXORA AI
             </h2>
             <p className="text-[11px] text-slate-400 dark:text-zinc-500 font-normal">
-              Trợ lý AI nội bộ
+              {tr('Internal AI assistant', 'Trợ lý AI nội bộ')}
             </p>
           </div>
         </div>
@@ -159,10 +163,10 @@ export const LoginPage: React.FC = () => {
         {/* Title & Subtitle */}
         <div className="mb-6 text-left">
           <h1 className="text-2xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
-            Chào mừng trở lại
+            {tr('Welcome back', 'Chào mừng trở lại')}
           </h1>
           <p className="text-xs text-slate-500 dark:text-zinc-400 mt-1">
-            Đăng nhập để tiếp tục sử dụng NEXORA AI
+            {tr('Sign in to continue to NEXORA AI', 'Đăng nhập để tiếp tục sử dụng NEXORA AI')}
           </p>
         </div>
 
@@ -187,11 +191,11 @@ export const LoginPage: React.FC = () => {
           <form.Field
             name="email"
             validators={{
-              onChange: ({ value }) => (!value ? 'Vui lòng nhập email hoặc tên đăng nhập' : undefined),
+              onChange: ({ value }) => (!value ? tr('Enter your email or username', 'Vui lòng nhập email hoặc tên đăng nhập') : undefined),
             }}
           >
             {(field) => {
-              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const errorMessage = field.state.meta.errors?.[0] ?? null;
               const hasError = Boolean(errorMessage);
 
               return (
@@ -206,7 +210,7 @@ export const LoginPage: React.FC = () => {
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="Nhập email"
+                      placeholder={tr('Enter email', 'Nhập email')}
                       className={`w-full pl-9 pr-3.5 py-2.5 bg-white dark:bg-zinc-800/60 border rounded-xl text-xs text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all ${
                         hasError
                           ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/20'
@@ -232,28 +236,28 @@ export const LoginPage: React.FC = () => {
             validators={{
               onChange: ({ value }) =>
                 !value
-                  ? 'Vui lòng nhập mật khẩu'
+                  ? tr('Enter your password', 'Vui lòng nhập mật khẩu')
                   : value.length < 6
-                  ? 'Mật khẩu phải có ít nhất 6 ký tự'
+                  ? tr('Password must contain at least 6 characters', 'Mật khẩu phải có ít nhất 6 ký tự')
                   : undefined,
             }}
           >
             {(field) => {
-              const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+              const errorMessage = field.state.meta.errors?.[0] ?? null;
               const hasError = Boolean(errorMessage);
 
               return (
                 <div>
                   <div className="flex items-center justify-between mb-1.5">
                     <label className="text-xs font-medium text-slate-700 dark:text-zinc-300">
-                      Mật khẩu
+                      {tr('Password', 'Mật khẩu')}
                     </label>
                     <button
                       type="button"
-                      onClick={() => showToast('Vui lòng liên hệ quản trị viên IT để đặt lại mật khẩu', 'info')}
+                      onClick={() => showToast(tr('Contact your IT administrator to reset your password.', 'Vui lòng liên hệ quản trị viên IT để đặt lại mật khẩu'), 'info')}
                       className="text-xs text-blue-600 dark:text-blue-400 font-medium hover:underline p-0 cursor-pointer"
                     >
-                      Quên mật khẩu?
+                      {tr('Forgot password?', 'Quên mật khẩu?')}
                     </button>
                   </div>
                   <div className="relative flex items-center">
@@ -263,7 +267,7 @@ export const LoginPage: React.FC = () => {
                       value={field.state.value}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="Nhập mật khẩu"
+                      placeholder={tr('Enter password', 'Nhập mật khẩu')}
                       className={`w-full pl-9 pr-9 py-2.5 bg-white dark:bg-zinc-800/60 border rounded-xl text-xs text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 focus:outline-none transition-all ${
                         hasError
                           ? 'border-rose-400 focus:border-rose-500 focus:ring-1 focus:ring-rose-500 bg-rose-50/20'
@@ -300,11 +304,11 @@ export const LoginPage: React.FC = () => {
             {isSubmitting ? (
               <>
                 <span className="loading loading-spinner loading-xs" />
-                <span>Đang xác thực...</span>
+                <span>{tr('Signing in...', 'Đang xác thực...')}</span>
               </>
             ) : (
               <>
-                <span>Đăng nhập</span>
+                <span>{tr('Sign in', 'Đăng nhập')}</span>
                 <ArrowRight className="w-4 h-4" />
               </>
             )}
@@ -323,33 +327,33 @@ export const LoginPage: React.FC = () => {
             <rect x="11" y="1" width="9" height="9" fill="#7fba00" />
             <rect x="11" y="11" width="9" height="9" fill="#ffb900" />
           </svg>
-          <span>Đăng nhập bằng Microsoft</span>
+          <span>{tr('Sign in with Microsoft', 'Đăng nhập bằng Microsoft')}</span>
         </button>
 
         {/* Footer Disclaimer / Terms of Service */}
         <div className="text-center mt-7 text-[11px] text-slate-500 dark:text-zinc-400 leading-relaxed">
-          Bằng việc đăng nhập, bạn đồng ý với{' '}
+          {tr('By signing in, you agree to the', 'Bằng việc đăng nhập, bạn đồng ý với')}{' '}
           <a
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              showToast('Điều khoản bảo mật NEXORA AI', 'info');
+              showToast(tr('NEXORA AI privacy terms', 'Điều khoản bảo mật NEXORA AI'), 'info');
             }}
             className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
           >
-            điều khoản bảo mật
+            {tr('privacy terms', 'điều khoản bảo mật')}
           </a>
           <br />
-          và{' '}
+          {tr('and', 'và')}{' '}
           <a
             href="#"
             onClick={(e) => {
               e.preventDefault();
-              showToast('Chính sách xử lý dữ liệu NEXORA AI', 'info');
+              showToast(tr('NEXORA AI data processing policy', 'Chính sách xử lý dữ liệu NEXORA AI'), 'info');
             }}
             className="text-blue-600 dark:text-blue-400 font-medium hover:underline"
           >
-            xử lý dữ liệu
+            {tr('data processing policy', 'xử lý dữ liệu')}
           </a>
           .
         </div>

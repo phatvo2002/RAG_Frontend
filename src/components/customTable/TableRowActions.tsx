@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React from 'react';
 import { MoreHorizontal } from 'lucide-react';
 
 export interface ActionMenuItem {
@@ -16,81 +16,40 @@ export interface TableRowActionsProps {
   className?: string;
 }
 
-/**
- * Enterprise SaaS Minimalist Row Actions Menu (⋯)
- * Controlled React Dropdown with click-outside listener to prevent styling bugs.
- */
+/** Display every row action as a labeled icon button. */
 export const TableRowActions: React.FC<TableRowActionsProps> = ({
   items,
   align = 'right',
   className = '',
 }) => {
-  const [isOpen, setIsOpen] = useState(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
-    };
-    if (isOpen) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [isOpen]);
-
   if (!items || items.length === 0) return null;
 
   return (
-    <div ref={dropdownRef} className={`relative inline-block text-left ${className}`}>
-      <button
-        type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setIsOpen((prev) => !prev);
-        }}
-        className="w-7 h-7 flex items-center justify-center rounded-md hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-        title="Thao tác"
-      >
-        <MoreHorizontal className="w-4 h-4" />
-      </button>
+    <div className={`inline-flex items-center gap-1 whitespace-nowrap ${align === 'right' ? 'justify-end' : 'justify-start'} ${className}`}>
+      {items.map((item, idx) => {
+        const isDanger = item.variant === 'danger' || item.danger;
 
-      {isOpen && (
-        <div
-          onClick={(e) => e.stopPropagation()}
-          className={`absolute ${
-            align === 'right' ? 'right-0' : 'left-0'
-          } top-full mt-1 z-50 p-1 shadow-xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg w-48 text-xs font-medium text-slate-700 dark:text-zinc-200 animate-in fade-in-50 zoom-in-95 duration-100`}
-        >
-          {items.map((item, idx) => {
-            const isDanger = item.variant === 'danger' || item.danger;
-
-            return (
-              <button
-                key={idx}
-                type="button"
-                disabled={item.disabled}
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setIsOpen(false);
-                  item.onClick();
-                }}
-                className={`w-full flex items-center gap-2 px-2.5 py-1.5 rounded-md transition-colors text-left cursor-pointer ${
-                  isDanger
-                    ? 'text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40'
-                    : 'hover:bg-slate-50 dark:hover:bg-zinc-800 hover:text-slate-900 dark:hover:text-white'
-                }`}
-              >
-                {item.icon && <span className="w-3.5 h-3.5 shrink-0 opacity-80">{item.icon}</span>}
-                <span className="truncate">{item.label}</span>
-              </button>
-            );
-          })}
-        </div>
-      )}
+        return (
+          <button
+            key={idx}
+            type="button"
+            aria-label={item.label}
+            title={item.label}
+            disabled={item.disabled}
+            onClick={(event) => {
+              event.stopPropagation();
+              item.onClick();
+            }}
+            className={`inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:cursor-not-allowed disabled:opacity-40 ${
+              isDanger
+                ? 'text-rose-600 hover:border-rose-200 hover:bg-rose-50 dark:text-rose-400 dark:hover:border-rose-900 dark:hover:bg-rose-950/40'
+                : 'text-slate-500 hover:border-blue-200 hover:bg-blue-50 hover:text-blue-600 dark:text-zinc-400 dark:hover:border-blue-900 dark:hover:bg-blue-950/40 dark:hover:text-blue-400'
+            }`}
+          >
+            {item.icon ?? <MoreHorizontal className="h-4 w-4" />}
+          </button>
+        );
+      })}
     </div>
   );
 };

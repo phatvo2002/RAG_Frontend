@@ -119,7 +119,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     if (saved && (saved === 'en' || saved === 'vi')) {
       return saved;
     }
-    return 'vi';
+    return 'en';
   });
 
   const setLanguage = (lang: AppLanguage) => {
@@ -127,6 +127,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     i18n.changeLanguage(lang);
     localStorage.setItem('nexora_language', lang);
   };
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
 
   const toggleLanguage = () => {
     const nextLang = language === 'en' ? 'vi' : 'en';
@@ -274,6 +278,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const user = await authApi.getMe();
           setCurrentUser(user);
+          if (!localStorage.getItem('nexora_language') && (user.preferredLanguage === 'en' || user.preferredLanguage === 'vi')) {
+            setLanguage(user.preferredLanguage);
+          }
           setIsAuthenticated(true);
         } catch {
           // Token không hợp lệ hoặc hết hạn
@@ -295,6 +302,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const response = await authApi.login(credentials);
       if (response && response.user) {
         setCurrentUser(response.user);
+        if (!localStorage.getItem('nexora_language') && (response.user.preferredLanguage === 'en' || response.user.preferredLanguage === 'vi')) {
+          setLanguage(response.user.preferredLanguage);
+        }
         setIsAuthenticated(true);
         showToast(`Signed in successfully! Welcome ${response.user.name}`, 'success');
         navigate({ to: '/chat' });

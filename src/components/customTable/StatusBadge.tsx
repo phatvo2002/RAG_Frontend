@@ -1,4 +1,5 @@
 import React from 'react';
+import { useTranslation } from 'react-i18next';
 
 export interface StatusBadgeProps {
   status: string | boolean;
@@ -13,10 +14,12 @@ export interface StatusBadgeProps {
  */
 export const StatusBadge: React.FC<StatusBadgeProps> = ({
   status,
-  activeText = 'Hoạt động',
-  inactiveText = 'Tạm khóa',
+  activeText,
+  inactiveText,
   className = '',
 }) => {
+  const { i18n } = useTranslation();
+  const vi = i18n.language.startsWith('vi');
   const isInactive =
     status === false ||
     status === 'Inactive' ||
@@ -28,13 +31,13 @@ export const StatusBadge: React.FC<StatusBadgeProps> = ({
 
   const isArchived = status === 'Archived' || status === 'Lưu trữ';
 
-  let text = activeText;
+  let text = activeText ?? (vi ? 'Hoạt động' : 'Active');
   if (typeof status === 'string' && status) {
-    if (status === 'Active') text = 'Hoạt động';
-    else if (status === 'Inactive') text = 'Tạm khóa';
+    if (status === 'Active') text = activeText ?? (vi ? 'Hoạt động' : 'Active');
+    else if (status === 'Inactive') text = inactiveText ?? (vi ? 'Tạm khóa' : 'Inactive');
     else text = status;
   } else if (isInactive) {
-    text = inactiveText;
+    text = inactiveText ?? (vi ? 'Tạm khóa' : 'Inactive');
   }
 
   let dotColor = 'bg-emerald-500';

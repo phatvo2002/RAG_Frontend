@@ -7,6 +7,7 @@ import { useDepartmentsQuery } from '@/api/departments.api';
 import { useRolesQuery } from '@/api/roles.api';
 import { useCurrentOrganizationQuery } from '@/api/organizations.api';
 import { Mail, User as UserIcon, Phone, Building, Shield, AlertCircle, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
 
 interface UserModalProps {
   isOpen: boolean;
@@ -23,6 +24,8 @@ export const UserModal: React.FC<UserModalProps> = ({
   departments: initialDepartments,
   onSuccessToast,
 }) => {
+  const { language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const isEditMode = Boolean(userToEdit);
   const [showPassword, setShowPassword] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
@@ -118,7 +121,7 @@ export const UserModal: React.FC<UserModalProps> = ({
           userYupSchema.validateSync(value, { abortEarly: false });
           return undefined;
         } catch (err: any) {
-          return err.message || 'Dữ liệu người dùng không hợp lệ';
+          return err.message || tr('Invalid user information', 'Dữ liệu người dùng không hợp lệ');
         }
       },
     },
@@ -159,12 +162,12 @@ export const UserModal: React.FC<UserModalProps> = ({
           },
           {
             onSuccess: (updatedUser) => {
-              onSuccessToast(`Đã cập nhật thông tin người dùng ${updatedUser.name} thành công!`);
+              onSuccessToast(tr(`Updated ${updatedUser.name}.`, `Đã cập nhật thông tin người dùng ${updatedUser.name} thành công!`));
               form.reset();
               onClose();
             },
             onError: (err: any) => {
-              setServerError(err.message || 'Không thể cập nhật người dùng');
+              setServerError(err.message || tr('Could not update user', 'Không thể cập nhật người dùng'));
             },
           }
         );
@@ -189,12 +192,12 @@ export const UserModal: React.FC<UserModalProps> = ({
           },
           {
             onSuccess: (createdUser) => {
-              onSuccessToast(`Đã thêm người dùng ${createdUser.name} thành công!`);
+              onSuccessToast(tr(`Created ${createdUser.name}.`, `Đã thêm người dùng ${createdUser.name} thành công!`));
               form.reset();
               onClose();
             },
             onError: (err: any) => {
-              setServerError(err.message || 'Không thể tạo mới người dùng');
+              setServerError(err.message || tr('Could not create user', 'Không thể tạo mới người dùng'));
             },
           }
         );
@@ -267,7 +270,7 @@ export const UserModal: React.FC<UserModalProps> = ({
     <Modal
       isOpen={isOpen}
       onClose={onClose}
-      title={isEditMode ? 'Chỉnh sửa thông tin người dùng' : 'Thêm người dùng mới'}
+      title={isEditMode ? tr('Edit user details', 'Chỉnh sửa thông tin người dùng') : tr('Add user', 'Thêm người dùng mới')}
       maxWidth="lg"
     >
       <form
@@ -290,7 +293,7 @@ export const UserModal: React.FC<UserModalProps> = ({
           <form.Field
             name="displayName"
             validators={{
-              onChange: ({ value }) => (!value?.trim() ? 'Tên hiển thị không được để trống' : undefined),
+              onChange: ({ value }) => (!value?.trim() ? tr('Display name is required', 'Tên hiển thị không được để trống') : undefined),
             }}
           >
             {(field) => {
@@ -300,7 +303,7 @@ export const UserModal: React.FC<UserModalProps> = ({
               return (
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Tên hiển thị (Display Name) <span className="text-rose-500">*</span>
+                    {tr('Display name', 'Tên hiển thị (Display Name)')} <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative flex items-center">
                     <input
@@ -309,7 +312,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                       value={field.state.value || ''}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="VD: lenhu"
+                      placeholder={tr('e.g. lenhu', 'VD: lenhu')}
                       className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
                         hasError ? 'input-error' : ''
                       }`}
@@ -331,7 +334,7 @@ export const UserModal: React.FC<UserModalProps> = ({
           <form.Field
             name="name"
             validators={{
-              onChange: ({ value }) => (!value?.trim() ? 'Họ và tên không được để trống' : undefined),
+              onChange: ({ value }) => (!value?.trim() ? tr('Full name is required', 'Họ và tên không được để trống') : undefined),
             }}
           >
             {(field) => {
@@ -341,7 +344,7 @@ export const UserModal: React.FC<UserModalProps> = ({
               return (
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Họ và tên (Full Name) <span className="text-rose-500">*</span>
+                    {tr('Full name', 'Họ và tên (Full Name)')} <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative flex items-center">
                     <input
@@ -350,7 +353,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                       value={field.state.value || ''}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="VD: Lê Thị Quỳnh Như"
+                      placeholder={tr('e.g. Jane Doe', 'VD: Lê Thị Quỳnh Như')}
                       className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
                         hasError ? 'input-error' : ''
                       }`}
@@ -373,7 +376,7 @@ export const UserModal: React.FC<UserModalProps> = ({
         <form.Field
           name="email"
           validators={{
-            onChange: ({ value }) => (!value?.trim() ? 'Email không được để trống' : undefined),
+            onChange: ({ value }) => (!value?.trim() ? tr('Email is required', 'Email không được để trống') : undefined),
           }}
         >
           {(field) => {
@@ -383,7 +386,7 @@ export const UserModal: React.FC<UserModalProps> = ({
             return (
               <div>
                 <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                  Email đăng nhập <span className="text-rose-500">*</span>
+                  {tr('Login email', 'Email đăng nhập')} <span className="text-rose-500">*</span>
                 </label>
                 <div className="relative flex items-center">
                   <input
@@ -392,7 +395,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                     value={field.state.value || ''}
                     onBlur={field.handleBlur}
                     onChange={(e) => field.handleChange(e.target.value)}
-                    placeholder="VD: lethiquynhu@gmail.com"
+                    placeholder={tr('e.g. jane@example.com', 'VD: lethiquynhu@gmail.com')}
                     className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
                       hasError ? 'input-error' : ''
                     }`}
@@ -415,7 +418,7 @@ export const UserModal: React.FC<UserModalProps> = ({
           <form.Field
             name="password"
             validators={{
-              onChange: ({ value }) => (!value || value.length < 6 ? 'Mật khẩu phải có ít nhất 6 ký tự' : undefined),
+              onChange: ({ value }) => (!value || value.length < 6 ? tr('Password must have at least 6 characters', 'Mật khẩu phải có ít nhất 6 ký tự') : undefined),
             }}
           >
             {(field) => {
@@ -426,9 +429,9 @@ export const UserModal: React.FC<UserModalProps> = ({
                 <div>
                   <div className="flex items-center justify-between mb-1">
                     <label className="block font-semibold text-slate-700 dark:text-zinc-300">
-                      Mật khẩu khởi tạo <span className="text-rose-500">*</span>
+                      {tr('Initial password', 'Mật khẩu khởi tạo')} <span className="text-rose-500">*</span>
                     </label>
-                    <span className="text-[11px] text-slate-400 dark:text-zinc-500">Mặc định: Nexora@2026</span>
+                    <span className="text-[11px] text-slate-400 dark:text-zinc-500">{tr('Default: Nexora@2026', 'Mặc định: Nexora@2026')}</span>
                   </div>
                   <div className="relative flex items-center">
                     <input
@@ -437,7 +440,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                       value={field.state.value || ''}
                       onBlur={field.handleBlur}
                       onChange={(e) => field.handleChange(e.target.value)}
-                      placeholder="Nhập mật khẩu cho tài khoản (tối thiểu 6 ký tự)"
+                      placeholder={tr('Enter a password (at least 6 characters)', 'Nhập mật khẩu cho tài khoản (tối thiểu 6 ký tự)')}
                       className={`input input-bordered input-sm w-full pl-9 pr-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
                         hasError ? 'input-error' : ''
                       }`}
@@ -473,7 +476,7 @@ export const UserModal: React.FC<UserModalProps> = ({
               return (
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Phòng ban <span className="text-rose-500">*</span>
+                    {tr('Department', 'Phòng ban')} <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative flex items-center">
                     <select
@@ -508,7 +511,7 @@ export const UserModal: React.FC<UserModalProps> = ({
             <form.Field name="organizationId">
               {(field) => (
                 <div>
-                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Tổ chức</label>
+                  <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">{tr('Organization', 'Tổ chức')}</label>
                   <div className="relative flex items-center">
                     <select
                       name={field.name}
@@ -518,14 +521,14 @@ export const UserModal: React.FC<UserModalProps> = ({
                       disabled={!currentOrganization}
                       className="select select-bordered select-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100"
                     >
-                      <option value="">Không thay đổi tổ chức</option>
+                      <option value="">{tr('Keep current organization', 'Không thay đổi tổ chức')}</option>
                       {currentOrganization && (
                         <option value={currentOrganization.organizationId}>{currentOrganization.name}</option>
                       )}
                     </select>
                     <Building className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
                   </div>
-                  {organizationLoadFailed && <p className="mt-1 text-[11px] text-rose-600">Không tải được tổ chức hiện tại; bạn vẫn có thể sửa thông tin khác.</p>}
+                  {organizationLoadFailed && <p className="mt-1 text-[11px] text-rose-600">{tr('Could not load the current organization; you can still edit other details.', 'Không tải được tổ chức hiện tại; bạn vẫn có thể sửa thông tin khác.')}</p>}
                 </div>
               )}
             </form.Field>
@@ -540,7 +543,7 @@ export const UserModal: React.FC<UserModalProps> = ({
               return (
                 <div>
                   <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
-                    Vai trò <span className="text-rose-500">*</span>
+                    {tr('Role', 'Vai trò')} <span className="text-rose-500">*</span>
                   </label>
                   <div className="relative flex items-center">
                     <select
@@ -579,7 +582,7 @@ export const UserModal: React.FC<UserModalProps> = ({
         <form.Field name="phone">
           {(field) => (
             <div>
-              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">Số điện thoại</label>
+              <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">{tr('Phone number', 'Số điện thoại')}</label>
               <div className="relative flex items-center">
                 <input
                   type="text"
@@ -587,7 +590,7 @@ export const UserModal: React.FC<UserModalProps> = ({
                   value={field.state.value || ''}
                   onBlur={field.handleBlur}
                   onChange={(e) => field.handleChange(e.target.value)}
-                  placeholder="VD: 0708 223 608"
+                  placeholder={tr('e.g. 0708 223 608', 'VD: 0708 223 608')}
                   className="input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500"
                 />
                 <Phone className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
@@ -602,7 +605,7 @@ export const UserModal: React.FC<UserModalProps> = ({
             onClick={onClose}
             className="btn btn-sm btn-ghost text-slate-700 dark:text-zinc-300 font-medium"
           >
-            Hủy
+            {tr('Cancel', 'Hủy')}
           </button>
           <button
             type="submit"
@@ -610,7 +613,7 @@ export const UserModal: React.FC<UserModalProps> = ({
             className="btn btn-sm btn-primary text-white font-medium shadow-xs"
           >
             {isPending && <span className="loading loading-spinner loading-xs" />}
-            <span>{isEditMode ? 'Lưu thay đổi' : 'Tạo người dùng'}</span>
+            <span>{isEditMode ? tr('Save changes', 'Lưu thay đổi') : tr('Create user', 'Tạo người dùng')}</span>
           </button>
         </div>
       </form>

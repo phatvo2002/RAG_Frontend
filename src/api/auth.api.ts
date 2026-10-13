@@ -98,7 +98,7 @@ export function normalizeUser(data: any): User {
     department: deptName || 'Công nghệ thông tin',
     departmentId: deptId,
     organizationId: userObj.organizationId ?? userObj.organization_id ?? null,
-    preferredLanguage: userObj.preferredLanguage || userObj.preferred_language || 'vi',
+    preferredLanguage: userObj.preferredLanguage || userObj.preferred_language || 'en',
     timeZone: userObj.timeZone || userObj.timezone || null,
     avatar: userObj.avatar || userObj.avatarUrl || userObj.avatar_url,
     isSuperAdmin: userObj.isSuperAdmin === true || userObj.is_super_admin === true,

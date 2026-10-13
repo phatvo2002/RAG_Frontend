@@ -1,14 +1,14 @@
 import i18n from 'i18next';
 import { initReactI18next } from 'react-i18next';
 
-// Vietnamese translations (Default)
+// Vietnamese translations
 import viCommon from '../locales/vi/common.json';
 import viSidebar from '../locales/vi/sidebar.json';
 import viHeader from '../locales/vi/header.json';
 import viTable from '../locales/vi/table.json';
 import viAdmin from '../locales/vi/admin.json';
 
-// English translations
+// English translations (default)
 import enCommon from '../locales/en/common.json';
 import enSidebar from '../locales/en/sidebar.json';
 import enHeader from '../locales/en/header.json';
@@ -34,7 +34,7 @@ export const resources = {
   },
 } as const;
 
-// Get initial language from localStorage or fallback to 'vi'
+// Keep an explicit user choice; otherwise start in English.
 const getSavedLanguage = (): string => {
   if (typeof window !== 'undefined') {
     const saved = localStorage.getItem('nexora_language');
@@ -42,7 +42,7 @@ const getSavedLanguage = (): string => {
       return saved;
     }
   }
-  return 'vi'; // Vietnamese as default
+  return 'en';
 };
 
 i18n
@@ -50,7 +50,7 @@ i18n
   .init({
     resources,
     lng: getSavedLanguage(),
-    fallbackLng: 'vi',
+    fallbackLng: 'en',
     defaultNS,
     interpolation: {
       escapeValue: false, // React already escapes values
