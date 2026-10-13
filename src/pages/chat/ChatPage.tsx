@@ -1,12 +1,38 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
-import { FileText, FolderOpen, LayoutDashboard, LoaderCircle, Menu, MessageCircle, Paperclip, Plus, Search, Send, ShieldCheck, Sparkles, Trash2, X } from 'lucide-react';
+import { FileText, FolderOpen, LayoutDashboard, LoaderCircle, Menu, MessageCircle, Mic, Paperclip, Plus, Search, Send, ShieldCheck, Trash2, X } from 'lucide-react';
 import { chatApi } from '@/api/chat.api';
 import type { ChatConversation, ChatMessage, ChatSource } from '@/api/chat.api';
 import { useApp } from '@/context/AppContext';
 import { LanguageSwitcher } from '@/components/languageSwitcher';
 import { ChatAnswerContent } from './ChatAnswerContent';
 import { ChatSourcesPanel } from './ChatSourcesPanel';
+import './chat-animations.css';
+
+type ChatComposerProps = {
+  input: string;
+  onInputChange: (value: string) => void;
+  onSend: () => void;
+  loading: boolean;
+  sending: boolean;
+  modelsAvailable: boolean;
+  language: 'en' | 'vi';
+};
+
+const ChatComposer: React.FC<ChatComposerProps> = ({ input, onInputChange, onSend, loading, sending, modelsAvailable, language }) => {
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
+
+  return <div className="w-full">
+    <div className="flex items-end gap-1.5 rounded-md border border-[#dce5f2] bg-white p-1.5 shadow-[0_1px_3px_rgba(16,36,86,0.05)] focus-within:border-[#8eb3ff] focus-within:ring-2 focus-within:ring-[#e8f0ff]">
+      <button type="button" disabled title={tr('Attaching documents is not supported yet', 'Đính kèm tài liệu chưa được hỗ trợ')} aria-label={tr('Attaching documents is not supported yet', 'Đính kèm tài liệu chưa được hỗ trợ')} className="rounded-md p-2 text-[#637797] opacity-60"><Paperclip size={18} /></button>
+      <button type="button" disabled title={tr('Voice input is not supported yet', 'Nhập bằng giọng nói chưa được hỗ trợ')} aria-label={tr('Voice input is not supported yet', 'Nhập bằng giọng nói chưa được hỗ trợ')} className="rounded-md p-2 text-[#637797] opacity-60"><Mic size={18} /></button>
+      <span aria-hidden="true" className="my-2 h-6 w-px shrink-0 bg-[#e1e8f3]" />
+      <textarea value={input} onChange={event => onInputChange(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); onSend(); } }} disabled={loading || sending || !modelsAvailable} maxLength={2000} rows={1} placeholder={loading ? tr('Loading AI assistant...', 'Đang tải trợ lý AI...') : modelsAvailable ? tr('Ask about your internal data...', 'Hỏi về dữ liệu nội bộ của bạn...') : tr('No AI model configured', 'Chưa cấu hình mô hình AI')} aria-label={tr('Message content', 'Nội dung tin nhắn')} className="max-h-32 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-sm text-[#243653] outline-none placeholder:text-[#8191ac] disabled:opacity-60" />
+      <button type="button" onClick={onSend} disabled={loading || sending || !input.trim() || !modelsAvailable} className="chat-action flex h-10 items-center gap-2 rounded-md bg-[#0759ee] px-3.5 text-sm font-semibold text-white hover:bg-[#126bff] disabled:opacity-50"><Send size={17} />{tr('Send', 'Gửi')}</button>
+    </div>
+    <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-[#7d8eaa]"><ShieldCheck size={14} className="mt-0.5 shrink-0 text-emerald-600" />{tr('NEXORA AI uses internal documents you can access. Conversation history is stored in the system.', 'NEXORA AI sử dụng tài liệu nội bộ bạn được phép truy cập. Lịch sử hội thoại được lưu trong hệ thống.')}</p>
+  </div>;
+};
 
 export const ChatPage: React.FC = () => {
   const navigate = useNavigate();
@@ -30,7 +56,9 @@ export const ChatPage: React.FC = () => {
   const [sourceFilter, setSourceFilter] = useState('all');
   const [focusedMessageId, setFocusedMessageId] = useState<string | null>(null);
   const [selectedSourceIndex, setSelectedSourceIndex] = useState(0);
+  const [now, setNow] = useState(() => new Date());
   const endRef = useRef<HTMLDivElement>(null);
+  const conversationLoadId = useRef(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -42,20 +70,18 @@ export const ChatPage: React.FC = () => {
       if (cancelled) return;
       setConversations(history);
       setHasMoreConversations(history.length === 50);
-      if (history.length > 0) {
-        const latestMessages = await chatApi.messages(history[0].id);
-        if (!cancelled) {
-          setActiveId(history[0].id);
-          setMessages(latestMessages);
-          setHasOlder(latestMessages.length === 50);
-        }
-      }
     }).catch(err => { if (!cancelled) setError(err instanceof Error ? err.message : tr('Could not load conversation history.', 'Không thể tải lịch sử hội thoại.')); })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
 
-  useEffect(() => { endRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, streamText]);
+  useEffect(() => {
+    endRef.current?.scrollIntoView({ behavior: window.matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth' });
+  }, [messages, streamText]);
+  useEffect(() => {
+    const timer = window.setInterval(() => setNow(new Date()), 60_000);
+    return () => window.clearInterval(timer);
+  }, []);
 
   const refreshConversations = async () => {
     const history = await chatApi.conversations();
@@ -65,6 +91,7 @@ export const ChatPage: React.FC = () => {
 
   const openConversation = async (id: string) => {
     if (sending) return;
+    const loadId = ++conversationLoadId.current;
     setHistoryOpen(false);
     setFocusedMessageId(null);
     setSelectedSourceIndex(0);
@@ -75,18 +102,23 @@ export const ChatPage: React.FC = () => {
     setLoading(true);
     try {
       const history = await chatApi.messages(id);
-      setMessages(history);
-      setHasOlder(history.length === 50);
+      if (loadId === conversationLoadId.current) {
+        setMessages(history);
+        setHasOlder(history.length === 50);
+      }
     } catch (err) {
-      setError(err instanceof Error ? err.message : tr('Could not load messages.', 'Không thể tải tin nhắn.'));
+      if (loadId === conversationLoadId.current) setError(err instanceof Error ? err.message : tr('Could not load messages.', 'Không thể tải tin nhắn.'));
     } finally {
-      setLoading(false);
+      if (loadId === conversationLoadId.current) setLoading(false);
     }
   };
 
   const newChat = () => {
     if (sending) return;
+    conversationLoadId.current++;
+    setLoading(false);
     setHistoryOpen(false);
+    setSourcesOpen(false);
     setFocusedMessageId(null);
     setSelectedSourceIndex(0);
     setSourceFilter('all');
@@ -190,6 +222,10 @@ export const ChatPage: React.FC = () => {
   const userName = currentUser?.displayName || currentUser?.name || tr('You', 'Bạn');
   const userInitial = userName.trim().split(/\s+/).map(part => part[0]).slice(-2).join('').toUpperCase() || 'B';
   const activeConversation = conversations.find(item => item.id === activeId);
+  const showWelcome = activeId === null && messages.length === 0 && !sending;
+  const greeting = now.getHours() < 12 ? tr('Good morning', 'Chào buổi sáng') : now.getHours() < 18 ? tr('Good afternoon', 'Chào buổi chiều') : tr('Good evening', 'Chào buổi tối');
+  const welcomeDate = `${new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(now)} · ${new Intl.DateTimeFormat(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(now)}`;
+  const composer = <ChatComposer input={input} onInputChange={setInput} onSend={() => void send()} loading={loading} sending={sending} modelsAvailable={modelsAvailable} language={language} />;
   const showSource = (index: number, messageId?: string) => {
     if (messageId) setFocusedMessageId(messageId);
     setSelectedSourceIndex(index);
@@ -208,7 +244,7 @@ export const ChatPage: React.FC = () => {
         </div>
 
         <div className="space-y-3 px-3 pb-3 pt-3">
-          <button type="button" onClick={newChat} disabled={sending} className="flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[#0759ee] text-[13px] font-semibold text-white hover:bg-[#126bff] disabled:opacity-50"><Plus size={19} />{tr('New chat', 'Đoạn chat mới')}</button>
+          <button type="button" onClick={newChat} disabled={sending} className="chat-action flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[#0759ee] text-[13px] font-semibold text-white hover:bg-[#126bff] disabled:opacity-50"><Plus size={19} />{tr('New chat', 'Đoạn chat mới')}</button>
           <label className="flex h-9 items-center gap-2 rounded-md border border-[#344e69] bg-[#112b45] px-2.5 text-[#9fb2cc] focus-within:border-[#70a2ff]">
             <Search size={16} aria-hidden="true" />
             <input value={search} onChange={event => setSearch(event.target.value)} placeholder={tr('Search chats...', 'Tìm đoạn chat...')} aria-label={tr('Search chats', 'Tìm đoạn chat')} className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-[#9fb2cc]" />
@@ -223,7 +259,7 @@ export const ChatPage: React.FC = () => {
             return <React.Fragment key={item.id}>
               {group !== previousGroup && <div className="mb-1 mt-3 border-b border-white/10 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[#9fb2cc]">{group}</div>}
               <button type="button" onClick={() => void openConversation(item.id)} disabled={sending} aria-current={activeId === item.id ? 'page' : undefined}
-                className={`mb-0.5 flex w-full items-start justify-between gap-2 rounded-md border-l-[3px] px-2 py-2.5 text-left text-xs transition-colors disabled:opacity-60 ${activeId === item.id ? 'border-[#2f86ff] bg-[#1b3d65] text-white' : 'border-transparent text-[#d5e2f3] hover:bg-white/10'}`}>
+                className={`chat-history-item mb-0.5 flex w-full items-start justify-between gap-2 rounded-md border-l-[3px] px-2 py-2.5 text-left text-xs transition-colors disabled:opacity-60 ${activeId === item.id ? 'border-[#2f86ff] bg-[#1b3d65] text-white' : 'border-transparent text-[#d5e2f3] hover:bg-white/10'}`}>
                 <span className="min-w-0 flex-1 break-words leading-snug">{item.title}</span><time className="shrink-0 text-[10px] text-[#9fb2cc]">{formatTime(item.updatedAt)}</time>
               </button>
             </React.Fragment>;
@@ -244,13 +280,13 @@ export const ChatPage: React.FC = () => {
         <header className="flex h-[62px] shrink-0 items-center justify-between gap-3 border-b border-[#e1e8f3] bg-white px-4 lg:px-6">
           <div className="flex min-w-0 items-center gap-3">
             <button type="button" onClick={() => setHistoryOpen(true)} aria-label={tr('Open conversation history', 'Mở lịch sử hội thoại')} className="rounded-md p-1.5 text-[#52678b] hover:bg-[#eef3fc] md:hidden"><Menu size={19} /></button>
-            <h1 className="max-w-[360px] truncate text-[17px] font-bold text-[#102456]">{activeConversation?.title || tr('NEXORA AI assistant', 'Trợ lý AI NEXORA')}</h1>
+            <h1 className="max-w-[360px] truncate text-[17px] font-bold text-[#102456]">{activeConversation?.title || tr('AI Assistant', 'Trợ lý AI')}</h1>
             <span className="hidden items-center gap-2 rounded-md border border-[#dce5f2] px-2.5 py-2 text-xs font-medium text-[#243653] lg:inline-flex"><FolderOpen size={16} />{tr('Internal documents', 'Tài liệu nội bộ')}</span>
             <button type="button" onClick={() => navigate({ to: '/data-repo' })} className="hidden rounded-md border border-[#dce5f2] px-3 py-2 text-xs font-medium text-[#1762f4] hover:bg-[#f3f7ff] lg:inline-flex">{tr('Open knowledge base', 'Vào kho tri thức')}</button>
           </div>
           <div className="flex shrink-0 items-center gap-2 sm:gap-4">
             <LanguageSwitcher />
-            <button type="button" onClick={() => setSourcesOpen(true)} aria-label={tr('Open sources', 'Mở nguồn tham khảo')} className="rounded-md p-2 text-[#52678b] hover:bg-[#eef3fc] min-[1180px]:hidden"><FileText size={18} /></button>
+            {!showWelcome && <button type="button" onClick={() => setSourcesOpen(true)} aria-label={tr('Open sources', 'Mở nguồn tham khảo')} className="rounded-md p-2 text-[#52678b] hover:bg-[#eef3fc] min-[1180px]:hidden"><FileText size={18} /></button>}
             <button type="button" onClick={() => navigate({ to: '/account' })} className="flex items-center gap-2 border-l border-[#e1e8f3] pl-3 text-left hover:opacity-80">
               <span className="flex h-8 w-8 items-center justify-center rounded-full bg-[#1762f4] text-xs font-bold text-white">{userInitial}</span><span className="hidden max-w-[110px] sm:block"><strong className="block truncate text-xs text-[#102456]">{userName}</strong><span className="block truncate text-[10px] text-[#7d8eaa]">{currentUser?.role || tr('Account', 'Tài khoản')}</span></span>
             </button>
@@ -259,16 +295,24 @@ export const ChatPage: React.FC = () => {
 
         <div className="flex min-h-0 flex-1">
           <main className="flex min-w-0 flex-1 flex-col bg-white">
+            {showWelcome ? <div className="flex min-h-0 flex-1 items-center justify-center overflow-y-auto px-5 py-10 sm:px-8">
+              <div className="w-full max-w-[760px] -translate-y-4 sm:-translate-y-8">
+                <p className="chat-welcome-date mb-3 text-xs font-medium text-[#7186ac] sm:text-sm">{welcomeDate}</p>
+                <h2 className="chat-welcome-title text-[clamp(2rem,4vw,3rem)] font-bold leading-tight tracking-tight text-[#102456]">{greeting}, {userName}.</h2>
+                <p className="chat-welcome-subtitle mb-7 mt-1 text-[clamp(1rem,2vw,1.35rem)] text-[#66799c]">{tr('How can I help you with your work today?', 'Tôi có thể giúp gì cho công việc của bạn hôm nay?')}</p>
+                <div className="chat-welcome-composer">{composer}</div>
+                {error && <div role="alert" className="mt-5 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}{!modelsAvailable && <button type="button" onClick={() => navigate({ to: '/account' })} className="ml-2 font-semibold text-[#1762f4] underline">{tr('Set up API key', 'Thiết lập khóa API')}</button>}</div>}
+              </div>
+            </div> : <>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-7">
               <div className="mx-auto max-w-[800px]">
                 {loading && <p className="flex items-center gap-2 py-5 text-sm text-[#8291aa]"><LoaderCircle size={17} className="animate-spin" />{tr('Loading conversations...', 'Đang tải hội thoại...')}</p>}
-                {!loading && messages.length === 0 && !sending && <div className="flex min-h-[48vh] flex-col items-center justify-center gap-3 text-center"><span className="flex h-14 w-14 items-center justify-center rounded-xl bg-[#eaf2ff] text-[#1762f4]"><Sparkles size={28} /></span><strong className="text-lg text-[#102456]">{tr('Ask about documents you can access', 'Hỏi về tài liệu bạn được phép truy cập')}</strong><p className="text-sm text-[#66799c]">{tr('Start a conversation to find information in the internal knowledge base.', 'Bắt đầu một cuộc hội thoại để tìm thông tin trong kho tri thức nội bộ.')}</p></div>}
                 {hasOlder && <button type="button" onClick={() => void loadOlder()} className="mb-4 block w-full text-center text-xs font-semibold text-[#1762f4] hover:underline">{tr('Load older messages', 'Tải tin nhắn cũ hơn')}</button>}
 
                 {messages.map(message => {
                   const isUser = message.role === 'user';
                   const attachments = isUser ? [] : [...new Map(message.sources.map((source, index) => [source.documentId, { source, index }] as const)).values()];
-                  return <article key={message.id} className="group border-b border-[#e6ebf4] py-5 first:pt-1">
+                  return <article key={message.id} className={`group border-b border-[#e6ebf4] py-5 first:pt-1 ${message.id === messages[messages.length - 1]?.id ? 'chat-message-enter' : ''}`}>
                     <div className="flex items-start gap-4">
                       <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center font-bold ${isUser ? 'rounded-full bg-[#e3efff] text-xs text-[#1762f4]' : 'rounded-md bg-[#1762f4] text-lg text-white'}`}>{isUser ? userInitial : 'N'}</span>
                       <div className="min-w-0 flex-1">
@@ -283,26 +327,22 @@ export const ChatPage: React.FC = () => {
                   </article>;
                 })}
 
-                {sending && <article className="flex items-start gap-4 py-5"><span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#1762f4] text-lg font-bold text-white">N</span><div className="min-w-0 flex-1"><strong className="text-[13px] text-[#1762f4]">NEXORA AI</strong>{streamText ? <div className="mt-3"><ChatAnswerContent content={streamText} sources={streamSources} onSource={index => showSource(index)} /></div> : <p className="mt-3 flex items-center gap-2 text-sm text-[#7587a5]"><LoaderCircle size={15} className="animate-spin" />{tr('Finding documents and generating a response...', 'Đang tìm tài liệu và tạo câu trả lời...')}</p>}</div></article>}
+                {sending && <article className="chat-message-enter flex items-start gap-4 py-5"><span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#1762f4] text-lg font-bold text-white">N</span><div className="min-w-0 flex-1"><strong className="text-[13px] text-[#1762f4]">NEXORA AI</strong>{streamText ? <div className="mt-3"><ChatAnswerContent content={streamText} sources={streamSources} onSource={index => showSource(index)} /></div> : <p className="mt-3 flex items-center gap-2 text-sm text-[#7587a5]"><span className="chat-thinking-dots" aria-hidden="true"><i /><i /><i /></span>{tr('Finding documents and generating a response...', 'Đang tìm tài liệu và tạo câu trả lời...')}</p>}</div></article>}
                 {error && <div role="alert" className="my-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}{!modelsAvailable && <button type="button" onClick={() => navigate({ to: '/account' })} className="ml-2 font-semibold text-[#1762f4] underline">{tr('Set up API key', 'Thiết lập khóa API')}</button>}</div>}
                 <div ref={endRef} />
               </div>
             </div>
 
             <div className="shrink-0 border-t border-[#e6ebf4] bg-white px-4 pb-3 pt-2 sm:px-6 lg:px-7">
-              <div className="mx-auto max-w-[800px]">
-                <div className="flex items-end gap-2 rounded-md border border-[#dce5f2] bg-white p-1.5 focus-within:border-[#8eb3ff]">
-                  <button type="button" disabled title={tr('Attaching documents is not supported yet', 'Đính kèm tài liệu chưa được hỗ trợ')} aria-label={tr('Attaching documents is not supported yet', 'Đính kèm tài liệu chưa được hỗ trợ')} className="rounded-md p-2 text-[#637797] opacity-60"><Paperclip size={18} /></button>
-                  <textarea value={input} onChange={event => setInput(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); void send(); } }} disabled={sending || !modelsAvailable} maxLength={2000} rows={1} placeholder={modelsAvailable ? tr('Ask about internal data...', 'Hỏi về dữ liệu nội bộ...') : tr('No AI model configured', 'Chưa cấu hình mô hình AI')} aria-label={tr('Message content', 'Nội dung tin nhắn')} className="max-h-32 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-sm text-[#243653] outline-none placeholder:text-[#8191ac] disabled:opacity-60" />
-                  <button type="button" onClick={() => void send()} disabled={sending || !input.trim() || !modelsAvailable} className="flex h-10 items-center gap-2 rounded-md bg-[#0759ee] px-3.5 text-sm font-semibold text-white hover:bg-[#126bff] disabled:opacity-50"><Send size={17} />{tr('Send', 'Gửi')}</button>
-                </div>
-                <p className="mt-2 flex items-center gap-1.5 text-[11px] text-[#7d8eaa]"><ShieldCheck size={14} className="shrink-0 text-emerald-600" />{tr('Answers are based on documents you can access. Conversation history is stored in the system.', 'Câu trả lời dựa trên tài liệu bạn có quyền truy cập. Lịch sử hội thoại được lưu trong hệ thống.')}</p>
-              </div>
+              <div className="mx-auto max-w-[800px]">{composer}</div>
             </div>
+            </>}
           </main>
 
-          {sourcesOpen && <button type="button" aria-label={tr('Close sources', 'Đóng nguồn tham khảo')} onClick={() => setSourcesOpen(false)} className="fixed inset-0 z-30 bg-[#07172b]/55 min-[1180px]:hidden" />}
-          <ChatSourcesPanel sources={sources} selectedIndex={selectedSourceIndex} filter={sourceFilter} open={sourcesOpen} onFilterChange={setSourceFilter} onSelect={setSelectedSourceIndex} onClose={() => setSourcesOpen(false)} onManageDocuments={() => navigate({ to: '/data-repo' })} />
+          {!showWelcome && <>
+            {sourcesOpen && <button type="button" aria-label={tr('Close sources', 'Đóng nguồn tham khảo')} onClick={() => setSourcesOpen(false)} className="fixed inset-0 z-30 bg-[#07172b]/55 min-[1180px]:hidden" />}
+            <ChatSourcesPanel sources={sources} selectedIndex={selectedSourceIndex} filter={sourceFilter} open={sourcesOpen} onFilterChange={setSourceFilter} onSelect={setSelectedSourceIndex} onClose={() => setSourcesOpen(false)} onManageDocuments={() => navigate({ to: '/data-repo' })} />
+          </>}
         </div>
       </div>
     </div>
