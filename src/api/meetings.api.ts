@@ -24,6 +24,16 @@ export interface MeetingUserOption {
 export interface MeetingDetail extends OnlineMeeting {
   rowVersion: number;
   participants: MeetingUserOption[];
+  mySourceLanguage: 'vi' | 'en' | null;
+}
+
+export interface MeetingTranscriptSegment {
+  segmentId: string;
+  speakerUserId: string;
+  startedAt: string;
+  endedAt: string;
+  sourceLanguage: 'vi' | 'en';
+  text: string;
 }
 
 export interface CreateOnlineMeeting {
@@ -86,11 +96,20 @@ export const meetingsApi = {
   async join(id: string): Promise<MeetingJoinToken> {
     return data(await apiClient<ApiResponse<MeetingJoinToken> | MeetingJoinToken>(`/api/meetings/${encodeURIComponent(id)}/join-token`, { method: 'POST' }));
   },
+  async setSourceLanguage(id: string, language: 'vi' | 'en'): Promise<string> {
+    return data(await apiClient<ApiResponse<string> | string>(`/api/meetings/${encodeURIComponent(id)}/my-source-language`, {
+      method: 'PUT', body: JSON.stringify({ language }),
+    }));
+  },
+  async transcript(id: string): Promise<MeetingTranscriptSegment[]> {
+    return data(await apiClient<ApiResponse<MeetingTranscriptSegment[]> | MeetingTranscriptSegment[]>(`/api/meetings/${encodeURIComponent(id)}/transcript`));
+  },
 };
 
 export const meetingKeys = {
   list: ['meetings'] as const,
   detail: (id: string) => ['meetings', id] as const,
+  transcript: (id: string) => ['meetings', id, 'transcript'] as const,
 };
 
 export function useMeetingsQuery() {

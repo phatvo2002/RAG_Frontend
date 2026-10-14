@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
-import { useQueryClient } from '@tanstack/react-query';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { LiveKitRoom, VideoConference } from '@livekit/components-react';
 import { ArrowLeft, Video } from 'lucide-react';
 import '@livekit/components-styles';
@@ -8,6 +8,7 @@ import { meetingKeys, meetingsApi, useMeetingQuery, type MeetingJoinToken } from
 import { useApp } from '@/context/AppContext';
 import { MeetingModal } from './MeetingModal';
 import { isScheduledMeetingExpired, useMeetingClock } from './meetingAvailability';
+import { TranscriptPanel, TranscriptStreamListener, type TranscriptEvent } from './TranscriptPanel';
 
 export const MeetingRoomPage: React.FC = () => {
   const { meetingId } = useParams({ from: '/meetings/$meetingId' });
@@ -20,7 +21,28 @@ export const MeetingRoomPage: React.FC = () => {
   const [connection, setConnection] = useState<MeetingJoinToken | null>(null);
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [busy, setBusy] = useState(false);
+  const [sourceLanguage, setSourceLanguage] = useState<'' | 'vi' | 'en'>('');
+  const [liveSegments, setLiveSegments] = useState<Record<string, TranscriptEvent>>({});
+  const [workerAvailable, setWorkerAvailable] = useState(false);
   const value = meeting.data;
+  const transcript = useQuery({
+    queryKey: meetingKeys.transcript(meetingId),
+    queryFn: () => meetingsApi.transcript(meetingId),
+    enabled: !!value,
+    refetchInterval: value?.status === 'Live' ? 5000 : false,
+  });
+  useEffect(() => { if (value) setSourceLanguage(value.mySourceLanguage ?? ''); }, [value?.mySourceLanguage]);
+  const onTranscriptEvent = useCallback((event: TranscriptEvent) => {
+    setLiveSegments(current => current[event.segmentId]?.type === 'final' && event.type === 'partial'
+      ? current : { ...current, [event.segmentId]: event });
+    if (event.type === 'final') void queryClient.invalidateQueries({ queryKey: meetingKeys.transcript(meetingId) });
+  }, [meetingId, queryClient]);
+  const onWorkerAvailability = useCallback((available: boolean) => setWorkerAvailable(available), []);
+  const segments = useMemo(() => {
+    const merged = { ...liveSegments };
+    for (const item of transcript.data ?? []) merged[item.segmentId] = { ...item, type: 'final' };
+    return Object.values(merged).sort((a, b) => a.startedAt.localeCompare(b.startedAt) || a.segmentId.localeCompare(b.segmentId));
+  }, [liveSegments, transcript.data]);
   const isHost = value?.organizerUserId === currentUser.id;
   const isExpired = value ? isScheduledMeetingExpired(value, now) : false;
   const statusLabel = isExpired ? tr('Overdue', 'Quá hạn') : {
@@ -87,8 +109,22 @@ export const MeetingRoomPage: React.FC = () => {
         )}
       </header>
 
+      {value.status !== 'Ended' && <div className="mt-4 flex items-center gap-3">
+        <label htmlFor="meeting-source-language" className="text-sm font-medium">{tr('Your spoken language', 'Ngôn ngữ bạn nói')}</label>
+        <select id="meeting-source-language" value={sourceLanguage} disabled={busy || value.status === 'Ending'}
+          onChange={event => {
+            const selected = event.target.value as 'vi' | 'en';
+            setSourceLanguage(selected);
+            void run(() => meetingsApi.setSourceLanguage(meetingId, selected));
+          }} className="rounded border border-[#dce5f3] bg-white px-3 py-2 text-sm dark:border-[#223149] dark:bg-[#111b2c]">
+          <option value="" disabled>{tr('Choose language', 'Chọn ngôn ngữ')}</option>
+          <option value="vi">Tiếng Việt</option><option value="en">English</option>
+        </select>
+      </div>}
+
+      <div className="mt-5 grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
       {value.status !== 'Live' || !connection ? (
-        <section className="mt-5 flex min-h-[320px] flex-1 flex-col items-center justify-center rounded-xl bg-[#f4f8ff] px-6 py-12 text-center dark:bg-[#111b2c]">
+        <section className="flex min-h-[480px] flex-col items-center justify-center rounded-xl bg-[#f4f8ff] px-6 py-12 text-center dark:bg-[#111b2c]">
           <span className="flex h-[104px] w-[104px] items-center justify-center rounded-full bg-[#e5efff] text-[#1769ee] dark:bg-[#18335f] dark:text-blue-400">
             <Video size={43} strokeWidth={1.7} aria-hidden="true" />
           </span>
@@ -113,7 +149,7 @@ export const MeetingRoomPage: React.FC = () => {
           {value.status === 'Live' && (
             <button
               type="button"
-              disabled={busy}
+              disabled={busy || !sourceLanguage}
               onClick={() => run(async () => { setConnection(await meetingsApi.join(meetingId)); })}
               className="mt-6 rounded-md bg-[#155dfb] px-5 py-2.5 text-sm font-medium text-white transition-colors hover:bg-[#0f4bd1] disabled:cursor-not-allowed disabled:opacity-50"
             >
@@ -122,14 +158,21 @@ export const MeetingRoomPage: React.FC = () => {
           )}
         </section>
       ) : (
-        <div className="mt-5 min-h-0 flex-1" data-lk-theme="default">
+        <div className="h-[65vh] min-h-[480px] max-h-[900px] min-w-0 overflow-hidden rounded-xl bg-[#111] xl:h-[75vh]" data-lk-theme="default">
           <LiveKitRoom token={connection.token} serverUrl={connection.url} connect={true} audio={true} video={true}
-            onDisconnected={() => { setConnection(null); void meeting.refetch(); }}
+            className="h-full"
+            onDisconnected={() => { setConnection(null); setWorkerAvailable(false); void meeting.refetch(); void transcript.refetch(); }}
             onError={error => showToast(error.message, 'error')}>
+            <TranscriptStreamListener meetingId={meetingId} onEvent={onTranscriptEvent} onAvailability={onWorkerAvailability} />
             <VideoConference />
           </LiveKitRoom>
         </div>
       )}
+      <div className="min-h-0 xl:h-[75vh] xl:max-h-[900px]">
+        <TranscriptPanel segments={segments} participants={value.participants} language={language}
+          unavailable={value.status === 'Live' && !!connection && !workerAvailable} />
+      </div>
+      </div>
       {isEditOpen && <MeetingModal meetingId={meetingId} isOpen={true} onClose={() => setIsEditOpen(false)} />}
     </div>
   );
