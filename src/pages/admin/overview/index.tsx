@@ -1,240 +1,460 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
 import { useUsersQuery } from '@/api/users.api';
+import { useDepartmentsQuery } from '@/api/departments.api';
+import { useRolesQuery } from '@/api/roles.api';
 import { useNavigate } from '@tanstack/react-router';
+import { CustomTable } from '@/components/customTable';
 import {
   Users,
   Building2,
-  HardDrive,
-  Sparkles,
   Shield,
-  FileCheck2,
   Clock,
   Sliders,
-  ArrowRight,
-  ChevronRight
+  FileCheck2,
+  FolderKanban,
+  CheckSquare,
+  FileText,
+  Calendar,
+  AlertTriangle,
+  Info,
+  CheckCircle2,
+  MoreHorizontal,
+  ChevronLeft,
+  ChevronRight,
+  Filter,
 } from 'lucide-react';
-import { mockRoles, mockDataPolicies, mockActivityLogs } from '@/data/mockData';
 
 export const OverviewPage: React.FC = () => {
-  const { departments } = useApp();
+  const { departments: localDepts } = useApp();
   const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState<'all' | 'overdue' | 'feedback' | 'doing'>('all');
 
-  // TanStack Query for Users
+  // TanStack Queries
   const { data: users = [] } = useUsersQuery();
+  const { data: departments = [] } = useDepartmentsQuery();
+  const { data: roles = [] } = useRolesQuery();
 
-  const activeUsersCount = users.filter((u) => u.status === 'Đang hoạt động').length;
+  const activeUsersCount = users.filter((u) => u.isActive !== false && u.status !== 'Inactive' && u.status !== 'Bị khóa').length;
 
-  const quickLinks = [
+  const mockTasksPriority = [
     {
-      title: 'Quản lý Người dùng',
-      desc: 'Xem danh sách, thêm mới, sửa, khóa và phân quyền tài khoản',
-      count: `${users.length} tài khoản`,
-      icon: Users,
-      color: 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400',
-      path: '/admin/users',
+      id: 't1',
+      name: 'Phê duyệt ngân sách Q2/2024',
+      project: 'Dự án ERP Nexora',
+      deadline: 'Hôm nay',
+      isToday: true,
+      priority: 'Cao',
+      status: 'Cần phản hồi',
+      assignee: { username: 'lenhu', avatarBg: 'bg-blue-600' },
     },
     {
-      title: 'Quản lý Phòng ban',
-      desc: 'Cơ cấu tổ chức phòng ban và trưởng bộ phận trực thuộc',
-      count: `${departments.length} phòng ban`,
-      icon: Building2,
-      color: 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400',
-      path: '/admin/departments',
+      id: 't2',
+      name: 'Rà soát yêu cầu & đặc tả chức năng',
+      project: 'Ứng dụng CRM',
+      deadline: 'Ngày mai',
+      priority: 'Cao',
+      status: 'Đang thực hiện',
+      assignee: { username: 'phat1', avatarBg: 'bg-emerald-600' },
     },
     {
-      title: 'Vai trò & Phân quyền',
-      desc: 'Thiết lập quyền truy cập cho Quản trị, Trưởng phòng, Nhân viên',
-      count: `${mockRoles.length} vai trò`,
-      icon: Shield,
-      color: 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400',
-      path: '/admin/roles',
+      id: 't3',
+      name: 'Kiểm thử tích hợp (UAT)',
+      project: 'Dự án ERP Nexora',
+      deadline: '23/05/2024',
+      priority: 'Trung bình',
+      status: 'Đang thực hiện',
+      assignee: { username: 'Phat', avatarBg: 'bg-blue-600' },
     },
     {
-      title: 'Chính sách Dữ liệu',
-      desc: 'Kiểm soát quyền truy cập tài liệu RAG và bảo mật thông tin nội bộ',
-      count: `${mockDataPolicies.length} chính sách`,
-      icon: FileCheck2,
-      color: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400',
-      path: '/admin/policies',
+      id: 't4',
+      name: 'Chuẩn hóa dữ liệu khách hàng',
+      project: 'Data Warehouse',
+      deadline: '24/05/2024',
+      priority: 'Trung bình',
+      status: 'Cần phản hồi',
+      assignee: { username: 'ngtuan', avatarBg: 'bg-blue-600' },
     },
     {
-      title: 'Nhật ký Hoạt động',
-      desc: 'Ghi nhận và lưu vết toàn bộ hoạt động của người dùng',
-      count: `${mockActivityLogs.length} sự kiện mới`,
-      icon: Clock,
-      color: 'bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400',
-      path: '/admin/logs',
-    },
-    {
-      title: 'Cấu hình Hệ thống & AI',
-      desc: 'Thiết lập mô hình AI, LLM, Vector Database và dung lượng',
-      count: 'Gemini 2.0 Flash',
-      icon: Sliders,
-      color: 'bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400',
-      path: '/admin/config',
+      id: 't5',
+      name: 'Đào tạo người dùng đợt 2',
+      project: 'Ứng dụng CRM',
+      deadline: '24/05/2024',
+      priority: 'Thấp',
+      status: 'Chưa bắt đầu',
+      assignee: { username: 'vhieu', avatarBg: 'bg-indigo-600' },
     },
   ];
 
-  return (
-    <div className="flex-1 flex flex-col h-full bg-slate-50 dark:bg-slate-950 overflow-hidden transition-colors">
-      <Header
-        title="Tổng quan Quản trị Hệ thống"
-        subTitle="Trung tâm điều hành cấu hình, tài khoản và an ninh dữ liệu"
-      />
+  const mockProjectTimelines = [
+    { name: 'Dự án ERP Nexora', progress: 68, greenWidth: '60%', redWidth: '8%', orangeWidth: '0%' },
+    { name: 'Ứng dụng CRM', progress: 52, greenWidth: '42%', orangeWidth: '10%', redWidth: '0%' },
+    { name: 'Data Warehouse', progress: 41, greenWidth: '35%', orangeWidth: '6%', redWidth: '0%' },
+    { name: 'Website Nexora', progress: 78, greenWidth: '78%', orangeWidth: '0%', redWidth: '0%' },
+  ];
 
-      <div className="flex-1 overflow-y-auto p-6 space-y-6 max-w-6xl mx-auto w-full">
-        {/* Top Stat Cards */}
+  return (
+    <div className="nexora-page flex-1 flex flex-col h-full bg-slate-50/50 dark:bg-black overflow-hidden transition-colors">
+      <Header />
+
+      <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6 w-full">
+        {/* Page Title & Subtitle */}
+        <div className="space-y-1">
+          <h1 className="text-xl font-bold text-slate-900 dark:text-zinc-100 tracking-tight">
+            Tổng quan Quản trị Hệ thống
+          </h1>
+          <p className="text-xs text-slate-500 dark:text-zinc-400">
+            Trung tâm điều hành cấu hình, tài khoản và an ninh dữ liệu
+          </p>
+        </div>
+
+        {/* Top 4 KPI Stat Cards matching 01-executive-dashboard.png */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div
             onClick={() => navigate({ to: '/admin/users' as any })}
-            className="bg-white dark:bg-slate-900 p-4.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 hover:border-blue-300 dark:hover:border-blue-700 transition-all cursor-pointer group"
+            className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-2xs flex items-center justify-between cursor-pointer hover:border-blue-300 dark:hover:border-zinc-700 transition-all"
           >
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-              <span>Người dùng (API)</span>
-              <Users className="w-4 h-4 text-blue-600 dark:text-blue-400 group-hover:scale-110 transition-transform" />
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Người dùng hệ thống</span>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{users.length || 12}</div>
+              <div className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                {activeUsersCount || 3} đang hoạt động
+              </div>
             </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{users.length}</div>
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium flex items-center gap-1">
-              <span>{activeUsersCount} đang hoạt động</span>
-            </p>
+            <div className="w-11 h-11 rounded-lg bg-blue-50 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Users className="w-5 h-5" />
+            </div>
           </div>
 
           <div
             onClick={() => navigate({ to: '/admin/departments' as any })}
-            className="bg-white dark:bg-slate-900 p-4.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2 hover:border-blue-300 dark:hover:border-blue-700 transition-all cursor-pointer group"
+            className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-2xs flex items-center justify-between cursor-pointer hover:border-blue-300 dark:hover:border-zinc-700 transition-all"
           >
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-              <span>Phòng ban</span>
-              <Building2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 group-hover:scale-110 transition-transform" />
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Phòng ban tổ chức</span>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{departments.length || 6}</div>
+              <div className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                Đã chuẩn hóa cơ cấu
+              </div>
             </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">{departments.length}</div>
-            <p className="text-[11px] text-slate-400 dark:text-slate-500">Đầy đủ trưởng bộ phận</p>
-          </div>
-
-          <div className="bg-white dark:bg-slate-900 p-4.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-              <span>Dung lượng lưu trữ</span>
-              <HardDrive className="w-4 h-4 text-amber-600 dark:text-amber-400" />
-            </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">13.6 GB</div>
-            <div className="w-full bg-slate-100 dark:bg-slate-800 rounded-full h-1.5">
-              <div className="bg-amber-500 h-1.5 rounded-full" style={{ width: '68%' }} />
+            <div className="w-11 h-11 rounded-lg bg-blue-50 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Building2 className="w-5 h-5" />
             </div>
           </div>
 
-          <div className="bg-white dark:bg-slate-900 p-4.5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs space-y-2">
-            <div className="flex items-center justify-between text-slate-500 dark:text-slate-400 text-xs font-medium">
-              <span>Sử dụng AI Token</span>
-              <Sparkles className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
+          <div
+            onClick={() => navigate({ to: '/admin/roles' as any })}
+            className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-2xs flex items-center justify-between cursor-pointer hover:border-blue-300 dark:hover:border-zinc-700 transition-all"
+          >
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Vai trò & Quyền hạn</span>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">{roles.length || 4}</div>
+              <div className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                Phân quyền theo module
+              </div>
             </div>
-            <div className="text-2xl font-bold text-slate-900 dark:text-slate-100">1.2M</div>
-            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-medium">Trong tháng này</p>
+            <div className="w-11 h-11 rounded-lg bg-blue-50 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Shield className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div
+            onClick={() => navigate({ to: '/admin/logs' as any })}
+            className="bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-xl p-5 shadow-2xs flex items-center justify-between cursor-pointer hover:border-blue-300 dark:hover:border-zinc-700 transition-all"
+          >
+            <div className="space-y-1">
+              <span className="text-xs font-semibold text-slate-500 dark:text-zinc-400">Nhật ký hoạt động</span>
+              <div className="text-2xl font-bold text-blue-600 dark:text-blue-400">24/7</div>
+              <div className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
+                Audit Trail đầy đủ
+              </div>
+            </div>
+            <div className="w-11 h-11 rounded-lg bg-blue-50 dark:bg-zinc-800 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+              <Clock className="w-5 h-5" />
+            </div>
           </div>
         </div>
 
-        {/* Quick Navigation Cards to Distinct Modules */}
-        <div className="space-y-3">
-          <h3 className="text-xs font-bold text-slate-800 dark:text-slate-200 uppercase tracking-wider">
-            Các Phân hệ Quản trị Chức năng
-          </h3>
-
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {quickLinks.map((item, idx) => {
-              const Icon = item.icon;
-
-              return (
-                <div
-                  key={idx}
-                  onClick={() => navigate({ to: item.path as any })}
-                  className="bg-white dark:bg-slate-900 p-5 rounded-xl border border-slate-200 dark:border-slate-800 shadow-2xs hover:border-blue-400 dark:hover:border-blue-600 hover:shadow-xs transition-all cursor-pointer group flex flex-col justify-between"
+        {/* 2. Main 2-Column Grid */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+          
+          {/* LEFT 2/3 COLUMN: Ưu tiên hôm nay + Tiến độ dự án */}
+          <div className="lg:col-span-2 space-y-6">
+            
+            {/* Section: Ưu tiên hôm nay */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 shadow-2xs overflow-hidden">
+              <div className="p-4 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between flex-wrap gap-3">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Ưu tiên hôm nay</h3>
+                <button
+                  onClick={() => navigate({ to: '/admin/users' as any })}
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
                 >
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between">
-                      <div className={`w-9 h-9 rounded-lg flex items-center justify-center ${item.color}`}>
-                        <Icon className="w-5 h-5" />
-                      </div>
-                      <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800 px-2 py-0.5 rounded-md">
-                        {item.count}
-                      </span>
-                    </div>
+                  Xem tất cả
+                </button>
+              </div>
 
-                    <div>
-                      <h4 className="font-bold text-slate-900 dark:text-slate-100 text-sm group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                        {item.title}
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 leading-relaxed">{item.desc}</p>
-                    </div>
-                  </div>
-
-                  <div className="pt-3.5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-blue-600 dark:text-blue-400 font-medium group-hover:translate-x-0.5 transition-transform">
-                    <span>Truy cập phân hệ</span>
-                    <ChevronRight className="w-4 h-4" />
-                  </div>
+              {/* Subheader Filter Tabs */}
+              <div className="px-4 py-2.5 bg-slate-50/60 dark:bg-zinc-900/60 border-b border-slate-200 dark:border-zinc-800 flex items-center justify-between gap-3 flex-wrap">
+                <div className="flex items-center gap-2 text-xs">
+                  <button
+                    onClick={() => setActiveTab('all')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                      activeTab === 'all'
+                        ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-2xs font-semibold'
+                        : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'
+                    }`}
+                  >
+                    Tất cả (28)
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('overdue')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                      activeTab === 'overdue'
+                        ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-2xs font-semibold'
+                        : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'
+                    }`}
+                  >
+                    Quá hạn (7)
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('feedback')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                      activeTab === 'feedback'
+                        ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-2xs font-semibold'
+                        : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'
+                    }`}
+                  >
+                    Cần phản hồi (12)
+                  </button>
+                  <button
+                    onClick={() => setActiveTab('doing')}
+                    className={`px-2.5 py-1 rounded-md font-medium transition-colors cursor-pointer ${
+                      activeTab === 'doing'
+                        ? 'bg-white dark:bg-zinc-800 text-blue-600 dark:text-blue-400 shadow-2xs font-semibold'
+                        : 'text-slate-500 hover:text-slate-800 dark:text-zinc-400'
+                    }`}
+                  >
+                    Đang thực hiện (9)
+                  </button>
                 </div>
-              );
-            })}
-          </div>
-        </div>
+              </div>
 
-        {/* Recent Activity & Logs Snippet */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-          <div className="lg:col-span-2 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Nhật ký hoạt động gần đây</h3>
-              <button
-                onClick={() => navigate({ to: '/admin/logs' as any })}
-                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
-              >
-                <span>Xem tất cả</span>
-                <ArrowRight className="w-3.5 h-3.5" />
-              </button>
+              {/* Tasks Table */}
+              <CustomTable<any> columns={[]} data={[]} className="border-0 shadow-none rounded-none">
+              <div className="overflow-x-auto">
+                <CustomTable.Table className="w-full text-left text-xs border-collapse">
+                  <CustomTable.Head className="bg-slate-50/70 dark:bg-zinc-900 text-[11px] font-semibold text-slate-400 dark:text-zinc-500 uppercase tracking-wider border-b border-slate-200 dark:border-zinc-800">
+                    <CustomTable.Row>
+                      <CustomTable.HeaderCell className="w-10 px-4 py-3 text-center">
+                        <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700" />
+                      </CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">CÔNG VIỆC</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">DỰ ÁN</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">HẠN HOÀN THÀNH</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">ƯU TIÊN</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">TRẠNG THÁI</CustomTable.HeaderCell>
+                      <CustomTable.HeaderCell className="px-3 py-3">GIAO CHO</CustomTable.HeaderCell>
+                    </CustomTable.Row>
+                  </CustomTable.Head>
+                  <CustomTable.Body className="divide-y divide-slate-100 dark:divide-zinc-800/80">
+                    {mockTasksPriority.map((task) => (
+                      <CustomTable.Row
+                        key={task.id}
+                        className="hover:bg-slate-50/80 dark:hover:bg-zinc-800/40 transition-colors"
+                      >
+                        <CustomTable.Cell className="px-4 py-3 text-center">
+                          <input type="checkbox" className="rounded border-slate-300 dark:border-zinc-700 cursor-pointer" />
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 font-semibold text-slate-900 dark:text-zinc-100">
+                          {task.name}
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3 text-slate-600 dark:text-zinc-400">
+                          {task.project}
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
+                          <span
+                            className={`font-semibold ${
+                              task.isToday
+                                ? 'text-rose-600 dark:text-rose-400'
+                                : 'text-slate-600 dark:text-zinc-400'
+                            }`}
+                          >
+                            {task.deadline}
+                          </span>
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
+                          <span className={`inline-flex items-center gap-1 font-medium ${task.priority === 'Cao' ? 'text-rose-500' : 'text-amber-500'}`}>
+                            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+                            {task.priority}
+                          </span>
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
+                          <span className="px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200 dark:border-blue-800">
+                            {task.status}
+                          </span>
+                        </CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
+                          <div className="flex items-center gap-1.5">
+                            <div className={`w-5 h-5 rounded-full ${task.assignee.avatarBg} text-white font-bold text-[9px] flex items-center justify-center shrink-0`}>
+                              {task.assignee.username.slice(0, 2).toUpperCase()}
+                            </div>
+                            <span className="text-slate-700 dark:text-zinc-300 text-[11px] font-medium">
+                              {task.assignee.username}
+                            </span>
+                          </div>
+                        </CustomTable.Cell>
+                      </CustomTable.Row>
+                    ))}
+                  </CustomTable.Body>
+                </CustomTable.Table>
+              </div>
+              </CustomTable>
             </div>
-            <div className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
-              {mockActivityLogs.slice(0, 4).map((log) => (
-                <div key={log.id} className="py-2.5 flex items-center justify-between first:pt-0 last:pb-0">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 flex items-center justify-center font-bold text-[10px]">
-                      {log.user.split(' ').map((n) => n[0]).join('')}
+
+            {/* Section: Tổng quan tiến độ dự án (Gantt timeline) */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Tổng quan tiến độ dự án</h3>
+                <div className="flex items-center gap-3 text-xs">
+                  <span className="flex items-center gap-1 text-slate-600 dark:text-zinc-400">
+                    <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                    Đúng tiến độ
+                  </span>
+                  <span className="flex items-center gap-1 text-slate-600 dark:text-zinc-400">
+                    <span className="w-2 h-2 rounded-full bg-amber-500" />
+                    Chậm nhẹ
+                  </span>
+                </div>
+              </div>
+
+              {/* Timeline Header Grid */}
+              <div className="space-y-3 pt-2 text-xs">
+                <div className="grid grid-cols-12 text-[11px] font-semibold text-slate-400 border-b border-slate-100 dark:border-zinc-800/80 pb-2">
+                  <div className="col-span-3">DỰ ÁN</div>
+                  <div className="col-span-3 text-center border-l border-slate-100 dark:border-zinc-800">04/2024</div>
+                  <div className="col-span-3 text-center border-l border-slate-100 dark:border-zinc-800">05/2024</div>
+                  <div className="col-span-2 text-center border-l border-slate-100 dark:border-zinc-800">06/2024</div>
+                  <div className="col-span-1 text-right">TIẾN ĐỘ</div>
+                </div>
+
+                {mockProjectTimelines.map((proj, idx) => (
+                  <div key={idx} className="grid grid-cols-12 items-center text-xs py-1">
+                    <div className="col-span-3 font-semibold text-slate-800 dark:text-zinc-200 truncate pr-2">
+                      {proj.name}
                     </div>
-                    <div>
-                      <p className="text-slate-800 dark:text-slate-200 font-medium">
-                        <span className="font-semibold text-slate-900 dark:text-slate-100">{log.user}</span> {log.action}
+                    <div className="col-span-8 px-2">
+                      <div className="w-full bg-slate-100 dark:bg-zinc-800 h-2.5 rounded-full overflow-hidden flex">
+                        <div style={{ width: proj.greenWidth }} className="bg-emerald-500 h-full" />
+                        {proj.orangeWidth !== '0%' && (
+                          <div style={{ width: proj.orangeWidth }} className="bg-amber-500 h-full" />
+                        )}
+                        {proj.redWidth !== '0%' && (
+                          <div style={{ width: proj.redWidth }} className="bg-rose-500 h-full" />
+                        )}
+                      </div>
+                    </div>
+                    <div className="col-span-1 text-right font-mono font-bold text-slate-800 dark:text-zinc-200">
+                      {proj.progress}%
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+          </div>
+
+          {/* RIGHT 1/3 COLUMN: Cảnh báo & Rủi ro + Hoạt động gần đây */}
+          <div className="space-y-6">
+            
+            {/* Box 1: Cảnh báo & rủi ro */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Cảnh báo & rủi ro</h3>
+                <span className="text-xs font-semibold text-blue-600 dark:text-blue-400">4 mục</span>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-3 bg-slate-50/70 dark:bg-zinc-800/50 rounded-lg border border-slate-100 dark:border-zinc-800 flex items-start justify-between gap-2.5">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <AlertTriangle className="w-4 h-4 text-rose-500 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-xs text-slate-900 dark:text-zinc-100">Dự án ERP Nexora</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
+                        Nguy cơ trễ hạn giai đoạn Kiểm thử tích hợp (UAT)
                       </p>
                     </div>
                   </div>
-                  <span className="text-[11px] text-slate-400 dark:text-slate-500 shrink-0">{log.timestamp}</span>
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-rose-50 text-rose-600 dark:bg-rose-950 dark:text-rose-400 rounded shrink-0">
+                    Cao
+                  </span>
                 </div>
-              ))}
-            </div>
-          </div>
 
-          {/* Quick Data Policy status */}
-          <div className="bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800 p-5 shadow-2xs space-y-4">
-            <div className="flex items-center justify-between">
-              <h3 className="font-bold text-slate-800 dark:text-slate-200 text-sm">Chính sách dữ liệu</h3>
-              <button
-                onClick={() => navigate({ to: '/admin/policies' as any })}
-                className="text-xs font-medium text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
-              >
-                Quản lý
-              </button>
+                <div className="p-3 bg-slate-50/70 dark:bg-zinc-800/50 rounded-lg border border-slate-100 dark:border-zinc-800 flex items-start justify-between gap-2.5">
+                  <div className="flex items-start gap-2.5 min-w-0">
+                    <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                    <div className="min-w-0">
+                      <h4 className="font-bold text-xs text-slate-900 dark:text-zinc-100">Ứng dụng CRM</h4>
+                      <p className="text-[11px] text-slate-500 dark:text-zinc-400 mt-0.5 leading-relaxed">
+                        Phụ thuộc chờ phản hồi từ phòng Kinh doanh
+                      </p>
+                    </div>
+                  </div>
+                  <span className="px-2 py-0.5 text-[10px] font-bold bg-amber-50 text-amber-600 dark:bg-amber-950 dark:text-amber-400 rounded shrink-0">
+                    Trung bình
+                  </span>
+                </div>
+              </div>
             </div>
-            <div className="space-y-2">
-              {mockDataPolicies.slice(0, 3).map((p) => (
-                <div key={p.id} className="p-2.5 bg-slate-50 dark:bg-slate-800/70 border border-slate-100 dark:border-slate-700/60 rounded-lg flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-2">
-                    <Shield className="w-4 h-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                    <span className="font-medium text-slate-700 dark:text-slate-300 truncate">{p.title}</span>
+
+            {/* Box 2: Hoạt động gần đây */}
+            <div className="bg-white dark:bg-zinc-900 rounded-xl border border-slate-200 dark:border-zinc-800 p-5 shadow-2xs space-y-4">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-bold text-slate-900 dark:text-zinc-100">Hoạt động gần đây</h3>
+                <button
+                  onClick={() => navigate({ to: '/admin/logs' as any })}
+                  className="text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+                >
+                  Xem tất cả
+                </button>
+              </div>
+
+              <div className="space-y-3.5 text-[11px]">
+                <div className="flex items-start gap-2.5">
+                  <span className="font-mono text-slate-400 shrink-0 mt-0.5">10:24</span>
+                  <div className="w-4 h-4 rounded-full bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <CheckCircle2 className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-700 dark:text-zinc-300">
+                      <strong>lenhu</strong> đã hoàn thành công việc <strong>"Phân tích yêu cầu nghiệp vụ"</strong>
+                    </p>
+                    <span className="text-[10px] text-slate-400">Dự án ERP Nexora</span>
                   </div>
                 </div>
-              ))}
+
+                <div className="flex items-start gap-2.5">
+                  <span className="font-mono text-slate-400 shrink-0 mt-0.5">09:58</span>
+                  <div className="w-4 h-4 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center shrink-0 mt-0.5">
+                    <FileText className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-slate-700 dark:text-zinc-300">
+                      <strong>phat1</strong> đã tải lên tài liệu <strong>"Đặc tả tính năng v1.2.pdf"</strong>
+                    </p>
+                    <span className="text-[10px] text-slate-400">Ứng dụng CRM</span>
+                  </div>
+                </div>
+              </div>
             </div>
+
           </div>
+
         </div>
+
       </div>
     </div>
   );
 };
+
 export default OverviewPage;

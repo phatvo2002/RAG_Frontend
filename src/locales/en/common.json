@@ -1,0 +1,63 @@
+{
+  "appName": "NEXORA AI",
+  "appSubtitle": "Internal Enterprise AI Assistant",
+  "actions": {
+    "save": "Save Changes",
+    "cancel": "Cancel",
+    "create": "Create",
+    "edit": "Edit",
+    "delete": "Delete",
+    "refresh": "Refresh",
+    "search": "Search",
+    "filter": "Filter",
+    "export": "Export",
+    "import": "Import",
+    "confirm": "Confirm",
+    "close": "Close",
+    "lock": "Lock",
+    "unlock": "Unlock",
+    "resetPassword": "Reset Password",
+    "pin": "Pin Session",
+    "viewAll": "View All",
+    "options": "More Options"
+  },
+  "status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "locked": "Locked",
+    "inProgress": "In Progress",
+    "completed": "Completed",
+    "delayed": "Delayed",
+    "pending": "Pending",
+    "review": "In Review",
+    "urgent": "Urgent",
+    "high": "High",
+    "medium": "Medium",
+    "low": "Low"
+  },
+  "roles": {
+    "admin": "Administrator",
+    "departmentHead": "Department Head",
+    "projectLead": "Project Lead",
+    "employee": "Employee"
+  },
+  "language": {
+    "en": "English",
+    "vi": "Tiếng Việt",
+    "switchLang": "Change Language"
+  },
+  "theme": {
+    "light": "Light Mode",
+    "dark": "Dark Mode",
+    "system": "System Default",
+    "toggle": "Toggle Theme"
+  },
+  "notifications": {
+    "noNew": "No new notifications",
+    "copied": "Copied to clipboard",
+    "loginSuccess": "Signed in successfully! Welcome back",
+    "logoutSuccess": "Signed out of the system",
+    "savedSuccess": "Configuration saved successfully!"
+  }
+}
+

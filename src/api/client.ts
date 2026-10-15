@@ -43,10 +43,56 @@ export class ApiError extends Error {
   }
 }
 
+function getReadableErrorMessage(value: any): string | null {
+  if (typeof value === 'string') {
+    const message = value.trim();
+    return message || null;
+  }
+
+  if (Array.isArray(value)) {
+    const messages = value
+      .map(getReadableErrorMessage)
+      .filter((message): message is string => Boolean(message));
+    return messages.length ? messages.join(', ') : null;
+  }
+
+  if (!value || typeof value !== 'object') return null;
+
+  for (const key of ['message', 'detail', 'title', 'description', 'details', 'errors']) {
+    const message = getReadableErrorMessage(value[key]);
+    if (message) return message;
+  }
+
+  return null;
+}
+
+function getErrorCodeMessage(value: any): string | null {
+  const code = typeof value?.error?.code === 'string'
+    ? value.error.code
+    : typeof value?.code === 'string'
+      ? value.code
+      : null;
+
+  switch (code) {
+    case 'conflict':
+      return 'Thao tác không thể hoàn tất do trạng thái hiện tại. Vui lòng thử lại sau.';
+    case 'authorization.forbidden':
+      return 'Bạn không có quyền thực hiện thao tác này.';
+    case 'authorization.unauthorized':
+      return 'Phiên đăng nhập không hợp lệ. Vui lòng đăng nhập lại.';
+    case 'resource.not_found':
+      return 'Không tìm thấy dữ liệu được yêu cầu.';
+    case 'server.error':
+      return 'Đã xảy ra lỗi máy chủ. Vui lòng thử lại sau.';
+    default:
+      return null;
+  }
+}
+
 let isRefreshing = false;
 let refreshPromise: Promise<string | null> | null = null;
 
-async function refreshAccessToken(): Promise<string | null> {
+export async function refreshAccessToken(): Promise<string | null> {
   const refreshToken = tokenStorage.getRefreshToken();
   if (!refreshToken) {
     tokenStorage.clearTokens();
@@ -103,8 +149,9 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
   const { skipAuth = false, skipAutoRefresh = false, headers, ...customConfig } = options;
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_BASE_URL}${endpoint}`;
+  const isFormDataBody = typeof FormData !== 'undefined' && customConfig.body instanceof FormData;
   const requestHeaders: Record<string, string> = {
-    'Content-Type': 'application/json',
+    ...(isFormDataBody ? {} : { 'Content-Type': 'application/json' }),
     ...(headers as Record<string, string>),
   };
 
@@ -146,25 +193,11 @@ export async function apiClient<T>(endpoint: string, options: RequestOptions = {
 
   // Check HTTP Error status
   if (!response.ok) {
-    let errorMessage = `HTTP Error ${response.status}`;
-
-    if (responseData) {
-      if (typeof responseData === 'string') {
-        errorMessage = responseData;
-      } else if (responseData.message) {
-        errorMessage = responseData.message;
-      } else if (responseData.detail) {
-        errorMessage = typeof responseData.detail === 'string'
-          ? responseData.detail
-          : JSON.stringify(responseData.detail);
-      } else if (responseData.error) {
-        errorMessage = responseData.error;
-      } else if (responseData.errors) {
-        errorMessage = Array.isArray(responseData.errors)
-          ? responseData.errors.join(', ')
-          : JSON.stringify(responseData.errors);
-      }
-    }
+    const errorMessage = getReadableErrorMessage(responseData?.error?.details)
+      ?? getReadableErrorMessage(responseData?.error)
+      ?? getReadableErrorMessage(responseData)
+      ?? getErrorCodeMessage(responseData)
+      ?? `HTTP Error ${response.status}`;
 
     throw new ApiError(errorMessage, response.status, responseData);
   }

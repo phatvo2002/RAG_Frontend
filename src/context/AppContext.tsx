@@ -1,12 +1,13 @@
 import React, { createContext, useContext, useState, useEffect, useMemo } from 'react';
 import { useNavigate, useLocation } from '@tanstack/react-router';
+import { useTranslation } from 'react-i18next';
+import { toast } from 'react-toastify';
 import {
   NavModule,
   User,
   Department,
   Project,
   TaskItem,
-  Meeting,
   DocumentItem,
   ChatMessage,
   ChatSession,
@@ -19,7 +20,6 @@ import {
   mockDepartments,
   mockProjects,
   mockTasks,
-  mockMeetings,
   mockDocuments,
   mockChatSessions,
   mockChatMessages,
@@ -34,13 +34,27 @@ interface Toast {
 }
 
 export type ThemeMode = 'light' | 'dark' | 'system';
+export type AppLanguage = 'en' | 'vi';
 
 interface AppContextType {
+  // Language state & actions
+  language: AppLanguage;
+  setLanguage: (lang: AppLanguage) => void;
+  toggleLanguage: () => void;
+
   // Theme state & actions
   theme: ThemeMode;
   isDark: boolean;
   setTheme: (mode: ThemeMode) => void;
   toggleTheme: () => void;
+
+  // Sidebar toggle state
+  isSidebarOpen: boolean;
+  setIsSidebarOpen: (open: boolean) => void;
+  toggleSidebar: () => void;
+  isMobileSidebarOpen: boolean;
+  setIsMobileSidebarOpen: (open: boolean) => void;
+  toggleMobileSidebar: () => void;
 
   activeModule: NavModule;
   setActiveModule: (module: NavModule) => void;
@@ -75,9 +89,6 @@ interface AppContextType {
   documents: DocumentItem[];
   addDocument: (doc: Omit<DocumentItem, 'id'>) => void;
 
-  meetings: Meeting[];
-  addMeeting: (meet: Omit<Meeting, 'id'>) => void;
-
   calendarEvents: CalendarEvent[];
   addCalendarEvent: (evt: Omit<CalendarEvent, 'id'>) => void;
 
@@ -100,6 +111,53 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { i18n } = useTranslation();
+
+  // Language Management (Default: English 'en')
+  const [language, setLanguageState] = useState<AppLanguage>(() => {
+    const saved = localStorage.getItem('nexora_language') as AppLanguage;
+    if (saved && (saved === 'en' || saved === 'vi')) {
+      return saved;
+    }
+    return 'en';
+  });
+
+  const setLanguage = (lang: AppLanguage) => {
+    setLanguageState(lang);
+    i18n.changeLanguage(lang);
+    localStorage.setItem('nexora_language', lang);
+  };
+
+  useEffect(() => {
+    document.documentElement.lang = language;
+  }, [language]);
+
+  const toggleLanguage = () => {
+    const nextLang = language === 'en' ? 'vi' : 'en';
+    setLanguage(nextLang);
+  };
+
+  // Sidebar Open/Close State
+  const [isSidebarOpen, setIsSidebarOpen] = useState<boolean>(() => {
+    const saved = localStorage.getItem('nexora_sidebar_open');
+    return saved !== null ? saved === 'true' : true;
+  });
+
+  const toggleSidebar = () => {
+    setIsSidebarOpen((prev) => {
+      const next = !prev;
+      localStorage.setItem('nexora_sidebar_open', String(next));
+      return next;
+    });
+  };
+
+  // Mobile navigation drawer state is presentation-only and is intentionally
+  // not persisted with the desktop sidebar preference.
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+
+  const toggleMobileSidebar = () => {
+    setIsMobileSidebarOpen((prev) => !prev);
+  };
 
   // Theme Management
   const [theme, setThemeState] = useState<ThemeMode>(() => {
@@ -132,8 +190,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
 
     if (activeDark) {
       root.classList.add('dark');
+      root.setAttribute('data-theme', 'black');
     } else {
       root.classList.remove('dark');
+      root.setAttribute('data-theme', 'light');
     }
 
     localStorage.setItem('nexora_theme', theme);
@@ -148,8 +208,10 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       setIsDark(activeDark);
       if (activeDark) {
         document.documentElement.classList.add('dark');
+        document.documentElement.setAttribute('data-theme', 'black');
       } else {
         document.documentElement.classList.remove('dark');
+        document.documentElement.setAttribute('data-theme', 'light');
       }
     };
     mediaQuery.addEventListener('change', handleChange);
@@ -201,7 +263,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   const [activeProject, setActiveProject] = useState<Project | null>(mockProjects[0]);
   const [tasks, setTasks] = useState<TaskItem[]>(mockTasks);
   const [documents, setDocuments] = useState<DocumentItem[]>(mockDocuments);
-  const [meetings, setMeetings] = useState<Meeting[]>(mockMeetings);
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>(mockCalendarEvents);
 
   const [chatSessions, setChatSessions] = useState<ChatSession[]>(mockChatSessions);
@@ -217,6 +278,9 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         try {
           const user = await authApi.getMe();
           setCurrentUser(user);
+          if (!localStorage.getItem('nexora_language') && (user.preferredLanguage === 'en' || user.preferredLanguage === 'vi')) {
+            setLanguage(user.preferredLanguage);
+          }
           setIsAuthenticated(true);
         } catch {
           // Token không hợp lệ hoặc hết hạn
@@ -238,12 +302,15 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       const response = await authApi.login(credentials);
       if (response && response.user) {
         setCurrentUser(response.user);
+        if (!localStorage.getItem('nexora_language') && (response.user.preferredLanguage === 'en' || response.user.preferredLanguage === 'vi')) {
+          setLanguage(response.user.preferredLanguage);
+        }
         setIsAuthenticated(true);
-        showToast(`Đăng nhập thành công! Chào mừng ${response.user.name}`, 'success');
+        showToast(`Signed in successfully! Welcome ${response.user.name}`, 'success');
         navigate({ to: '/chat' });
       }
     } catch (error: any) {
-      showToast(error.message || 'Đăng nhập thất bại. Vui lòng kiểm tra lại.', 'error');
+      showToast(error.message || 'Login failed. Please check credentials.', 'error');
       throw error;
     } finally {
       setIsAuthLoading(false);
@@ -257,22 +324,32 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       // Ignored
     } finally {
       setIsAuthenticated(false);
-      showToast('Đã đăng xuất khỏi hệ thống', 'info');
+      showToast('Signed out of the system', 'info');
       navigate({ to: '/login' });
     }
   };
 
-  // Toast Helpers
+  // Toast Helpers with React-Toastify
   const showToast = (message: string, type: Toast['type'] = 'info') => {
-    const id = Date.now().toString();
-    setToasts((prev) => [...prev, { id, message, type }]);
-    setTimeout(() => {
-      removeToast(id);
-    }, 4000);
+    switch (type) {
+      case 'success':
+        toast.success(message);
+        break;
+      case 'error':
+        toast.error(message);
+        break;
+      case 'warning':
+        toast.warning(message);
+        break;
+      case 'info':
+      default:
+        toast.info(message);
+        break;
+    }
   };
 
-  const removeToast = (id: string) => {
-    setToasts((prev) => prev.filter((t) => t.id !== id));
+  const removeToast = (_id: string) => {
+    toast.dismiss();
   };
 
   // Data helpers
@@ -282,19 +359,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `usr_${Date.now().toString().slice(-4)}`
     };
     setUsers((prev) => [newUser, ...prev]);
-    showToast(`Đã thêm người dùng ${newUser.name} thành công`, 'success');
+    showToast(`User ${newUser.name} added successfully`, 'success');
   };
 
   const updateUserStatus = (id: string, status: User['status']) => {
     setUsers((prev) =>
       prev.map((u) => (u.id === id ? { ...u, status } : u))
     );
-    showToast('Đã cập nhật trạng thái người dùng', 'success');
+    showToast('Updated user status successfully', 'success');
   };
 
   const deleteUser = (id: string) => {
     setUsers((prev) => prev.filter((u) => u.id !== id));
-    showToast('Đã xóa người dùng thành công', 'warning');
+    showToast('Deleted user successfully', 'warning');
   };
 
   const addDepartment = (deptData: Omit<Department, 'id'>) => {
@@ -303,7 +380,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `dept_${Date.now().toString().slice(-4)}`
     };
     setDepartments((prev) => [newDept, ...prev]);
-    showToast(`Đã thêm phòng ban ${newDept.name}`, 'success');
+    showToast(`Added department ${newDept.name}`, 'success');
   };
 
   const addProject = (projectData: Omit<Project, 'id'>) => {
@@ -312,7 +389,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `prj_${Date.now().toString().slice(-4)}`
     };
     setProjects((prev) => [newProject, ...prev]);
-    showToast(`Đã tạo dự án mới: ${newProject.name}`, 'success');
+    showToast(`Created project: ${newProject.name}`, 'success');
   };
 
   const addTask = (taskData: Omit<TaskItem, 'id'>) => {
@@ -321,7 +398,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `tsk_${Date.now().toString().slice(-4)}`
     };
     setTasks((prev) => [newTask, ...prev]);
-    showToast(`Đã thêm công việc: ${newTask.title}`, 'success');
+    showToast(`Created task: ${newTask.title}`, 'success');
   };
 
   const updateTaskStatus = (id: string, status: TaskItem['status']) => {
@@ -336,16 +413,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `doc_${Date.now().toString().slice(-4)}`
     };
     setDocuments((prev) => [newDoc, ...prev]);
-    showToast(`Đã tải lên tài liệu: ${newDoc.name}`, 'success');
-  };
-
-  const addMeeting = (meetData: Omit<Meeting, 'id'>) => {
-    const newMeet: Meeting = {
-      ...meetData,
-      id: `mtg_${Date.now().toString().slice(-4)}`
-    };
-    setMeetings((prev) => [newMeet, ...prev]);
-    showToast(`Đã lên lịch cuộc họp: ${newMeet.title}`, 'success');
+    showToast(`Uploaded document: ${newDoc.name}`, 'success');
   };
 
   const addCalendarEvent = (evtData: Omit<CalendarEvent, 'id'>) => {
@@ -354,7 +422,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       id: `evt_${Date.now().toString().slice(-4)}`
     };
     setCalendarEvents((prev) => [newEvt, ...prev]);
-    showToast(`Đã thêm sự kiện lịch: ${newEvt.title}`, 'success');
+    showToast(`Added calendar event: ${newEvt.title}`, 'success');
   };
 
   const addChatMessage = (msgData: Omit<ChatMessage, 'id' | 'timestamp'>) => {
@@ -370,8 +438,8 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
     const newId = `sess_${Date.now()}`;
     const newSession: ChatSession = {
       id: newId,
-      title: 'Đoạn chat mới',
-      date: 'Hôm nay',
+      title: language === 'vi' ? 'Đoạn chat mới' : 'New conversation',
+      date: language === 'vi' ? 'Hôm nay' : 'Today',
       group: 'today'
     };
     setChatSessions((prev) => [newSession, ...prev]);
@@ -380,7 +448,7 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
       {
         id: 'msg_welcome',
         sender: 'ai',
-        text: 'Xin chào! Tôi có thể giúp gì cho công việc của bạn hôm nay?',
+        text: language === 'vi' ? 'Xin chào! Tôi có thể giúp gì cho công việc của bạn hôm nay?' : 'Hello! How can I assist you with your work today?',
         timestamp: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
       }
     ]);
@@ -389,10 +457,19 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
   return (
     <AppContext.Provider
       value={{
+        language,
+        setLanguage,
+        toggleLanguage,
         theme,
         isDark,
         setTheme,
         toggleTheme,
+        isSidebarOpen,
+        setIsSidebarOpen,
+        toggleSidebar,
+        isMobileSidebarOpen,
+        setIsMobileSidebarOpen,
+        toggleMobileSidebar,
         activeModule,
         setActiveModule,
         activeAdminTab: activeAdminTabState,
@@ -419,8 +496,6 @@ export const AppProvider: React.FC<{ children: React.ReactNode }> = ({ children 
         updateTaskStatus,
         documents,
         addDocument,
-        meetings,
-        addMeeting,
         calendarEvents,
         addCalendarEvent,
         chatSessions,

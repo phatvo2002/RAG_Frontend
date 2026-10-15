@@ -8,12 +8,15 @@ import {
 } from '@tanstack/react-router';
 import { AppProvider } from '@/context/AppContext';
 import { AppLayout } from '@/components/layout';
+import { PermissionGuard } from '@/components/auth/PermissionGuard';
 import { ChatPage } from '@/pages/chat/ChatPage';
+import { AccountPage } from '@/pages/account/AccountPage';
 import { DashboardPage } from '@/pages/dashboard/DashboardPage';
 import { DataRepoPage } from '@/pages/data-repo/DataRepoPage';
 import { ProjectsPage } from '@/pages/projects/ProjectsPage';
 import { TasksPage } from '@/pages/tasks/TasksPage';
 import { MeetingsPage } from '@/pages/meetings/MeetingsPage';
+import { MeetingRoomPage } from '@/pages/meetings/MeetingRoomPage';
 import { CalendarPage } from '@/pages/calendar/CalendarPage';
 import { ReportsPage } from '@/pages/reports/ReportsPage';
 import {
@@ -27,6 +30,7 @@ import {
 } from '@/pages/admin';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+import { OrganizationsPage } from '@/pages/catalog/organizations';
 
 // Root Route wrapping AppProvider and AppLayout
 const rootRoute = createRootRoute({
@@ -53,91 +57,174 @@ const chatRoute = createRoute({
   component: ChatPage,
 });
 
+const accountRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/account',
+  component: AccountPage,
+});
+
+// Các phân hệ đã hoàn thiện giao diện theo nexora-workbench-v3
 const dashboardRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/dashboard',
-  component: DashboardPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <DashboardPage />
+    </PermissionGuard>
+  ),
 });
 
 const dataRepoRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/data-repo',
-  component: DataRepoPage,
+  component: () => (
+    <PermissionGuard module={['document', 'documents', 'data-repo']} isImplemented={true}>
+      <DataRepoPage />
+    </PermissionGuard>
+  ),
 });
 
 const projectsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/projects',
-  component: ProjectsPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <ProjectsPage />
+    </PermissionGuard>
+  ),
 });
 
 const tasksRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/tasks',
-  component: TasksPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <TasksPage />
+    </PermissionGuard>
+  ),
 });
 
 const meetingsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/meetings',
-  component: MeetingsPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <MeetingsPage />
+    </PermissionGuard>
+  ),
+});
+
+const meetingRoomRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/meetings/$meetingId',
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <MeetingRoomPage />
+    </PermissionGuard>
+  ),
 });
 
 const calendarRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/calendar',
-  component: CalendarPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <CalendarPage />
+    </PermissionGuard>
+  ),
 });
 
 const reportsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/reports',
-  component: ReportsPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <ReportsPage />
+    </PermissionGuard>
+  ),
+});
+
+const organizationsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/catalog/organizations',
+  component: () => (
+    <PermissionGuard module="ORGANIZATION.READ" isImplemented={true}>
+      <OrganizationsPage />
+    </PermissionGuard>
+  ),
 });
 
 // ============================================================================
-// ADMIN ROUTES (Độc lập cho từng phân hệ, không dùng tab bar)
+// ADMIN ROUTES (Được bảo vệ bằng PermissionGuard theo từng phân hệ)
 // ============================================================================
 const adminRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin',
-  component: AdminPage,
+  component: () => (
+    <PermissionGuard module="all" isImplemented={true}>
+      <AdminPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminUsersRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/users',
-  component: UsersPage,
+  component: () => (
+    <PermissionGuard module="user" isImplemented={true}>
+      <UsersPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminDepartmentsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/departments',
-  component: DepartmentsPage,
+  component: () => (
+    <PermissionGuard module="department" isImplemented={true}>
+      <DepartmentsPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminRolesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/roles',
-  component: RolesPage,
+  component: () => (
+    <PermissionGuard module={['role', 'roles', 'authorization']} isImplemented={true}>
+      <RolesPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminPoliciesRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/policies',
-  component: PoliciesPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <PoliciesPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminLogsRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/logs',
-  component: LogsPage,
+  component: () => (
+    <PermissionGuard module={['activitylog', 'activity_log', 'log', 'logs', 'audit']} isImplemented={true}>
+      <LogsPage />
+    </PermissionGuard>
+  ),
 });
 
 const adminConfigRoute = createRoute({
   getParentRoute: () => rootRoute,
   path: '/admin/config',
-  component: ConfigPage,
+  component: () => (
+    <PermissionGuard isImplemented={true}>
+      <ConfigPage />
+    </PermissionGuard>
+  ),
 });
 
 const loginRoute = createRoute({
@@ -149,13 +236,16 @@ const loginRoute = createRoute({
 const routeTree = rootRoute.addChildren([
   indexRoute,
   chatRoute,
+  accountRoute,
   dashboardRoute,
   dataRepoRoute,
   projectsRoute,
   tasksRoute,
   meetingsRoute,
+  meetingRoomRoute,
   calendarRoute,
   reportsRoute,
+  organizationsRoute,
   adminRoute,
   adminUsersRoute,
   adminDepartmentsRoute,

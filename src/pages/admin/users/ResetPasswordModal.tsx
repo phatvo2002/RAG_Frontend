@@ -1,8 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useForm } from '@tanstack/react-form';
 import { Modal } from '@/components/disclosure';
+import { User, resetPasswordYupSchema, ResetPasswordFormData } from '@/types';
 import { useResetPasswordMutation } from '@/api/users.api';
-import { User } from '@/types';
-import { Lock, Eye, EyeOff, KeyRound } from 'lucide-react';
+import { Lock, Eye, EyeOff, KeyRound, AlertCircle } from 'lucide-react';
+import { useApp } from '@/context/AppContext';
 
 interface ResetPasswordModalProps {
   isOpen: boolean;
@@ -17,124 +19,213 @@ export const ResetPasswordModal: React.FC<ResetPasswordModalProps> = ({
   user,
   onSuccessToast,
 }) => {
-  const [newPassword, setNewPassword] = useState('Nexora@2026');
-  const [confirmPassword, setConfirmPassword] = useState('Nexora@2026');
+  const { language } = useApp();
+  const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const [showPassword, setShowPassword] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  const resetPasswordMutation = useResetPasswordMutation();
+  const resetMutation = useResetPasswordMutation();
+
+  const form = useForm({
+    defaultValues: {
+      newPassword: '',
+      confirmPassword: '',
+    } as ResetPasswordFormData,
+    validators: {
+      onSubmit: ({ value }) => {
+        try {
+          resetPasswordYupSchema.validateSync(value, { abortEarly: false });
+          return undefined;
+        } catch (err: any) {
+          return err.message || tr('Invalid password', 'Dữ liệu mật khẩu không hợp lệ');
+        }
+      },
+    },
+    onSubmit: async ({ value }) => {
+      if (!user) return;
+      setServerError(null);
+
+      resetMutation.mutate(
+        {
+          userId: user.id,
+          data: { newPassword: value.newPassword },
+        },
+        {
+          onSuccess: () => {
+            onSuccessToast(tr(`Password reset for ${user.name}.`, `Đã đặt lại mật khẩu cho tài khoản ${user.name} thành công!`));
+            form.reset();
+            onClose();
+          },
+          onError: (err: any) => {
+            setServerError(err.message || tr('Could not reset password', 'Không thể đặt lại mật khẩu'));
+          },
+        }
+      );
+    },
+  });
+
+  useEffect(() => {
+    if (isOpen) {
+      form.reset();
+      setShowPassword(false);
+      setServerError(null);
+    }
+  }, [isOpen]);
 
   if (!isOpen || !user) return null;
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-
-    if (newPassword.length < 6) {
-      setError('Mật khẩu mới phải có ít nhất 6 ký tự');
-      return;
-    }
-
-    if (newPassword !== confirmPassword) {
-      setError('Mật khẩu xác nhận không khớp');
-      return;
-    }
-
-    resetPasswordMutation.mutate(
-      {
-        userId: user.id,
-        data: { newPassword, confirmPassword },
-      },
-      {
-        onSuccess: () => {
-          onSuccessToast(`Đã đặt lại mật khẩu cho tài khoản ${user.name} thành công!`);
-          onClose();
-        },
-        onError: (err: any) => {
-          setError(err.message || 'Không thể đặt lại mật khẩu');
-        },
-      }
-    );
-  };
-
   return (
-    <Modal isOpen={isOpen} onClose={onClose} title="Đặt lại mật khẩu người dùng">
-      <form onSubmit={handleSubmit} className="space-y-3.5 text-xs">
-        <div className="p-3 bg-blue-50/70 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 rounded-lg flex items-center gap-3">
-          <div className="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-xs shrink-0">
-            <KeyRound className="w-4 h-4" />
-          </div>
-          <div>
-            <p className="font-semibold text-slate-900 dark:text-slate-100">{user.name}</p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">{user.email}</p>
-          </div>
+    <Modal
+      isOpen={isOpen}
+      onClose={onClose}
+      title={tr(`Reset password: ${user.name}`, `Đặt lại mật khẩu: ${user.name}`)}
+      maxWidth="sm"
+    >
+      <form
+        onSubmit={(e) => {
+          e.preventDefault();
+          e.stopPropagation();
+          form.handleSubmit();
+        }}
+        className="space-y-3.5 text-xs"
+      >
+        <div className="p-3 bg-amber-50 dark:bg-zinc-800/80 border border-amber-200 dark:border-zinc-700 rounded-box text-amber-800 dark:text-amber-300 text-[11px] leading-relaxed flex items-start gap-2">
+          <KeyRound className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+          <span>
+            {tr('You are resetting the password for', 'Bạn đang đặt lại mật khẩu cho tài khoản')} <strong>{user.email}</strong>. {tr('The old password will no longer work.', 'Sau khi hoàn tất, mật khẩu cũ sẽ bị vô hiệu hóa.')}
+          </span>
         </div>
 
-        {error && (
-          <div className="p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-lg text-rose-700 dark:text-rose-300 text-[11px]">
-            {error}
+        {serverError && (
+          <div className="p-2.5 bg-rose-50 dark:bg-rose-950/60 border border-rose-200 dark:border-rose-800 rounded-box text-rose-700 dark:text-rose-300 text-[11px] flex items-center gap-1.5">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{serverError}</span>
           </div>
         )}
 
-        <div>
-          <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-            Mật khẩu mới <span className="text-rose-500">*</span>
-          </label>
-          <div className="relative flex items-center">
-            <Lock className="w-4 h-4 absolute left-3 text-slate-400 dark:text-slate-500" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              required
-              value={newPassword}
-              onChange={(e) => setNewPassword(e.target.value)}
-              placeholder="Nhập mật khẩu mới"
-              className="w-full pl-9 pr-9 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-600 focus:bg-white dark:focus:bg-slate-800 text-xs"
-            />
-            <button
-              type="button"
-              onClick={() => setShowPassword(!showPassword)}
-              className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer"
-            >
-              {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-            </button>
-          </div>
-        </div>
+        {/* Field: newPassword */}
+        <form.Field
+          name="newPassword"
+          validators={{
+            onChange: ({ value }) =>
+              !value
+                ? tr('Enter a new password', 'Vui lòng nhập mật khẩu mới')
+                : value.length < 6
+                ? tr('Password must have at least 6 characters', 'Mật khẩu phải có ít nhất 6 ký tự')
+                : undefined,
+          }}
+        >
+          {(field) => {
+            const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+            const hasError = Boolean(errorMessage);
 
-        <div>
-          <label className="block font-medium text-slate-700 dark:text-slate-300 mb-1">
-            Xác nhận mật khẩu mới <span className="text-rose-500">*</span>
-          </label>
-          <div className="relative flex items-center">
-            <Lock className="w-4 h-4 absolute left-3 text-slate-400 dark:text-slate-500" />
-            <input
-              type={showPassword ? 'text' : 'password'}
-              required
-              value={confirmPassword}
-              onChange={(e) => setConfirmPassword(e.target.value)}
-              placeholder="Nhập lại mật khẩu mới"
-              className="w-full pl-9 pr-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-slate-800 dark:text-slate-100 placeholder:text-slate-400 dark:placeholder:text-slate-500 focus:outline-none focus:border-blue-600 focus:bg-white dark:focus:bg-slate-800 text-xs"
-            />
-          </div>
-        </div>
+            return (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  {tr('New password', 'Mật khẩu mới')} <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder={tr('Enter at least 6 characters', 'Nhập tối thiểu 6 ký tự')}
+                    className={`input input-bordered input-sm w-full pl-9 pr-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                      hasError ? 'input-error' : ''
+                    }`}
+                  />
+                  <Lock className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute right-3 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 cursor-pointer z-10"
+                  >
+                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </button>
+                </div>
+                {hasError && (
+                  <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </p>
+                )}
+              </div>
+            );
+          }}
+        </form.Field>
 
-        <div className="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+        {/* Field: confirmPassword */}
+        <form.Field
+          name="confirmPassword"
+          validators={{
+            onChangeListenTo: ['newPassword'],
+            onChange: ({ value, fieldApi }) => {
+              if (!value) return tr('Confirm the new password', 'Vui lòng xác nhận lại mật khẩu mới');
+              if (value !== fieldApi.form.getFieldValue('newPassword')) {
+                return tr('Passwords do not match', 'Mật khẩu xác nhận không khớp');
+              }
+              return undefined;
+            },
+          }}
+        >
+          {(field) => {
+            const errorMessage = field.state.meta.errors?.[0]?.message || (typeof field.state.meta.errors?.[0] === 'string' ? field.state.meta.errors[0] : null);
+            const hasError = Boolean(errorMessage);
+
+            return (
+              <div>
+                <label className="block font-semibold text-slate-700 dark:text-zinc-300 mb-1">
+                  {tr('Confirm new password', 'Xác nhận mật khẩu mới')} <span className="text-rose-500">*</span>
+                </label>
+                <div className="relative flex items-center">
+                  <input
+                    type={showPassword ? 'text' : 'password'}
+                    name={field.name}
+                    value={field.state.value}
+                    onBlur={field.handleBlur}
+                    onChange={(e) => field.handleChange(e.target.value)}
+                    placeholder={tr('Re-enter the new password', 'Nhập lại mật khẩu mới')}
+                    className={`input input-bordered input-sm w-full pl-9 text-xs bg-slate-50 dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder:text-slate-400 dark:placeholder:text-zinc-500 ${
+                      hasError ? 'input-error' : ''
+                    }`}
+                  />
+                  <Lock className="w-4 h-4 absolute left-3 text-slate-400 dark:text-zinc-400 pointer-events-none z-10" />
+                </div>
+                {hasError && (
+                  <p className="mt-1 text-[11px] text-rose-600 dark:text-rose-400 font-medium flex items-center gap-1">
+                    <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                    <span>{errorMessage}</span>
+                  </p>
+                )}
+              </div>
+            );
+          }}
+        </form.Field>
+
+        <div className="pt-3 flex items-center justify-end gap-2 border-t border-slate-100 dark:border-zinc-800">
           <button
             type="button"
             onClick={onClose}
-            className="px-3.5 py-2 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-lg font-medium hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer transition-colors"
+            className="btn btn-sm btn-ghost text-slate-700 dark:text-zinc-300 font-medium"
           >
-            Hủy
+            {tr('Cancel', 'Hủy')}
           </button>
           <button
             type="submit"
-            disabled={resetPasswordMutation.isPending}
-            className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-medium shadow-2xs shadow-blue-500/20 flex items-center gap-1.5 cursor-pointer disabled:opacity-50 transition-colors"
+            disabled={resetMutation.isPending}
+            className="btn btn-sm btn-primary text-white font-medium shadow-xs"
           >
-            {resetPasswordMutation.isPending ? 'Đang xử lý...' : 'Xác nhận đặt lại'}
+            {resetMutation.isPending && (
+              <span className="loading loading-spinner loading-xs" />
+            )}
+            <span>{tr('Reset password', 'Xác nhận đổi mật khẩu')}</span>
           </button>
         </div>
       </form>
     </Modal>
   );
 };
+
 export default ResetPasswordModal;

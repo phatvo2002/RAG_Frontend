@@ -1,6 +1,7 @@
 import React from 'react';
 import { FileText } from 'lucide-react';
 import { Button, ButtonProps } from '@/components/button';
+import { useTranslation } from 'react-i18next';
 
 export interface WordExportProps extends Omit<ButtonProps, 'onClick'> {
   filename?: string;
@@ -13,9 +14,10 @@ export const WordExport: React.FC<WordExportProps> = ({
   filename = 'export_document.doc',
   content = '',
   onExport,
-  buttonText = 'Xuất Word',
+  buttonText,
   ...props
 }) => {
+  const { i18n } = useTranslation();
   const handleExport = () => {
     if (onExport) {
       onExport();
@@ -39,7 +41,7 @@ export const WordExport: React.FC<WordExportProps> = ({
       onClick={handleExport}
       {...props}
     >
-      {buttonText}
+      {buttonText ?? (i18n.language.startsWith('vi') ? 'Xuất Word' : 'Export Word')}
     </Button>
   );
 };

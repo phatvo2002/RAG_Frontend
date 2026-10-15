@@ -16,7 +16,7 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
           {leftIcon && <span className="absolute left-3 text-slate-400 pointer-events-none">{leftIcon}</span>}
           <input
             ref={ref}
-            className={`w-full py-2.5 bg-slate-50/50 border rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${
+            className={`nexora-control w-full py-2.5 bg-slate-50/50 border rounded-xl text-xs text-slate-800 placeholder-slate-400 focus:outline-none transition-all ${
               leftIcon ? 'pl-9' : 'pl-3.5'
             } ${rightIcon ? 'pr-9' : 'pr-3.5'} ${
               error
@@ -34,4 +34,3 @@ export const Input = forwardRef<HTMLInputElement, InputProps>(
 );
 Input.displayName = 'Input';
 export default Input;
-

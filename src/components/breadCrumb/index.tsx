@@ -14,7 +14,7 @@ export interface BreadCrumbProps {
 
 export const BreadCrumb: React.FC<BreadCrumbProps> = ({ items, showHome = true }) => {
   return (
-    <nav className="flex items-center gap-1.5 text-xs text-slate-500 font-medium">
+    <nav className="nexora-breadcrumb flex items-center gap-1.5 text-xs text-slate-500 font-medium">
       {showHome && (
         <>
           <Link to="/chat" className="hover:text-slate-800 flex items-center gap-1 transition-colors">
@@ -42,4 +42,3 @@ export const BreadCrumb: React.FC<BreadCrumbProps> = ({ items, showHome = true }
   );
 };
 export default BreadCrumb;
-

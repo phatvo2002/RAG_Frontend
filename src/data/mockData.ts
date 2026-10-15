@@ -5,8 +5,6 @@ import {
   DataPolicy,
   ActivityLog,
   DocumentItem,
-  Meeting,
-  MeetingRoom,
   Project,
   TaskItem,
   CalendarEvent,
@@ -17,12 +15,12 @@ import {
 
 export const mockCurrentUser: User = {
   id: 'usr_000',
-  name: 'Anh Khoa',
-  email: 'anh.khoa@congty.vn',
-  role: 'Trưởng dự án',
+  name: 'Võ Đăng Phát',
+  email: 'vodangphat2002@gmail.com',
+  role: 'SupperAdmin',
   status: 'Đang hoạt động',
-  department: 'Sản phẩm',
-  phone: '0901234567'
+  department: 'Công nghệ thông tin',
+  phone: '0708223688'
 };
 
 export const mockUsers: User[] = [
@@ -70,81 +68,82 @@ export const mockUsers: User[] = [
 
 export const mockDepartments: Department[] = [
   {
-    id: 'dept_001',
-    code: 'HD',
-    name: 'Hóa Đơn',
-    parentDepartment: 'Hóa Đơn',
-    phone: '03291515545',
-    address: '54545454',
-    head: 'Trần Minh',
-    memberCount: 12,
-    status: 'Đang hoạt động'
+    id: '656811bc-683a-40ab-aa91-8fb327c7ffa9',
+    departmentId: '656811bc-683a-40ab-aa91-8fb327c7ffa9',
+    parentDepartmentId: null,
+    code: 'CNTT',
+    name: 'Phòng công nghệ thông tin',
+    managerUserId: 'usr_001',
+    status: 'Active',
+    phone: '0274 374 0530',
+    address: 'Tầng 4, Tòa A',
+    head: 'Nguyễn An',
+    memberCount: 28,
   },
   {
     id: 'dept_002',
+    departmentId: 'dept_002',
+    parentDepartmentId: null,
     code: 'PXSX',
     name: 'PHÂN XƯỞNG – SẢN XUẤT',
-    parentDepartment: 'PHÂN XƯỞNG – SẢN XUẤT',
+    managerUserId: 'usr_002',
+    status: 'Active',
     phone: '',
-    address: '',
-    head: 'Lê Hoàng',
+    address: 'Khu vực xưởng B',
+    head: 'Trần Linh',
     memberCount: 45,
-    status: 'Đang hoạt động'
   },
   {
     id: 'dept_003',
+    departmentId: 'dept_003',
+    parentDepartmentId: null,
     code: 'TCHC',
     name: 'TỔ CHỨC – HÀNH CHÍNH',
-    parentDepartment: 'TỔ CHỨC – HÀNH CHÍNH',
-    phone: '',
-    address: '',
-    head: 'Phạm Thảo',
+    managerUserId: 'usr_003',
+    status: 'Active',
+    phone: '028 3822 1234',
+    address: 'Tầng 2, Tòa A',
+    head: 'Mai Hương',
     memberCount: 18,
-    status: 'Đang hoạt động'
   },
   {
     id: 'dept_004',
-    code: 'P1',
-    name: 'QUẢN LÝ MẠNG',
-    parentDepartment: 'QUẢN LÝ MẠNG',
+    departmentId: 'dept_004',
+    parentDepartmentId: '656811bc-683a-40ab-aa91-8fb327c7ffa9',
+    code: 'QLM',
+    name: 'QUẢN LÝ MẠNG & HẠ TẦNG',
+    managerUserId: 'usr_001',
+    status: 'Active',
     phone: '',
-    address: '',
-    head: 'Nguyễn Vy',
+    address: 'Phòng Server Tầng Hầm',
+    head: 'Nguyễn An',
     memberCount: 14,
-    status: 'Đang hoạt động'
   },
   {
     id: 'dept_005',
+    departmentId: 'dept_005',
+    parentDepartmentId: null,
     code: 'KD',
-    name: 'KINH DOANH',
-    parentDepartment: 'KINH DOANH',
-    phone: '02743740530',
-    address: '',
-    head: 'Đỗ Hằng',
+    name: 'PHÒNG KINH DOANH',
+    managerUserId: 'usr_004',
+    status: 'Active',
+    phone: '0274 374 0530',
+    address: 'Tầng 3, Tòa A',
+    head: 'Phạm Việt',
     memberCount: 30,
-    status: 'Đang hoạt động'
   },
   {
     id: 'dept_006',
-    code: 'CNTT',
-    name: 'PHÒNG CÔNG NGHỆ THÔNG TIN',
-    parentDepartment: 'PHÒNG CÔNG NGHỆ THÔNG TIN',
-    phone: '',
-    address: '',
-    head: 'Nguyễn An',
-    memberCount: 28,
-    status: 'Đang hoạt động'
-  },
-  {
-    id: 'dept_007',
-    code: 'KH',
-    name: 'KINH TẾ – KẾ HOẠCH',
-    parentDepartment: 'KINH TẾ – KẾ HOẠCH',
-    phone: '065037100187',
-    address: '',
-    head: 'Trần Linh',
+    departmentId: 'dept_006',
+    parentDepartmentId: null,
+    code: 'TCKT',
+    name: 'TÀI CHÍNH – KẾ TOÁN',
+    managerUserId: 'usr_005',
+    status: 'Active',
+    phone: '0650 371 0018',
+    address: 'Tầng 2, Tòa B',
+    head: 'Quang Dũng',
     memberCount: 16,
-    status: 'Đang hoạt động'
   },
   {
     id: 'dept_008',
@@ -431,80 +430,6 @@ export const mockSharedDocuments = [
     title: 'Quy trình onboarding.pdf',
     sharedWithText: 'Chia sẻ với: Phòng Nhân sự',
     date: '09/05/2024'
-  }
-];
-
-export const mockMeetings: Meeting[] = [
-  {
-    id: 'meet_001',
-    title: 'Họp khởi động dự án NEXORA',
-    date: '16/05/2024 (Thứ Năm)',
-    time: '10:00 - 11:30',
-    room: 'Phòng họp Orion',
-    participants: ['AK', 'TM', 'MH', 'LM', 'PV'],
-    languages: ['VI', 'EN'],
-    status: 'Sắp tới',
-    transcriptsAvailable: true
-  },
-  {
-    id: 'meet_002',
-    title: 'Weekly Project Sync',
-    date: '17/05/2024',
-    time: '14:00 - 15:00',
-    room: 'Phòng họp Vega',
-    participants: ['AK', 'TM', 'MH'],
-    languages: ['VI', 'EN'],
-    status: 'Sắp tới'
-  },
-  {
-    id: 'meet_003',
-    title: 'Rà soát tiến độ Sprint 6',
-    date: '18/05/2024',
-    time: '09:00 - 10:30',
-    room: 'Phòng họp Polaris',
-    participants: ['AK', 'TM', 'MH', 'QD'],
-    languages: ['VI'],
-    status: 'Sắp tới'
-  }
-];
-
-export const mockMeetingRooms: MeetingRoom[] = [
-  { id: 'rm_001', name: 'Orion', capacity: 12, status: 'Trống' },
-  { id: 'rm_002', name: 'Vega', capacity: 8, status: 'Trống' },
-  { id: 'rm_003', name: 'Polaris', capacity: 10, status: 'Đang họp' },
-  { id: 'rm_004', name: 'Nova', capacity: 6, status: 'Trống' },
-  { id: 'rm_005', name: 'Galaxy', capacity: 20, status: 'Trống' },
-  { id: 'rm_006', name: 'Zenith', capacity: 4, status: 'Trống' }
-];
-
-export const mockRecentTranscripts = [
-  {
-    id: 'tr_001',
-    title: 'Họp khởi động dự án NEXORA',
-    date: '16/05/2024 • 14:15 • Phòng Orion',
-    languages: ['VI'],
-    participants: ['AK', 'TM']
-  },
-  {
-    id: 'tr_002',
-    title: 'Weekly Project Sync',
-    date: '15/05/2024 • 15:30 • Phòng Vega',
-    languages: ['VI'],
-    participants: ['AK', 'TM']
-  },
-  {
-    id: 'tr_003',
-    title: 'Rà soát tiến độ Sprint 5',
-    date: '14/05/2024 • 10:45 • Phòng Polaris',
-    languages: ['VI'],
-    participants: ['AK', 'MH']
-  },
-  {
-    id: 'tr_004',
-    title: 'Họp tổng kết tháng 4',
-    date: '10/05/2024 • 16:00 • Phòng Orion',
-    languages: ['VI'],
-    participants: ['AK', 'PV']
   }
 ];
 

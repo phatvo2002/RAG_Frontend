@@ -1,6 +1,7 @@
 import React, { useState, useRef } from 'react';
 import { Upload, FileText, X } from 'lucide-react';
 import { formatBytes } from '@/utils';
+import { useTranslation } from 'react-i18next';
 
 export interface DropZoneProps {
   onFilesSelected?: (files: File[]) => void;
@@ -15,6 +16,8 @@ export const DropZone: React.FC<DropZoneProps> = ({
   maxFiles = 5,
   className = '',
 }) => {
+  const { i18n } = useTranslation();
+  const vi = i18n.language.startsWith('vi');
   const [isDragOver, setIsDragOver] = useState(false);
   const [selectedFiles, setSelectedFiles] = useState<File[]>([]);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -71,10 +74,10 @@ export const DropZone: React.FC<DropZoneProps> = ({
           <Upload className="w-5 h-5" />
         </div>
         <p className="text-xs font-semibold text-slate-700">
-          Kéo thả tệp tin vào đây, hoặc <span className="text-blue-600">chọn tệp</span>
+          {vi ? 'Kéo thả tệp tin vào đây, hoặc ' : 'Drag files here, or '}<span className="text-blue-600">{vi ? 'chọn tệp' : 'choose files'}</span>
         </p>
         <p className="text-[11px] text-slate-400 mt-1">
-          Hỗ trợ: PDF, DOCX, XLSX, PPTX, TXT (tối đa 25MB)
+          {vi ? 'Hỗ trợ: PDF, DOCX, XLSX, PPTX, TXT (tối đa 25MB)' : 'Supported: PDF, DOCX, XLSX, PPTX, TXT (max 25 MB)'}
         </p>
       </div>
 

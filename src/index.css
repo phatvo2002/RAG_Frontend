@@ -1,27 +1,364 @@
 @import "tailwindcss";
+@plugin "daisyui" {
+  themes: light --default, black --prefersdark;
+}
 
 @custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  --nexora-font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+  --nexora-font-size-base: 14px;
+  --nexora-line-height-base: 1.45;
   --background: #ffffff;
-  --foreground: #0f172a;
+  --foreground: #09090b;
+  --nexora-canvas: #f7faff;
+  --nexora-surface: #ffffff;
+  --nexora-surface-muted: #f4f7fc;
+  --nexora-sidebar: #08172b;
+  --nexora-sidebar-border: #1a2a43;
+  --nexora-ink: #101d49;
+  --nexora-ink-muted: #6073a2;
+  --nexora-border: #dce5f3;
+  --nexora-accent: #1769ee;
+  --nexora-accent-soft: #eaf2ff;
+  --nexora-success: #079b63;
+  --nexora-warning: #ee9400;
+  --nexora-danger: #ed3341;
+  --nexora-radius-sm: 0.5rem;
+  --nexora-radius-md: 0.75rem;
+  --nexora-radius-lg: 1rem;
+  --nexora-radius-table: 0.25rem;
+  --nexora-shadow-sm: 0 1px 3px rgb(16 29 73 / 0.06);
+  --nexora-shadow-panel: 0 12px 30px rgb(16 29 73 / 0.06);
   color-scheme: light;
 }
 
 .dark {
-  --background: #0b0f19;
-  --foreground: #f8fafc;
+  --background: #000000;
+  --foreground: #f4f4f5;
+  --nexora-canvas: #070c16;
+  --nexora-surface: #0d1422;
+  --nexora-surface-muted: #111b2c;
+  --nexora-sidebar: #050f20;
+  --nexora-sidebar-border: #1b2a43;
+  --nexora-ink: #f4f7ff;
+  --nexora-ink-muted: #94a6c4;
+  --nexora-border: #223149;
+  --nexora-accent-soft: #102c5b;
+  --nexora-shadow-sm: 0 1px 3px rgb(0 0 0 / 0.24);
+  --nexora-shadow-panel: 0 12px 30px rgb(0 0 0 / 0.2);
   color-scheme: dark;
 }
 
 body {
   color: var(--foreground);
-  background: var(--background);
-  font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+  background: var(--nexora-canvas);
+  font-family: var(--nexora-font-family);
+  font-size: var(--nexora-font-size-base);
+  line-height: var(--nexora-line-height-base);
   margin: 0;
   padding: 0;
-  overflow-x: hidden;
+  overflow-x: clip;
   transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+.font-sans {
+  font-family: var(--nexora-font-family);
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible,
+textarea:focus-visible {
+  outline: 2px solid var(--nexora-accent);
+  outline-offset: 2px;
+}
+
+.nexora-page {
+  background: var(--nexora-canvas);
+  color: var(--nexora-ink);
+  font-family: var(--nexora-font-family);
+  font-size: var(--nexora-font-size-base);
+  line-height: var(--nexora-line-height-base);
+}
+
+.nexora-page .font-mono {
+  font-family: var(--nexora-font-family);
+}
+
+.nexora-surface {
+  background: var(--nexora-surface);
+  border: 1px solid var(--nexora-border);
+  border-radius: var(--nexora-radius-md);
+  box-shadow: var(--nexora-shadow-sm);
+}
+
+.nexora-control {
+  border-color: var(--nexora-border);
+  background-color: var(--nexora-surface-muted);
+  color: var(--nexora-ink);
+  border-radius: var(--nexora-radius-sm);
+  min-height: 2.25rem;
+}
+
+.nexora-toolbar {
+  border-color: var(--nexora-border);
+  border-radius: var(--nexora-radius-sm);
+  box-shadow: var(--nexora-shadow-sm);
+}
+
+.nexora-button {
+  border-radius: var(--nexora-radius-sm);
+  transition: background-color 160ms ease, border-color 160ms ease, color 160ms ease, box-shadow 160ms ease, transform 160ms ease;
+}
+
+.nexora-button:active {
+  transform: translateY(1px);
+}
+
+.nexora-table {
+  --table-surface: #ffffff;
+  --table-header: #f1f5fc;
+  --table-row-hover: #edf4ff;
+  --table-row-selected: #e8f1ff;
+  --table-border: #dce5f3;
+  --table-text: #192744;
+  --table-muted: #677b9b;
+  background: var(--table-surface) !important;
+  border: 1px solid var(--table-border) !important;
+  border-radius: 4px;
+  box-shadow: var(--nexora-shadow-sm);
+  overflow: hidden;
+}
+
+.dark .nexora-table {
+  --table-surface: #152131;
+  --table-header: #1d2c3e;
+  --table-row-hover: #223349;
+  --table-row-selected: #19334f;
+  --table-border: #30445c;
+  --table-text: #e5edf8;
+  --table-muted: #9bb0ce;
+}
+
+.nexora-table .nexora-data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--table-surface);
+  color: var(--table-text);
+}
+
+.nexora-table .nexora-data-table thead {
+  background: var(--table-header) !important;
+  color: var(--table-muted) !important;
+}
+
+.nexora-table .nexora-data-table th {
+  height: 54px;
+  padding: 14px 22px !important;
+  border-bottom: 1px solid var(--table-border) !important;
+  border-right: 1px solid var(--table-border);
+  background: var(--table-header) !important;
+  color: var(--table-muted) !important;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  vertical-align: middle;
+  white-space: nowrap;
+}
+
+.nexora-table .nexora-data-table td {
+  min-height: 76px;
+  padding: 18px 22px !important;
+  border-bottom: 1px solid var(--table-border) !important;
+  border-right: 1px solid var(--table-border);
+  color: var(--table-text);
+  font-size: 14px;
+  vertical-align: middle;
+}
+
+.nexora-table .nexora-data-table .nexora-table-action-cell {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.nexora-table .nexora-data-table th:last-child,
+.nexora-table .nexora-data-table td:last-child {
+  border-right: 0;
+}
+
+.nexora-table .nexora-data-table tbody tr {
+  background: var(--table-surface) !important;
+  transition: background-color 150ms ease;
+}
+
+.nexora-table .nexora-data-table tbody tr:hover {
+  background: var(--table-row-hover) !important;
+}
+
+.nexora-table .nexora-data-table tbody tr[class*="bg-blue"] {
+  background: var(--table-row-selected) !important;
+}
+
+.nexora-table .nexora-data-table tbody tr:last-child td {
+  border-bottom: 0 !important;
+}
+
+.nexora-table .nexora-data-table input[type='checkbox'] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--nexora-accent);
+  cursor: pointer;
+}
+
+.nexora-table-footer {
+  min-height: 68px;
+  padding: 14px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  border-top: 1px solid var(--table-border, var(--nexora-border)) !important;
+  background: var(--table-surface, var(--nexora-surface)) !important;
+  color: var(--table-muted, var(--nexora-ink-muted));
+}
+
+.dark .nexora-table-footer {
+  background: var(--table-surface, #152131) !important;
+  border-color: var(--table-border, #30445c) !important;
+}
+
+.nexora-table-footer button {
+  min-width: 32px;
+  min-height: 32px;
+  border-radius: 4px;
+}
+
+.nexora-table-filters {
+  padding: 12px;
+  border: 1px solid var(--nexora-border);
+  border-radius: 4px;
+  background: var(--nexora-surface-muted);
+}
+
+.dark .nexora-table-filters {
+  background: #1a2839 !important;
+  border-color: #30445c !important;
+}
+
+.nexora-table-filters input:not([type='checkbox']),
+.nexora-table-filters select {
+  min-height: 46px;
+  background: var(--nexora-surface) !important;
+  border: 1px solid var(--nexora-border) !important;
+  color: var(--nexora-ink) !important;
+  border-radius: 4px !important;
+}
+
+.dark .nexora-table-filters input:not([type='checkbox']),
+.dark .nexora-table-filters select {
+  background: #111b2a !important;
+  border-color: #354960 !important;
+}
+
+.nexora-table-filters .relative > svg.absolute {
+  top: 50% !important;
+  transform: translateY(-50%);
+}
+
+@media (max-width: 640px) {
+  .nexora-table .nexora-data-table th,
+  .nexora-table .nexora-data-table td {
+    padding-left: 14px !important;
+    padding-right: 14px !important;
+  }
+
+  .nexora-table-footer {
+    flex-wrap: wrap;
+  }
+}
+
+.nexora-breadcrumb {
+  color: var(--nexora-ink-muted);
+}
+
+.nexora-page h1,
+.nexora-page h2,
+.nexora-page h3,
+.nexora-page h4 {
+  color: var(--nexora-ink);
+  font-style: normal;
+}
+
+html:not(.dark) .nexora-page [class*="bg-slate-50"],
+html:not(.dark) .nexora-page [class*="bg-white"] {
+  background-color: var(--nexora-surface);
+}
+
+html:not(.dark) .nexora-page [class*="bg-slate-50"] {
+  background-color: var(--nexora-canvas);
+}
+
+html:not(.dark) .nexora-page [class*="border-slate-200"],
+html:not(.dark) .nexora-page [class*="border-slate-100"] {
+  border-color: var(--nexora-border);
+}
+
+html:not(.dark) .nexora-page [class*="text-slate-900"] {
+  color: var(--nexora-ink);
+}
+
+html:not(.dark) .nexora-page [class*="text-slate-500"],
+html:not(.dark) .nexora-page [class*="text-slate-400"] {
+  color: var(--nexora-ink-muted);
+}
+
+html:not(.dark) .nexora-page [class*="shadow-2xs"] {
+  box-shadow: var(--nexora-shadow-sm);
+}
+
+.nexora-page h1 {
+  font-size: clamp(1.5rem, 2vw, 1.8rem);
+  line-height: 1.15;
+  letter-spacing: -0.025em;
+}
+
+.nexora-page h2,
+.nexora-page h3 {
+  letter-spacing: -0.015em;
+}
+
+.nexora-page input:not([type='checkbox']):not([type='radio']),
+.nexora-page select,
+.nexora-page textarea {
+  border-radius: var(--nexora-radius-sm);
+}
+
+.nexora-chat {
+  background: var(--nexora-sidebar);
+}
+
+.nexora-login {
+  isolation: isolate;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+  }
 }
 
 /* Custom scrollbar for dark/light */
@@ -40,7 +377,7 @@ body {
 }
 
 .dark ::-webkit-scrollbar-thumb {
-  background: rgba(71, 85, 105, 0.5);
+  background: rgba(63, 63, 70, 0.6);
 }
 
 ::-webkit-scrollbar-thumb:hover {
@@ -48,5 +385,5 @@ body {
 }
 
 .dark ::-webkit-scrollbar-thumb:hover {
-  background: rgba(100, 116, 139, 0.8);
+  background: rgba(82, 82, 91, 0.8);
 }

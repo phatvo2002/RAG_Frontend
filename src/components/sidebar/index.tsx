@@ -1,379 +1,560 @@
-import React, { useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import { useApp } from '@/context/AppContext';
 import { useNavigate, useRouterState } from '@tanstack/react-router';
-import { getInitials } from '@/utils';
+import { useUserPermissions } from '@/hooks/useUserPermissions';
+import { useTranslation } from 'react-i18next';
 import {
-  Plus,
-  Search,
-  SlidersHorizontal,
-  Folder,
-  Calendar,
-  FolderKanban,
-  CheckSquare,
-  BarChart2,
-  Settings,
-  Users2,
   ChevronDown,
   ChevronRight,
-  Sparkles,
-  LogOut,
-  LayoutDashboard,
+  ChevronsLeft,
+  ChevronsRight,
   MessageSquare,
+  Home,
+  Database,
+  Folder,
+  LayoutGrid,
+  Calendar,
   Users,
   Building2,
+  ShieldCheck,
   Shield,
-  FileCheck2,
+  Settings,
+  LayoutDashboard,
   Clock,
-  Sliders,
-  Sun,
-  Moon
+  Layers,
+  FileBarChart,
+  CalendarClock,
+  Sparkles,
+  User as UserIcon,
 } from 'lucide-react';
 
-interface NavItem {
+interface MenuItem {
   id: string;
   label: string;
   path: string;
   icon: any;
+  module?: string | string[];
+  isImplemented?: boolean;
 }
 
-interface NavGroup {
+interface MenuGroup {
+  id: string;
   title: string;
-  isOpen: boolean;
-  setIsOpen: React.Dispatch<React.SetStateAction<boolean>>;
-  items: NavItem[];
+  icon: any;
+  items: MenuItem[];
+  defaultOpen?: boolean;
 }
 
 export const Sidebar: React.FC = () => {
   const {
-    chatSessions,
-    activeChatSessionId,
-    setActiveChatSessionId,
-    startNewChat,
+    isSidebarOpen,
+    toggleSidebar,
     currentUser,
-    logout,
-    showToast,
-    isDark,
-    toggleTheme
+    isMobileSidebarOpen,
+    setIsMobileSidebarOpen,
   } = useApp();
-
+  const { hasModuleAccess, isSuperAdmin, isLoading } = useUserPermissions();
+  const { t } = useTranslation('sidebar');
   const navigate = useNavigate();
   const routerState = useRouterState();
   const currentPath = routerState.location.pathname;
 
-  const [opsOpen, setOpsOpen] = useState(true);
-  const [collabOpen, setCollabOpen] = useState(true);
-  const [adminOpen, setAdminOpen] = useState(true);
-  const [searchTerm, setSearchTerm] = useState('');
+  // Thông tin user hiển thị ở User Card footer
+  const displayName = currentUser?.name || currentUser?.displayName || currentUser?.userName || 'Phat';
+  const roleName = currentUser?.roles?.[0]?.roleName || currentUser?.role || t('common:roles.employee');
+  const initials = displayName.slice(0, 2).toUpperCase();
 
-  const isChatMode = currentPath === '/chat';
+  // Quản lý trạng thái đóng/mở của từng nhóm menu
+  const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
+    operations: true,
+    collaboration: true,
+    catalog: true,
+    admin: true,
+  });
 
-  // Group chat history
-  const filteredChatSessions = chatSessions.filter((s) =>
-    s.title.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const toggleGroup = (groupId: string) => {
+    setOpenGroups((prev) => ({
+      ...prev,
+      [groupId]: !prev[groupId],
+    }));
+  };
 
-  const todaySessions = filteredChatSessions.filter(
-    (s) => !s.group || s.group === 'today'
-  );
-  const olderSessions = filteredChatSessions.filter(
-    (s) => s.group && s.group !== 'today'
-  );
+  const defaultHomePath = useMemo(() => {
+    if (isSuperAdmin || hasModuleAccess(['user', 'users'])) return '/admin/users';
+    if (hasModuleAccess('dashboard')) return '/dashboard';
+    if (hasModuleAccess(['chat', 'ai'])) return '/chat';
+    if (hasModuleAccess(['document', 'documents', 'data-repo'])) return '/data-repo';
+    if (hasModuleAccess(['project', 'projects', 'proj'])) return '/projects';
+    if (hasModuleAccess('ORGANIZATION.READ')) return '/catalog/organizations';
+    if (hasModuleAccess(['task', 'tasks'])) return '/tasks';
+    if (hasModuleAccess([
+      'department', 'departments', 'dept',
+      'role', 'roles', 'authorization', 'permission', 'permissions',
+      'activitylog', 'activity_log', 'log', 'logs', 'audit',
+      'policy', 'policies',
+      'config', 'configuration', 'system',
+    ])) return '/admin';
+    return '/chat';
+  }, [hasModuleAccess, isSuperAdmin]);
 
-  const navGroups: NavGroup[] = [
+  // 1. Root Item: Tổng quan
+  const rootOverviewItem: MenuItem = useMemo(() => ({
+    id: 'overview',
+    label: t('items.adminOverview'),
+    path: '/admin',
+    icon: Home,
+    module: 'all',
+    isImplemented: true,
+  }), [t]);
+
+  // 2. Danh mục các nhóm Menu theo thiết kế nexora-workbench-v3
+  const menuGroups: MenuGroup[] = useMemo(() => [
     {
-      title: 'VẬN HÀNH & DỮ LIỆU',
-      isOpen: opsOpen,
-      setIsOpen: setOpsOpen,
+      id: 'operations',
+      title: t('groups.operations'),
+      icon: Layers,
       items: [
-        { id: 'dashboard', label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-        { id: 'data-repo', label: 'Kho dữ liệu', path: '/data-repo', icon: Folder },
-        { id: 'projects', label: 'Dự án', path: '/projects', icon: FolderKanban },
-        { id: 'tasks', label: 'Công việc', path: '/tasks', icon: CheckSquare },
-        { id: 'reports', label: 'Báo cáo', path: '/reports', icon: BarChart2 },
+        {
+          id: 'dashboard',
+          label: t('items.dashboard'),
+          path: '/dashboard',
+          icon: LayoutDashboard,
+          module: 'dashboard',
+          isImplemented: true,
+        },
+        {
+          id: 'knowledge',
+          label: t('items.dataRepo'),
+          path: '/data-repo',
+          icon: Database,
+          module: ['document', 'documents', 'data-repo'],
+          isImplemented: true,
+        },
+        {
+          id: 'projects',
+          label: t('items.projects'),
+          path: '/projects',
+          icon: Folder,
+          module: ['project', 'projects', 'proj'],
+          isImplemented: true,
+        },
+        {
+          id: 'tasks',
+          label: t('items.tasks'),
+          path: '/tasks',
+          icon: LayoutGrid,
+          module: ['task', 'tasks'],
+          isImplemented: true,
+        },
+        {
+          id: 'reports',
+          label: t('items.reports'),
+          path: '/reports',
+          icon: FileBarChart,
+          module: ['report', 'reports', 'rep'],
+          isImplemented: true,
+        },
       ],
     },
     {
-      title: 'CỘNG TÁC',
-      isOpen: collabOpen,
-      setIsOpen: setCollabOpen,
+      id: 'collaboration',
+      title: t('groups.collaboration'),
+      icon: Calendar,
       items: [
-        { id: 'meetings', label: 'Phòng họp', path: '/meetings', icon: Users2 },
-        { id: 'calendar', label: 'Lịch', path: '/calendar', icon: Calendar },
+        {
+          id: 'calendar',
+          label: t('items.calendar'),
+          path: '/calendar',
+          icon: Calendar,
+          module: ['calendar', 'cal'],
+          isImplemented: true,
+        },
+        {
+          id: 'meetings',
+          label: t('items.meetings'),
+          path: '/meetings',
+          icon: CalendarClock,
+          module: ['meeting', 'meetings', 'meet'],
+          isImplemented: true,
+        },
       ],
     },
     {
-      title: 'QUẢN TRỊ HỆ THỐNG',
-      isOpen: adminOpen,
-      setIsOpen: setAdminOpen,
+      id: 'catalog',
+      title: t('groups.catalog'),
+      icon: Building2,
       items: [
-        { id: 'admin-overview', label: 'Tổng quan', path: '/admin', icon: LayoutDashboard },
-        { id: 'admin-users', label: 'Người dùng', path: '/admin/users', icon: Users },
-        { id: 'admin-departments', label: 'Phòng ban', path: '/admin/departments', icon: Building2 },
-        { id: 'admin-roles', label: 'Vai trò & Quyền', path: '/admin/roles', icon: Shield },
-        { id: 'admin-policies', label: 'Chính sách dữ liệu', path: '/admin/policies', icon: FileCheck2 },
-        { id: 'admin-logs', label: 'Nhật ký hoạt động', path: '/admin/logs', icon: Clock },
-        { id: 'admin-config', label: 'Cấu hình hệ thống', path: '/admin/config', icon: Sliders },
+        {
+          id: 'organizations',
+          label: t('items.organizations'),
+          path: '/catalog/organizations',
+          icon: Building2,
+          module: 'ORGANIZATION.READ',
+          isImplemented: true,
+        },
       ],
     },
-  ];
+    {
+      id: 'admin',
+      title: t('groups.admin'),
+      icon: ShieldCheck,
+      items: [
+        {
+          id: 'users',
+          label: t('items.adminUsers'),
+          path: '/admin/users',
+          icon: UserIcon,
+          module: 'user',
+          isImplemented: true,
+        },
+        {
+          id: 'departments',
+          label: t('items.adminDepartments'),
+          path: '/admin/departments',
+          icon: Building2,
+          module: 'department',
+          isImplemented: true,
+        },
+        {
+          id: 'roles',
+          label: t('items.adminRoles'),
+          path: '/admin/roles',
+          icon: ShieldCheck,
+          module: ['role', 'authorization'],
+          isImplemented: true,
+        },
+        {
+          id: 'logs',
+          label: t('items.adminLogs'),
+          path: '/admin/logs',
+          icon: Clock,
+          module: ['activitylog', 'activity_log', 'log', 'logs', 'audit'],
+          isImplemented: true,
+        },
+        {
+          id: 'policies',
+          label: t('items.adminPolicies'),
+          path: '/admin/policies',
+          icon: Shield,
+          module: ['policy', 'policies'],
+          isImplemented: true,
+        },
+        {
+          id: 'config',
+          label: t('items.adminConfig'),
+          path: '/admin/config',
+          icon: Settings,
+          module: ['config', 'configuration', 'system'],
+          isImplemented: true,
+        },
+      ],
+    },
+  ], [t]);
 
+  // Helper kiểm tra quyền của một item
+  const isItemVisible = (item: MenuItem): boolean => {
+    if (isLoading || !item.isImplemented) return false;
+    if (isSuperAdmin) return true;
+    if (item.path === '/admin') {
+      return hasModuleAccess([
+        'user', 'users',
+        'department', 'departments', 'dept',
+        'role', 'roles', 'authorization', 'permission', 'permissions',
+        'activitylog', 'activity_log', 'log', 'logs', 'audit',
+        'policy', 'policies',
+        'config', 'configuration', 'system',
+      ]);
+    }
+    return hasModuleAccess(item.module);
+  };
+
+  const isRootOverviewVisible = isItemVisible(rootOverviewItem);
+  const isChatVisible = !isLoading;
+
+  const visibleGroups = useMemo(() => {
+    return menuGroups
+      .map((group) => {
+        const visibleItems = group.items.filter(isItemVisible);
+        return {
+          ...group,
+          items: visibleItems,
+        };
+      })
+      .filter((group) => group.items.length > 0);
+  }, [menuGroups, isLoading, isSuperAdmin, hasModuleAccess]);
+
+  const isPathActive = (path: string) => currentPath === path || currentPath.startsWith(`${path}/`);
+  const isRootOverviewActive = currentPath === rootOverviewItem.path;
+  const activeGroupId = visibleGroups.find((group) => group.items.some((item) => isPathActive(item.path)))?.id;
+
+  useEffect(() => {
+    if (!activeGroupId) return;
+    setOpenGroups((prev) => (prev[activeGroupId] ? prev : { ...prev, [activeGroupId]: true }));
+  }, [activeGroupId]);
+
+  useEffect(() => {
+    if (!isMobileSidebarOpen) return;
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') setIsMobileSidebarOpen(false);
+    };
+
+    document.addEventListener('keydown', handleEscape);
+    return () => document.removeEventListener('keydown', handleEscape);
+  }, [isMobileSidebarOpen, setIsMobileSidebarOpen]);
+
+  const navigateTo = (path: string) => {
+    setIsMobileSidebarOpen(false);
+    navigate({ to: path as any });
+  };
+
+  const activeItemClass = 'bg-[#1b3d65] text-white';
+  const inactiveItemClass = 'text-[#d5e2f3] hover:bg-white/10 hover:text-white';
+
+  // =========================================================================
+  // 1. GIAO DIỆN KHI THU GỌN (COLLAPSED MINI SIDEBAR - w-16)
+  // =========================================================================
+  if (!isSidebarOpen && !isMobileSidebarOpen) {
+    return (
+      <aside className="hidden lg:flex w-16 bg-[#0c2137] border-r border-white/10 flex-col h-screen shrink-0 select-none text-[#eaf2ff] font-sans transition-all duration-300">
+        <div className="h-[62px] px-2 border-b border-white/10 flex items-center justify-center shrink-0">
+          <button
+            type="button"
+            onClick={() => navigateTo(defaultHomePath)}
+            className="w-8 h-8 rounded-md bg-[#1762f4] flex items-center justify-center text-white font-bold text-lg cursor-pointer hover:bg-[#2670ff] transition-colors"
+            title="NEXORA AI"
+              aria-label={t('navMode.openAiChat')}
+          >
+            N
+          </button>
+        </div>
+
+        <div className="px-2 pt-3 pb-2 flex justify-center">
+          {isChatVisible && (
+            <button
+              type="button"
+              onClick={() => navigateTo('/chat')}
+              className={`w-10 h-10 rounded-md flex items-center justify-center transition-colors cursor-pointer group ${currentPath === '/chat' ? activeItemClass : inactiveItemClass}`}
+              title={t('navMode.openAiChat')}
+              aria-label={t('navMode.openAiChat')}
+            >
+              <MessageSquare className="w-[18px] h-[18px]" />
+            </button>
+          )}
+        </div>
+
+        <nav aria-label={t('navigation')} className="flex-1 overflow-y-auto px-2 py-1 space-y-1.5 text-xs custom-scrollbar flex flex-col items-center">
+          {isRootOverviewVisible && (
+            <button
+              type="button"
+              onClick={() => navigateTo(rootOverviewItem.path)}
+              className={`w-10 h-10 rounded-md flex items-center justify-center transition-all cursor-pointer relative ${isRootOverviewActive ? activeItemClass : inactiveItemClass}`}
+              title={rootOverviewItem.label}
+              aria-label={rootOverviewItem.label}
+              aria-current={isRootOverviewActive ? 'page' : undefined}
+            >
+              <Home className="w-4 h-4" />
+            </button>
+          )}
+
+          {visibleGroups.map((group) => (
+            <div key={group.id} className="w-full flex flex-col items-center pt-2 mt-1 border-t border-white/10">
+              {group.items.map((item) => {
+                const isActive = isPathActive(item.path);
+                const ItemIcon = item.icon;
+
+                return (
+                  <button
+                    key={item.id}
+                    type="button"
+                    onClick={() => navigateTo(item.path)}
+                    className={`w-10 h-10 rounded-md flex items-center justify-center transition-all cursor-pointer relative ${isActive ? activeItemClass : inactiveItemClass}`}
+                    title={`${group.title}: ${item.label}`}
+                    aria-label={item.label}
+                    aria-current={isActive ? 'page' : undefined}
+                  >
+                    <ItemIcon className="w-4 h-4" />
+                  </button>
+                );
+              })}
+            </div>
+          ))}
+
+        </nav>
+
+        <div className="p-2 border-t border-white/10 flex flex-col items-center gap-2">
+          <button
+            type="button"
+            className="w-8 h-8 rounded-full bg-[#1762f4] text-white text-xs font-bold flex items-center justify-center cursor-pointer"
+            title={`${displayName} (${roleName})`}
+            onClick={() => navigateTo('/account')}
+            aria-label={`${displayName}, ${roleName}`}
+          >
+            {initials}
+          </button>
+          <button
+            type="button"
+            onClick={toggleSidebar}
+            className="w-10 h-8 hover:bg-white/10 rounded-md text-[#9fb2cc] hover:text-white flex items-center justify-center transition-colors cursor-pointer"
+            title={t('expand')}
+            aria-label={t('expand')}
+          >
+            <ChevronsRight className="w-4 h-4" />
+          </button>
+        </div>
+
+      </aside>
+    );
+  }
+
+  // =========================================================================
+  // 2. GIAO DIỆN KHI MỞ RỘNG (EXPANDED SIDEBAR - w-60)
+  // =========================================================================
   return (
-    <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800/80 flex flex-col h-screen shrink-0 select-none transition-colors">
-      {/* 1. Header Logo */}
-      <div className="h-14 px-4 border-b border-slate-200 dark:border-slate-800/80 flex items-center justify-between shrink-0">
-        <div
-          onClick={() => navigate({ to: '/chat' as any })}
-          className="flex items-center gap-2.5 cursor-pointer group"
+    <>
+    {isMobileSidebarOpen && (
+      <button
+        type="button"
+        onClick={() => setIsMobileSidebarOpen(false)}
+        className="fixed inset-0 z-40 bg-[#031126]/45 backdrop-blur-[1px] lg:hidden cursor-default"
+        aria-label={t('closeMenu')}
+      />
+    )}
+    <aside className={`w-[238px] bg-[#0c2137] border-r border-white/10 flex flex-col h-screen shrink-0 select-none text-[#eaf2ff] font-sans transition-all duration-300 ${isMobileSidebarOpen ? 'fixed inset-y-0 left-0 z-50 translate-x-0 flex shadow-2xl lg:relative lg:shadow-none' : 'hidden lg:flex'}`}>
+      <div className="h-[62px] px-3 border-b border-white/10 flex items-center justify-between shrink-0">
+        <button
+          type="button"
+          onClick={() => navigateTo(defaultHomePath)}
+          className="flex items-center gap-2.5 cursor-pointer group min-w-0 text-left"
+          aria-label={t('navMode.openAiChat')}
         >
-          <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center text-white font-bold text-lg shadow-2xs shadow-blue-500/30 relative">
-            <span>N</span>
-            <Sparkles className="w-2.5 h-2.5 absolute -top-0.5 -right-0.5 text-blue-200 fill-blue-200" />
+          <div className="w-8 h-8 rounded-md bg-[#1762f4] flex items-center justify-center text-white font-bold text-lg shrink-0">
+            N
           </div>
-          <div>
-            <h1 className="font-bold text-slate-900 dark:text-slate-100 leading-tight text-sm tracking-tight flex items-center gap-1">
-              NEXORA AI
-              <span className="text-[9px] px-1 py-0.2 bg-blue-50 dark:bg-blue-950 text-blue-600 dark:text-blue-400 rounded font-semibold border border-blue-200/50 dark:border-blue-800/50">
-                PRO
-              </span>
-            </h1>
-            <p className="text-[10px] text-slate-400 dark:text-slate-500 font-medium">Trợ lý AI nội bộ</p>
-          </div>
-        </div>
+          <span className="min-w-0"><strong className="block truncate text-sm leading-tight text-white">NEXORA AI</strong><span className="block text-[11px] text-[#9fb2cc]">{t('navMode.managementSpace')}</span></span>
+        </button>
 
-        <div className="flex items-center gap-1">
-          <button
-            onClick={toggleTheme}
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-            title={isDark ? 'Chuyển sang giao diện Sáng' : 'Chuyển sang giao diện Tối'}
-          >
-            {isDark ? <Sun className="w-3.5 h-3.5 text-amber-400" /> : <Moon className="w-3.5 h-3.5 text-slate-500" />}
-          </button>
-          <button
-            onClick={() => showToast('Cài đặt giao diện', 'info')}
-            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors cursor-pointer"
-          >
-            <Settings className="w-3.5 h-3.5" />
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={toggleSidebar}
+          className="p-1.5 hover:bg-white/10 text-[#9fb2cc] hover:text-white rounded-md cursor-pointer transition-colors"
+          title={t('collapse')}
+          aria-label={t('collapse')}
+        >
+          <ChevronsLeft className="w-4 h-4" />
+        </button>
       </div>
 
-      {/* 2. Chat Mode specific view VS Management Mode view */}
-      {isChatMode ? (
-        <div className="flex-1 flex flex-col min-h-0 overflow-hidden">
-          {/* New Chat & Search */}
-          <div className="p-3 space-y-2 border-b border-slate-100 dark:border-slate-800/60">
-            <button
-              onClick={startNewChat}
-              className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 active:bg-blue-800 text-white font-semibold text-xs rounded-lg shadow-2xs shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
-            >
-              <Plus className="w-4 h-4" />
-              <span>Đoạn chat mới</span>
-            </button>
+      <div className="px-3 pt-3 pb-2">
+        {isChatVisible && (
+          <button
+            type="button"
+            onClick={() => navigateTo('/chat')}
+            className={`w-full px-3 py-2.5 rounded-md text-[13px] font-semibold flex items-center gap-2.5 transition-colors cursor-pointer group border ${currentPath === '/chat' ? `${activeItemClass} border-[#2f86ff]` : 'text-[#d5e2f3] border-[#344e69] bg-[#112b45] hover:bg-[#1b3d65]'}`}
+            aria-current={currentPath === '/chat' ? 'page' : undefined}
+          >
+            <span className="w-7 h-7 rounded-md bg-[#1b3d65] flex items-center justify-center shrink-0">
+              <Sparkles className="w-4 h-4 text-[#bcd7ff]" />
+            </span>
+            <span className="truncate">{t('navMode.openAiChat')}</span>
+            <ChevronRight className="w-3.5 h-3.5 ml-auto text-[#9fb2cc] group-hover:translate-x-0.5 transition-transform" />
+          </button>
+        )}
+      </div>
 
-            <div className="relative flex items-center">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 pointer-events-none" />
-              <input
-                type="text"
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                placeholder="Tìm đoạn chat..."
-                className="w-full pl-8.5 pr-8 py-1.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700/80 rounded-lg text-xs placeholder:text-slate-400 dark:placeholder:text-slate-500 text-slate-700 dark:text-slate-200 focus:outline-none focus:border-blue-500 focus:bg-white dark:focus:bg-slate-800 transition-colors"
-              />
+      <nav aria-label={t('navigation')} className="flex-1 overflow-y-auto px-3 pb-3 space-y-1 text-[13px] custom-scrollbar">
+        {isRootOverviewVisible && (
+          <div className="pb-2 mb-1 border-b border-white/10">
+            <button
+              type="button"
+              onClick={() => navigateTo(rootOverviewItem.path)}
+              className={`w-full px-3 py-2.5 rounded-md flex items-center gap-2.5 text-[13px] transition-colors cursor-pointer border-l-[3px] ${isRootOverviewActive ? `${activeItemClass} border-[#2f86ff] font-semibold` : `${inactiveItemClass} border-transparent`}`}
+              aria-current={isRootOverviewActive ? 'page' : undefined}
+            >
+              <Home className="w-[17px] h-[17px] shrink-0" />
+              <span className="truncate">{rootOverviewItem.label}</span>
+            </button>
+          </div>
+        )}
+
+        {visibleGroups.map((group) => {
+          const isOpen = openGroups[group.id] ?? true;
+          const GroupIcon = group.icon;
+
+          return (
+            <div key={group.id} className="pt-2 first:pt-0 space-y-1">
               <button
-                onClick={() => showToast('Bộ lọc tìm kiếm lịch sử chat', 'info')}
-                className="absolute right-2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 p-0.5 cursor-pointer"
+                type="button"
+                onClick={() => toggleGroup(group.id)}
+                className={`w-full px-3 py-2 rounded-md flex items-center justify-between text-[11px] uppercase tracking-wide font-semibold transition-colors cursor-pointer ${activeGroupId === group.id ? 'text-[#c9ddff]' : 'text-[#9fb2cc] hover:text-white'}`}
+                aria-expanded={isOpen}
+                aria-controls={`sidebar-group-${group.id}`}
               >
-                <SlidersHorizontal className="w-3.5 h-3.5" />
+                <div className="flex items-center gap-2.5 truncate">
+                  <GroupIcon className="w-3.5 h-3.5 shrink-0" />
+                  <span className="truncate">{group.title}</span>
+                </div>
+                <ChevronDown
+                  className={`w-3.5 h-3.5 transition-transform duration-200 ${
+                    isOpen ? 'rotate-0' : '-rotate-90'
+                  }`}
+                />
               </button>
+
+              {isOpen && (
+                <div id={`sidebar-group-${group.id}`} className="space-y-0.5 ml-2 pl-2 border-l border-[#344e69]">
+                  {group.items.map((item) => {
+                    const isActive = isPathActive(item.path);
+                    const ItemIcon = item.icon;
+
+                    return (
+                      <button
+                        key={item.id}
+                        type="button"
+                        onClick={() => navigateTo(item.path)}
+                        className={`w-full px-3 py-2.5 rounded-md flex items-center gap-2.5 text-[13px] transition-colors cursor-pointer border-l-[3px] ${isActive ? `${activeItemClass} border-[#2f86ff] font-semibold` : `${inactiveItemClass} border-transparent`}`}
+                        aria-current={isActive ? 'page' : undefined}
+                      >
+                        <ItemIcon className="w-[17px] h-[17px] shrink-0" />
+                        <span className="truncate">{item.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
             </div>
-          </div>
+          );
+        })}
 
-          {/* Quick AI Modules Row */}
-          <div className="p-2 border-b border-slate-100 dark:border-slate-800/60 flex items-center gap-1 overflow-x-auto no-scrollbar text-xs">
-            <button
-              onClick={() => showToast('Bộ lọc: Chat Dự án', 'info')}
-              className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap text-[11px] cursor-pointer"
-            >
-              Dự án
-            </button>
-            <button
-              onClick={() => showToast('Bộ lọc: Chat Báo cáo', 'info')}
-              className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap text-[11px] cursor-pointer"
-            >
-              Báo cáo
-            </button>
-            <button
-              onClick={() => showToast('Bộ lọc: Chat Phòng họp', 'info')}
-              className="px-2.5 py-1 rounded-md bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 font-medium whitespace-nowrap text-[11px] cursor-pointer"
-            >
-              Phòng họp
-            </button>
-          </div>
+      </nav>
 
-          {/* Chat History List */}
-          <div className="flex-1 overflow-y-auto p-2 space-y-4 text-xs">
-            {todaySessions.length > 0 && (
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 block">
-                  Hôm nay
-                </span>
-                {todaySessions.map((session) => {
-                  const isCurrent = activeChatSessionId === session.id;
-                  return (
-                    <div
-                      key={session.id}
-                      onClick={() => setActiveChatSessionId(session.id)}
-                      className={`group relative flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer transition-colors ${
-                        isCurrent
-                          ? 'bg-blue-50/80 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold shadow-2xs'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <MessageSquare
-                          className={`w-3.5 h-3.5 shrink-0 ${
-                            isCurrent ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'
-                          }`}
-                        />
-                        <span className="truncate text-xs">{session.title}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-
-            {olderSessions.length > 0 && (
-              <div className="space-y-1">
-                <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider px-2 block">
-                  Trước đó
-                </span>
-                {olderSessions.map((session) => {
-                  const isCurrent = activeChatSessionId === session.id;
-                  return (
-                    <div
-                      key={session.id}
-                      onClick={() => setActiveChatSessionId(session.id)}
-                      className={`group relative flex items-center justify-between px-2.5 py-2 rounded-lg cursor-pointer transition-colors ${
-                        isCurrent
-                          ? 'bg-blue-50/80 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-semibold shadow-2xs'
-                          : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
-                      }`}
-                    >
-                      <div className="flex items-center gap-2 min-w-0 flex-1">
-                        <MessageSquare
-                          className={`w-3.5 h-3.5 shrink-0 ${
-                            isCurrent ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'
-                          }`}
-                        />
-                        <span className="truncate text-xs">{session.title}</span>
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            )}
-          </div>
-        </div>
-      ) : (
-        /* Navigation Mode (When outside Chat) */
-        <div className="flex-1 overflow-y-auto p-3 space-y-4 text-xs">
-          {/* Quick back to Chat Button */}
-          <button
-            onClick={() => navigate({ to: '/chat' as any })}
-            className="w-full py-2 px-3 bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs rounded-lg shadow-2xs shadow-blue-500/20 flex items-center justify-center gap-2 transition-all cursor-pointer"
-          >
-            <MessageSquare className="w-4 h-4" />
-            <span>Mở Trợ lý Chat AI</span>
-          </button>
-
-          {/* Nav Groups */}
-          <div className="space-y-4 pt-1">
-            {navGroups.map((grp, idx) => (
-              <div key={idx} className="space-y-1">
-                <button
-                  type="button"
-                  onClick={() => grp.setIsOpen(!grp.isOpen)}
-                  className="w-full flex items-center justify-between px-2 py-1 text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider hover:text-slate-600 dark:hover:text-slate-300 transition-colors cursor-pointer"
-                >
-                  <span>{grp.title}</span>
-                  {grp.isOpen ? (
-                    <ChevronDown className="w-3 h-3" />
-                  ) : (
-                    <ChevronRight className="w-3 h-3" />
-                  )}
-                </button>
-
-                {grp.isOpen && (
-                  <div className="space-y-0.5">
-                    {grp.items.map((item) => {
-                      const Icon = item.icon;
-                      const isActive =
-                        item.path === '/admin'
-                          ? currentPath === '/admin'
-                          : currentPath.startsWith(item.path);
-
-                      return (
-                        <button
-                          key={item.id}
-                          type="button"
-                          onClick={() => navigate({ to: item.path as any })}
-                          className={`w-full text-left px-2.5 py-2 rounded-lg flex items-center justify-between transition-colors font-medium cursor-pointer ${
-                            isActive
-                              ? 'bg-blue-50 dark:bg-blue-950/70 text-blue-700 dark:text-blue-300 font-semibold shadow-2xs'
-                              : 'text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 hover:text-slate-900 dark:hover:text-white'
-                          }`}
-                        >
-                          <div className="flex items-center gap-2.5 min-w-0">
-                            <Icon
-                              className={`w-4 h-4 shrink-0 ${
-                                isActive ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 dark:text-slate-500'
-                              }`}
-                            />
-                            <span className="truncate">{item.label}</span>
-                          </div>
-                          {isActive && (
-                            <span className="w-1.5 h-1.5 rounded-full bg-blue-600 dark:bg-blue-400 shrink-0" />
-                          )}
-                        </button>
-                      );
-                    })}
-                  </div>
-                )}
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
-      {/* 3. Footer User Profile */}
-      <div className="p-3 border-t border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-900/90 shrink-0 transition-colors">
-        <div className="flex items-center justify-between">
+      <div className="p-3 border-t border-white/10">
+        <button
+          type="button"
+          onClick={() => navigateTo('/account')}
+          className="w-full flex items-center justify-between p-1 rounded-md hover:bg-white/10 cursor-pointer transition-colors group text-left"
+          aria-label={`Mở hồ sơ ${displayName}`}
+        >
           <div className="flex items-center gap-2.5 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-gradient-to-tr from-blue-600 to-indigo-600 text-white font-semibold text-xs flex items-center justify-center shadow-2xs shrink-0">
-              {getInitials(currentUser.name)}
+            <div className="w-8 h-8 rounded-full bg-[#1762f4] text-white font-bold text-xs flex items-center justify-center shrink-0">
+              {initials}
             </div>
-            <div className="min-w-0">
-              <p className="text-xs font-semibold text-slate-800 dark:text-slate-200 truncate leading-tight">
-                {currentUser.name}
-              </p>
-              <p className="text-[10px] text-slate-400 dark:text-slate-500 truncate mt-0.5 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0" />
-                {currentUser.role}
-              </p>
+            <div className="min-w-0 flex flex-col">
+              <span className="text-xs font-semibold text-white truncate leading-tight">
+                {displayName}
+              </span>
+              <span className="text-[10px] text-[#9fb2cc] truncate leading-tight mt-0.5">
+                {roleName}
+              </span>
             </div>
           </div>
-
-          <button
-            onClick={logout}
-            className="p-1.5 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/50 rounded-md transition-colors cursor-pointer"
-            title="Đăng xuất"
-          >
-            <LogOut className="w-4 h-4" />
-          </button>
-        </div>
+          <ChevronRight className="w-4 h-4 text-[#9fb2cc] group-hover:text-white group-hover:translate-x-0.5 transition-all shrink-0 ml-1" />
+        </button>
       </div>
+
     </aside>
+    </>
   );
 };
+
 export default Sidebar;
