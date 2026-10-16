@@ -6,8 +6,9 @@ export const APP_DESCRIPTION = 'Nền tảng Trợ lý AI nội bộ cho doanh n
 export const ACCESS_TOKEN_KEY = 'nexora_access_token';
 export const REFRESH_TOKEN_KEY = 'nexora_refresh_token';
 
-// Đọc URL từ biến môi trường Vite (.env)
+// Docker supplies this URL at startup; local Vite builds use their existing .env values.
 export const API_BASE_URL: string =
+  window.__NEXORA_CONFIG__?.apiBaseUrl ||
   import.meta.env.VITE_API_URL ||
   import.meta.env.VITE_API_BASE_URL ||
   (import.meta.env as any).NEXT_PUBLIC_API_URL ||
