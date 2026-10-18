@@ -57,6 +57,7 @@ async function streamTurn(body: object, onEvent: (event: ChatEvent) => void, sig
 export const chatApi = {
   models: () => apiClient<{ defaultModel: string; models: ChatModel[]; configurationError?: string | null }>('/api/chat/models'),
   conversations: (skip = 0) => apiClient<ChatConversation[]>(`/api/chat/conversations?skip=${skip}`),
+  deleteConversation: (id: string) => apiClient(`/api/chat/conversations/${id}`, { method: 'DELETE' }),
   messages: (id: string, beforeSequenceNo?: number) => apiClient<ChatMessage[]>(`/api/chat/conversations/${id}/messages${beforeSequenceNo ? `?beforeSequenceNo=${beforeSequenceNo}` : ''}`),
   deleteMessage: (conversationId: string, messageId: string) => apiClient(`/api/chat/conversations/${conversationId}/messages/${messageId}`, { method: 'DELETE' }),
   streamTurn,

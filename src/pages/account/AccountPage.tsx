@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Header } from '@/components/header';
+import { ConfirmModal } from '@/components/disclosure';
 import { accountApi } from '@/api/account.api';
 import type { AccountProfile, ProviderKeySettings } from '@/api/account.api';
 import { useApp } from '@/context/AppContext';
@@ -11,13 +12,14 @@ const providers = [
 ] as const;
 
 export const AccountPage: React.FC = () => {
-  const { currentUser, setCurrentUser, setLanguage, language } = useApp();
+  const { currentUser, setCurrentUser, setLanguage, language, showToast } = useApp();
   const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const [profile, setProfile] = useState<AccountProfile | null>(null);
   const [keys, setKeys] = useState<ProviderKeySettings | null>(null);
   const [draftKeys, setDraftKeys] = useState<Record<string, string>>({});
   const [endpoints, setEndpoints] = useState<Record<string, string>>({ claude: 'official' });
   const [busy, setBusy] = useState<string | null>(null);
+  const [keyToDelete, setKeyToDelete] = useState<string | null>(null);
   const [error, setError] = useState('');
   const [notice, setNotice] = useState('');
   const [activeSection, setActiveSection] = useState<'profile' | 'keys'>('profile');
@@ -57,12 +59,13 @@ export const AccountPage: React.FC = () => {
     finally { setBusy(null); }
   };
 
-  const deleteKey = async (provider: string) => {
-    if (!window.confirm(tr(`Delete your ${provider === 'gemini' ? 'Gemini' : 'Claude'} key?`, `Xóa khóa ${provider === 'gemini' ? 'Gemini' : 'Claude'} của bạn?`))) return;
+  const deleteKey = async () => {
+    const provider = keyToDelete;
+    if (!provider || busy) return;
     setBusy(provider); setError(''); setNotice('');
-    try { await accountApi.deleteProviderKey(provider); await reloadKeys(); setNotice(tr('API key deleted.', 'Đã xóa khóa API.')); }
-    catch { setError(tr('Could not delete API key.', 'Không thể xóa khóa API.')); }
-    finally { setBusy(null); }
+    try { await accountApi.deleteProviderKey(provider); await reloadKeys(); showToast(tr('API key deleted.', 'Đã xóa khóa API.'), 'success'); }
+    catch (err) { showToast(err instanceof Error ? err.message : tr('Could not delete API key.', 'Không thể xóa khóa API.'), 'error'); }
+    finally { setBusy(null); setKeyToDelete(null); }
   };
 
   const displayName = profile?.displayName || currentUser.displayName || currentUser.name || profile?.userName || '';
@@ -177,7 +180,7 @@ export const AccountPage: React.FC = () => {
                     </label>
                     <div className="flex w-full shrink-0 gap-2 sm:w-auto sm:pb-0.5">
                       <button type="button" disabled={!draftKeys[provider.id]?.trim() || busy === provider.id} onClick={() => saveKey(provider.id)} className="h-9 flex-1 rounded-md border border-[#d6dfed] bg-[#f7f9fc] px-3 text-xs font-medium text-[#556985] transition hover:bg-[#edf3fc] disabled:cursor-not-allowed disabled:opacity-50 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 sm:flex-none">{busy === provider.id ? tr('Saving...', 'Đang lưu...') : saved ? tr('Update key', 'Cập nhật khóa') : tr('Save key', 'Lưu khóa')}</button>
-                      {saved && <button type="button" disabled={busy === provider.id} onClick={() => deleteKey(provider.id)} className="h-9 rounded-md border border-red-200 px-3 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-900/70 dark:text-red-400 dark:hover:bg-red-950/50">{tr('Delete', 'Xóa')}</button>}
+                      {saved && <button type="button" disabled={busy === provider.id} onClick={() => setKeyToDelete(provider.id)} className="h-9 rounded-md border border-red-200 px-3 text-xs font-medium text-red-600 transition hover:bg-red-50 disabled:opacity-50 dark:border-red-900/70 dark:text-red-400 dark:hover:bg-red-950/50">{tr('Delete', 'Xóa')}</button>}
                     </div>
                   </div>
                 </div>
@@ -187,5 +190,14 @@ export const AccountPage: React.FC = () => {
         </section>
       </div>
     </div>
+    <ConfirmModal
+      isOpen={keyToDelete !== null}
+      onClose={() => { if (!busy) setKeyToDelete(null); }}
+      onConfirm={deleteKey}
+      isLoading={busy === keyToDelete && keyToDelete !== null}
+      title={tr('Delete API key', 'Xóa khóa API')}
+      message={keyToDelete ? tr(`Delete your ${keyToDelete === 'gemini' ? 'Gemini' : 'Claude'} key?`, `Xóa khóa ${keyToDelete === 'gemini' ? 'Gemini' : 'Claude'} của bạn?`) : ''}
+      confirmText={tr('Delete', 'Xóa')}
+    />
   </>;
 };

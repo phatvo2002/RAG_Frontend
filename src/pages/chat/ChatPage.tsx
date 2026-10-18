@@ -3,6 +3,7 @@ import { useNavigate } from '@tanstack/react-router';
 import { FileText, FolderOpen, LayoutDashboard, LoaderCircle, Menu, MessageCircle, Mic, Paperclip, Plus, Search, Send, ShieldCheck, Trash2, X } from 'lucide-react';
 import { chatApi } from '@/api/chat.api';
 import type { ChatConversation, ChatMessage, ChatSource } from '@/api/chat.api';
+import { ConfirmModal } from '@/components/disclosure';
 import { useApp } from '@/context/AppContext';
 import { LanguageSwitcher } from '@/components/languageSwitcher';
 import { ChatAnswerContent } from './ChatAnswerContent';
@@ -18,6 +19,8 @@ type ChatComposerProps = {
   modelsAvailable: boolean;
   language: 'en' | 'vi';
 };
+
+type DeleteTarget = { kind: 'conversation'; value: ChatConversation } | { kind: 'message'; value: ChatMessage };
 
 const ChatComposer: React.FC<ChatComposerProps> = ({ input, onInputChange, onSend, loading, sending, modelsAvailable, language }) => {
   const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
@@ -36,7 +39,7 @@ const ChatComposer: React.FC<ChatComposerProps> = ({ input, onInputChange, onSen
 
 export const ChatPage: React.FC = () => {
   const navigate = useNavigate();
-  const { currentUser, language } = useApp();
+  const { currentUser, language, showToast } = useApp();
   const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const [conversations, setConversations] = useState<ChatConversation[]>([]);
   const [activeId, setActiveId] = useState<string | null>(null);
@@ -46,6 +49,8 @@ export const ChatPage: React.FC = () => {
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [sending, setSending] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState<DeleteTarget | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [streamText, setStreamText] = useState('');
   const [streamSources, setStreamSources] = useState<ChatSource[]>([]);
   const [error, setError] = useState('');
@@ -90,7 +95,7 @@ export const ChatPage: React.FC = () => {
   };
 
   const openConversation = async (id: string) => {
-    if (sending) return;
+    if (sending || isDeleting) return;
     const loadId = ++conversationLoadId.current;
     setHistoryOpen(false);
     setFocusedMessageId(null);
@@ -114,7 +119,7 @@ export const ChatPage: React.FC = () => {
   };
 
   const newChat = () => {
-    if (sending) return;
+    if (sending || isDeleting) return;
     conversationLoadId.current++;
     setLoading(false);
     setHistoryOpen(false);
@@ -132,7 +137,7 @@ export const ChatPage: React.FC = () => {
 
   const send = async () => {
     const question = input.trim();
-    if (!question || !modelsAvailable || sending) return;
+    if (!question || !modelsAvailable || sending || isDeleting) return;
     setInput('');
     setError('');
     setStreamText('');
@@ -185,24 +190,53 @@ export const ChatPage: React.FC = () => {
     }
   };
 
-  const deleteMessage = async (message: ChatMessage) => {
-    if (!activeId || sending || !window.confirm(tr('Delete this message from the conversation?', 'Xóa tin nhắn này khỏi hội thoại?'))) return;
+  const confirmDelete = async () => {
+    if (!deleteTarget || sending || isDeleting) return;
+    setIsDeleting(true);
     try {
-      await chatApi.deleteMessage(activeId, message.id);
-      setMessages(previous => previous.filter(item => item.id !== message.id));
-      if (focusedMessageId === message.id) setFocusedMessageId(null);
+      if (deleteTarget.kind === 'message') {
+        const message = deleteTarget.value;
+        await chatApi.deleteMessage(message.conversationId, message.id);
+        setMessages(previous => previous.filter(item => item.id !== message.id));
+        if (focusedMessageId === message.id) setFocusedMessageId(null);
+      } else {
+        const conversation = deleteTarget.value;
+        await chatApi.deleteConversation(conversation.id);
+        setConversations(previous => previous.filter(item => item.id !== conversation.id));
+        if (activeId === conversation.id) {
+          conversationLoadId.current++;
+          setActiveId(null);
+          setMessages([]);
+          setHasOlder(false);
+          setSourcesOpen(false);
+          setFocusedMessageId(null);
+          setLoading(false);
+        }
+      }
+      setError('');
+      setDeleteTarget(null);
+      showToast(deleteTarget.kind === 'message'
+        ? tr('Message deleted.', 'Đã xóa tin nhắn.')
+        : tr('Conversation deleted.', 'Đã xóa đoạn chat.'), 'success');
     } catch (err) {
-      setError(err instanceof Error ? err.message : tr('Could not delete the message.', 'Không thể xóa tin nhắn.'));
+      showToast(err instanceof Error ? err.message : deleteTarget.kind === 'message'
+        ? tr('Could not delete the message.', 'Không thể xóa tin nhắn.')
+        : tr('Could not delete the conversation.', 'Không thể xóa đoạn chat.'), 'error');
+      setDeleteTarget(null);
+    } finally {
+      setIsDeleting(false);
     }
   };
 
   const loadOlder = async () => {
     if (!activeId || messages.length === 0) return;
+    const loadId = conversationLoadId.current;
     try {
       const older = await chatApi.messages(activeId, messages[0].sequenceNo);
+      if (loadId !== conversationLoadId.current) return;
       setMessages(previous => [...older, ...previous]);
       setHasOlder(older.length === 50);
-    } catch (err) { setError(err instanceof Error ? err.message : tr('Could not load older messages.', 'Không thể tải tin nhắn cũ.')); }
+    } catch (err) { if (loadId === conversationLoadId.current) setError(err instanceof Error ? err.message : tr('Could not load older messages.', 'Không thể tải tin nhắn cũ.')); }
   };
 
   const latestAssistant = [...messages].reverse().find(message => message.role === 'assistant');
@@ -225,7 +259,7 @@ export const ChatPage: React.FC = () => {
   const showWelcome = activeId === null && messages.length === 0 && !sending;
   const greeting = now.getHours() < 12 ? tr('Good morning', 'Chào buổi sáng') : now.getHours() < 18 ? tr('Good afternoon', 'Chào buổi chiều') : tr('Good evening', 'Chào buổi tối');
   const welcomeDate = `${new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(now)} · ${new Intl.DateTimeFormat(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(now)}`;
-  const composer = <ChatComposer input={input} onInputChange={setInput} onSend={() => void send()} loading={loading} sending={sending} modelsAvailable={modelsAvailable} language={language} />;
+  const composer = <ChatComposer input={input} onInputChange={setInput} onSend={() => void send()} loading={loading} sending={sending || isDeleting} modelsAvailable={modelsAvailable} language={language} />;
   const showSource = (index: number, messageId?: string) => {
     if (messageId) setFocusedMessageId(messageId);
     setSelectedSourceIndex(index);
@@ -244,7 +278,7 @@ export const ChatPage: React.FC = () => {
         </div>
 
         <div className="space-y-3 px-3 pb-3 pt-3">
-          <button type="button" onClick={newChat} disabled={sending} className="chat-action flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[#0759ee] text-[13px] font-semibold text-white hover:bg-[#126bff] disabled:opacity-50"><Plus size={19} />{tr('New chat', 'Đoạn chat mới')}</button>
+          <button type="button" onClick={newChat} disabled={sending || isDeleting} className="chat-action flex h-10 w-full items-center justify-center gap-2 rounded-md bg-[#0759ee] text-[13px] font-semibold text-white hover:bg-[#126bff] disabled:opacity-50"><Plus size={19} />{tr('New chat', 'Đoạn chat mới')}</button>
           <label className="flex h-9 items-center gap-2 rounded-md border border-[#344e69] bg-[#112b45] px-2.5 text-[#9fb2cc] focus-within:border-[#70a2ff]">
             <Search size={16} aria-hidden="true" />
             <input value={search} onChange={event => setSearch(event.target.value)} placeholder={tr('Search chats...', 'Tìm đoạn chat...')} aria-label={tr('Search chats', 'Tìm đoạn chat')} className="min-w-0 flex-1 bg-transparent text-xs text-white outline-none placeholder:text-[#9fb2cc]" />
@@ -258,10 +292,18 @@ export const ChatPage: React.FC = () => {
             const previousGroup = index > 0 ? formatHistoryGroup(filteredConversations[index - 1].updatedAt) : null;
             return <React.Fragment key={item.id}>
               {group !== previousGroup && <div className="mb-1 mt-3 border-b border-white/10 pb-1 text-[10px] font-semibold uppercase tracking-wide text-[#9fb2cc]">{group}</div>}
-              <button type="button" onClick={() => void openConversation(item.id)} disabled={sending} aria-current={activeId === item.id ? 'page' : undefined}
-                className={`chat-history-item mb-0.5 flex w-full items-start justify-between gap-2 rounded-md border-l-[3px] px-2 py-2.5 text-left text-xs transition-colors disabled:opacity-60 ${activeId === item.id ? 'border-[#2f86ff] bg-[#1b3d65] text-white' : 'border-transparent text-[#d5e2f3] hover:bg-white/10'}`}>
-                <span className="min-w-0 flex-1 break-words leading-snug">{item.title}</span><time className="shrink-0 text-[10px] text-[#9fb2cc]">{formatTime(item.updatedAt)}</time>
-              </button>
+              <div className={`chat-history-item group relative mb-0.5 flex w-full items-center rounded-md border-l-[3px] transition-colors ${activeId === item.id ? 'border-[#2f86ff] bg-[#1b3d65] text-white' : 'border-transparent text-[#d5e2f3] hover:bg-white/10'}`}>
+                <button type="button" onClick={() => void openConversation(item.id)} disabled={sending || isDeleting} aria-current={activeId === item.id ? 'page' : undefined}
+                  className="flex min-w-0 flex-1 items-center gap-2 py-2.5 pl-2 pr-8 text-left text-xs disabled:opacity-60 md:pr-2">
+                  <span className="min-w-0 flex-1 truncate" title={item.title}>{item.title}</span>
+                  <time className="hidden shrink-0 text-[10px] text-[#9fb2cc] group-hover:opacity-0 group-focus-within:opacity-0 md:block">{formatTime(item.updatedAt)}</time>
+                </button>
+                <button type="button" onClick={() => setDeleteTarget({ kind: 'conversation', value: item })} disabled={sending || isDeleting}
+                  aria-label={tr(`Delete conversation ${item.title}`, `Xóa đoạn chat ${item.title}`)} title={tr('Delete conversation', 'Xóa đoạn chat')}
+                  className="absolute right-1 top-1/2 -translate-y-1/2 rounded p-1.5 text-[#9fb2cc] opacity-100 hover:bg-white/10 hover:text-rose-300 focus-visible:opacity-100 focus-visible:outline focus-visible:outline-2 focus-visible:outline-[#8dbaff] disabled:opacity-40 md:opacity-0 md:group-hover:opacity-100 md:group-focus-within:opacity-100">
+                  <Trash2 size={14} />
+                </button>
+              </div>
             </React.Fragment>;
           })}
           {!loading && filteredConversations.length === 0 && <p className="px-2 py-5 text-center text-xs text-[#9fb2cc]">{search ? tr('No chats found.', 'Không tìm thấy đoạn chat.') : tr('No chats yet.', 'Chưa có đoạn chat nào.')}</p>}
@@ -316,7 +358,7 @@ export const ChatPage: React.FC = () => {
                     <div className="flex items-start gap-4">
                       <span aria-hidden="true" className={`flex h-9 w-9 shrink-0 items-center justify-center font-bold ${isUser ? 'rounded-full bg-[#e3efff] text-xs text-[#1762f4]' : 'rounded-md bg-[#1762f4] text-lg text-white'}`}>{isUser ? userInitial : 'N'}</span>
                       <div className="min-w-0 flex-1">
-                        <div className="flex flex-wrap items-center justify-between gap-2"><strong className={`text-[13px] ${isUser ? 'text-[#102456]' : 'text-[#1762f4]'}`}>{isUser ? tr('You', 'Bạn') : 'NEXORA AI'}</strong><div className="flex items-center gap-2 text-[11px] text-[#7d8eaa]"><time>{formatTime(message.createdAt)} {formatDate(message.createdAt)}</time><button type="button" onClick={() => void deleteMessage(message)} disabled={sending || !activeId} aria-label={tr('Delete message', 'Xóa tin nhắn')} title={tr('Delete message', 'Xóa tin nhắn')} className="rounded p-1 opacity-0 hover:bg-rose-50 hover:text-rose-600 focus:opacity-100 disabled:hidden group-hover:opacity-100"><Trash2 size={14} /></button></div></div>
+                        <div className="flex flex-wrap items-center justify-between gap-2"><strong className={`text-[13px] ${isUser ? 'text-[#102456]' : 'text-[#1762f4]'}`}>{isUser ? tr('You', 'Bạn') : 'NEXORA AI'}</strong><div className="flex items-center gap-2 text-[11px] text-[#7d8eaa]"><time>{formatTime(message.createdAt)} {formatDate(message.createdAt)}</time><button type="button" onClick={() => setDeleteTarget({ kind: 'message', value: message })} disabled={sending || isDeleting || !activeId} aria-label={tr('Delete message', 'Xóa tin nhắn')} title={tr('Delete message', 'Xóa tin nhắn')} className="rounded p-1 opacity-0 hover:bg-rose-50 hover:text-rose-600 focus:opacity-100 disabled:hidden group-hover:opacity-100"><Trash2 size={14} /></button></div></div>
                         {isUser ? <p className="mt-2 whitespace-pre-wrap text-[14px] leading-relaxed text-[#263b63]">{message.content}</p>
                           : <div className="mt-3"><ChatAnswerContent content={message.content} sources={message.sources} onSource={index => showSource(index, message.id)} /></div>}
                         {message.status === 'FAILED' && <p className="mt-2 text-xs text-rose-600">{tr('Could not generate a response for this message.', 'Không thể tạo câu trả lời cho tin nhắn này.')}</p>}
@@ -345,6 +387,17 @@ export const ChatPage: React.FC = () => {
           </>}
         </div>
       </div>
+      <ConfirmModal
+        isOpen={deleteTarget !== null}
+        onClose={() => { if (!isDeleting) setDeleteTarget(null); }}
+        onConfirm={confirmDelete}
+        isLoading={isDeleting}
+        title={deleteTarget?.kind === 'conversation' ? tr('Delete conversation', 'Xóa đoạn chat') : tr('Delete message', 'Xóa tin nhắn')}
+        message={deleteTarget?.kind === 'conversation'
+          ? tr(`Delete "${deleteTarget.value.title}" from your history?`, `Xóa đoạn chat "${deleteTarget.value.title}" khỏi lịch sử?`)
+          : tr('Delete this message from the conversation?', 'Xóa tin nhắn này khỏi hội thoại?')}
+        confirmText={tr('Delete', 'Xóa')}
+      />
     </div>
   );
 };

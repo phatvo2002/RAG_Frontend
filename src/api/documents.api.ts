@@ -26,6 +26,22 @@ export interface DocumentListItem {
   readyAt?: string | null;
 }
 
+export interface DocumentProgressItem {
+  documentId: string;
+  versionId: string;
+  fileName: string;
+  processingStatus: string;
+  provider: string;
+  indexStatus?: string | null;
+  indexedChunks: number;
+  totalChunks: number;
+  waitingForQuota: boolean;
+  reindexing: boolean;
+  failureCode?: string | null;
+  createdAt: string;
+  readyAt?: string | null;
+}
+
 export interface DocumentListParams {
   folderId: string;
   page?: number;
@@ -50,13 +66,20 @@ const unwrapData = <T>(response: T | ApiResponse<T>): T => {
 };
 
 export const documentsApi = {
+  async getProgress(): Promise<DocumentProgressItem[]> {
+    const response = await apiClient<ApiResponse<DocumentProgressItem[]> | DocumentProgressItem[]>('/api/documents/progress', {
+      method: 'GET',
+    });
+    const data = unwrapData(response);
+    return Array.isArray(data) ? data : [];
+  },
   async getDocuments(params: DocumentListParams): Promise<PagedDocumentResult> {
     const query = new URLSearchParams({
-      folderId: params.folderId,
       page: String(params.page ?? 1),
       pageSize: String(params.pageSize ?? 25),
     });
 
+    if (params.folderId !== 'all') query.set('folderId', params.folderId);
     if (params.search?.trim()) query.set('search', params.search.trim());
     if (params.fileType && params.fileType !== 'all') query.set('fileType', params.fileType);
     if (params.processingStatus && params.processingStatus !== 'all') query.set('processingStatus', params.processingStatus);
@@ -97,6 +120,7 @@ export const documentsApi = {
 
 export const documentsQueryKeys = {
   all: ['documents'] as const,
+  progress: () => [...documentsQueryKeys.all, 'progress'] as const,
   lists: () => [...documentsQueryKeys.all, 'list'] as const,
   list: (params: DocumentListParams) => [...documentsQueryKeys.lists(), params] as const,
 };
@@ -106,6 +130,8 @@ export function useDocumentsQuery(params: DocumentListParams, enabled = true) {
     queryKey: documentsQueryKeys.list(params),
     queryFn: () => documentsApi.getDocuments(params),
     enabled: enabled && Boolean(params.folderId),
+    refetchInterval: (query) => enabled && query.state.data?.items.some((item) =>
+      ['QUEUED', 'PROCESSING', 'EXTRACTING', 'CHUNKING', 'INDEXING'].includes(item.processingStatus)) ? 5000 : false,
   });
 }
 
@@ -116,6 +142,7 @@ export function useUploadDocumentMutation() {
     mutationFn: ({ folderId, file }: { folderId: string; file: File }) =>
       documentsApi.upload(folderId, file),
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: documentsQueryKeys.progress() });
       queryClient.invalidateQueries({ queryKey: documentsQueryKeys.lists() });
       queryClient.invalidateQueries({ queryKey: documentFoldersQueryKeys.lists() });
     },

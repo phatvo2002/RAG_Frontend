@@ -64,16 +64,13 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
 
       try {
         const receipt = await uploadMutation.mutateAsync({ folderId, file });
-        onUploaded?.(receipt, file, selectedFolder, value.accessScope);
-        setCurrentStep(3);
         setIsProcessing(false);
         setFileError(null);
-
-        window.setTimeout(() => {
-          setFile(null);
-          form.reset();
-          onClose();
-        }, 600);
+        const uploadedFile = file;
+        setFile(null);
+        form.reset();
+        onClose();
+        onUploaded?.(receipt, uploadedFile, selectedFolder, value.accessScope);
       } catch (error: any) {
         setIsProcessing(false);
         setCurrentStep(2);
@@ -260,7 +257,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
             <div className="flex items-center justify-between text-xs text-blue-700 dark:text-blue-300">
               <span className="flex items-center gap-1.5 font-bold">
                 <Sparkles className="w-3.5 h-3.5 animate-spin" />
-                {tr('Chunking and generating embedding vectors...', 'Đang phân đoạn chunking & sinh Embedding Vector...')}
+                {tr('Uploading document...', 'Đang tải tài liệu lên máy chủ...')}
               </span>
               <span className="font-mono text-[11px]">Qdrant</span>
             </div>
@@ -285,7 +282,7 @@ export const UploadModal: React.FC<UploadModalProps> = ({ isOpen, onClose, defau
             {isProcessing ? (
               <>
                 <span className="loading loading-spinner loading-xs" />
-                <span>{tr('Processing RAG...', 'Đang xử lý RAG...')}</span>
+                <span>{tr('Uploading...', 'Đang tải lên...')}</span>
               </>
             ) : (
               <>

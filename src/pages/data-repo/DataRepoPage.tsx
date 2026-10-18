@@ -2,6 +2,7 @@ import React, { useState, useMemo, useCallback, useEffect } from 'react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
 import { UploadModal } from './UploadModal';
+import { DocumentProcessingProgress } from './DocumentProcessingProgress';
 import { FolderModal } from './FolderModal';
 import { FolderDetailPanel } from './FolderDetailPanel';
 import { useDepartmentsQuery } from '@/api/departments.api';
@@ -84,7 +85,8 @@ export const DataRepoPage: React.FC = () => {
   const [isUploadOpen, setIsUploadOpen] = useState(false);
   const [isFolderModalOpen, setIsFolderModalOpen] = useState(false);
   const [isActivityOpen, setIsActivityOpen] = useState(false);
-  const [activityTab, setActivityTab] = useState<'issues' | 'recent'>('issues');
+  const [activityTab, setActivityTab] = useState<'issues' | 'recent' | 'progress'>('issues');
+  const [progressDocumentId, setProgressDocumentId] = useState<string | null>(null);
   const [detailFolderId, setDetailFolderId] = useState<string | null>(null);
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
   const [folderDepartmentFilter, setFolderDepartmentFilter] = useState('all');
@@ -124,7 +126,7 @@ export const DataRepoPage: React.FC = () => {
     isError: isDocumentsError,
     error: documentsError,
     refetch: refetchDocuments,
-  } = useDocumentsQuery(documentQueryParams, !isFolderView && Boolean(activeFolder));
+  } = useDocumentsQuery(documentQueryParams, !isFolderView && (Boolean(activeFolder) || selectedFolder === 'all'));
 
   const documentItems = documentResult?.items ?? [];
   const documentStart = documentResult && documentResult.totalCount > 0
@@ -142,7 +144,11 @@ export const DataRepoPage: React.FC = () => {
     (_receipt: DocumentUploadResponse, file: File, folder: FolderItem, _accessScope: string) => {
       setSelectedFolder(folder.id);
       setRepositoryView('documents');
+      setIndexFilter('all');
       setDetailFolderId(null);
+      setProgressDocumentId(null);
+      setActivityTab('progress');
+      setIsActivityOpen(true);
       showToast(tr(`Uploaded ${file.name}. RAG indexing is in progress.`, `Đã tải ${file.name} lên máy chủ. Tài liệu đang được Index RAG.`), 'success');
     },
     [showToast, language]
@@ -199,6 +205,7 @@ export const DataRepoPage: React.FC = () => {
   const openFolder = (folderId: string) => {
     setSelectedFolder(folderId);
     setRepositoryView('documents');
+    setIndexFilter('all');
     setSelectedDocIds([]);
   };
 
@@ -320,14 +327,17 @@ export const DataRepoPage: React.FC = () => {
           <p className="text-xs text-slate-500 dark:text-zinc-400">
             {isFolderView
               ? tr(`${folders.length} folders • ${folders.reduce((total, folder) => total + (folder.documentCount || 0), 0)} documents • ${folders.reduce((total, folder) => total + (folder.failedCount || 0), 0)} need review`, `${folders.length} thư mục • ${folders.reduce((total, folder) => total + (folder.documentCount || 0), 0)} tài liệu • ${folders.reduce((total, folder) => total + (folder.failedCount || 0), 0)} cần kiểm tra`)
-              : tr(`${activeFolder ? (documentResult?.totalCount ?? 0) : 0} documents • Managed by ${activeFolder ? 'department' : 'Nexora'}`, `${activeFolder ? (documentResult?.totalCount ?? 0) : 0} tài liệu • Quản lý bởi ${activeFolder ? 'phòng ban' : 'Nexora'}`)}
+              : tr(`${documentResult?.totalCount ?? 0} documents • Managed by ${activeFolder ? 'department' : 'Nexora'}`, `${documentResult?.totalCount ?? 0} tài liệu • Quản lý bởi ${activeFolder ? 'phòng ban' : 'Nexora'}`)}
           </p>
         </div>
 
         <div className="flex items-center gap-2">
           <button
             type="button"
-            onClick={() => setIsActivityOpen((open) => !open)}
+            onClick={() => {
+              setProgressDocumentId(null);
+              setIsActivityOpen((open) => !open);
+            }}
             className="px-2.5 py-1.5 bg-white dark:bg-zinc-900 hover:bg-slate-50 dark:hover:bg-zinc-800 border border-slate-200 dark:border-zinc-800 text-slate-700 dark:text-zinc-300 rounded-md text-xs font-semibold flex items-center gap-1.5 shadow-2xs transition-colors cursor-pointer"
             aria-expanded={isActivityOpen}
           >
@@ -423,6 +433,7 @@ export const DataRepoPage: React.FC = () => {
               onClick={() => {
                 setSelectedFolder('all');
                 setRepositoryView('documents');
+                setIndexFilter('all');
               }}
               className={`relative -mb-px min-h-10 px-1 transition-colors cursor-pointer ${
                 !isFolderView && selectedFolder === 'all' ? 'text-blue-600 dark:text-blue-400' : 'hover:text-slate-800 dark:hover:text-zinc-200'
@@ -711,7 +722,7 @@ export const DataRepoPage: React.FC = () => {
                     </CustomTable.Row>
                   ) : isDocumentsLoading ? (
                     <CustomTable.Row><CustomTable.Cell colSpan={9} className="py-10 text-center text-slate-400"><RefreshCw className="mx-auto mb-2 h-5 w-5 animate-spin text-blue-500" />{tr('Loading documents...', 'Đang tải danh sách tài liệu...')}</CustomTable.Cell></CustomTable.Row>
-                  ) : !activeFolder ? (
+                  ) : !activeFolder && selectedFolder !== 'all' ? (
                     <CustomTable.Row><CustomTable.Cell colSpan={9} className="py-10 text-center text-slate-400">{tr('Select a folder to view documents.', 'Hãy chọn một folder để xem tài liệu.')}</CustomTable.Cell></CustomTable.Row>
                   ) : documentItems.length === 0 ? (
                     <CustomTable.Row><CustomTable.Cell colSpan={9} className="py-10 text-center text-slate-400">{tr('No matching documents in this folder.', 'Folder này chưa có tài liệu phù hợp.')}</CustomTable.Cell></CustomTable.Row>
@@ -739,7 +750,22 @@ export const DataRepoPage: React.FC = () => {
                         <CustomTable.Cell className="px-3 py-3 text-slate-700 dark:text-zinc-300 font-medium">{departmentName}</CustomTable.Cell>
                         <CustomTable.Cell className="px-3 py-3 font-mono text-slate-500 text-[11px]">{formatDocumentSize(doc.sizeBytes)}</CustomTable.Cell>
                         <CustomTable.Cell className="px-3 py-3 font-mono text-slate-500 text-[11px]">{formatDocumentDate(doc.updatedAt)}</CustomTable.Cell>
-                        <CustomTable.Cell className="px-3 py-3">{getIndexStatusBadge(doc.processingStatus)}</CustomTable.Cell>
+                        <CustomTable.Cell className="px-3 py-3">
+                          <div className="flex flex-col items-start gap-1">
+                            {getIndexStatusBadge(doc.processingStatus)}
+                            <button type="button"
+                              onClick={() => {
+                                setProgressDocumentId(doc.documentId);
+                                setActivityTab('progress');
+                                setIsActivityOpen(true);
+                              }}
+                              className="inline-flex items-center gap-1 text-[11px] font-medium text-blue-600 hover:underline dark:text-blue-400 cursor-pointer"
+                              aria-label={tr(`View processing progress for ${documentName}`, `Xem tiến trình xử lý của ${documentName}`)}>
+                              <Activity className="h-3 w-3" />
+                              {tr('View progress', 'Xem tiến trình')}
+                            </button>
+                          </div>
+                        </CustomTable.Cell>
                         <CustomTable.Cell className="px-3 py-3 text-slate-400 dark:text-zinc-500">—</CustomTable.Cell>
                         <CustomTable.Cell className="px-4 py-3 text-right">
                           <button
@@ -964,9 +990,23 @@ export const DataRepoPage: React.FC = () => {
               {tr('Recent uploads', 'Tải lên gần đây')}
               {activityTab === 'recent' && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />}
             </button>
+            <button type="button" onClick={() => setActivityTab('progress')}
+              className={`relative -mb-px min-h-9 cursor-pointer ${activityTab === 'progress' ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200'}`}>
+              {tr('Processing progress', 'Tiến trình xử lý')}
+              {activityTab === 'progress' && <span className="absolute inset-x-0 bottom-0 h-0.5 rounded-full bg-blue-600" />}
+            </button>
           </div>
 
-          {activityTab === 'issues' ? (
+          {activityTab === 'progress' ? (
+            <div className="space-y-3">
+              {progressDocumentId && <button type="button" onClick={() => setProgressDocumentId(null)}
+                className="inline-flex items-center gap-1 text-blue-600 hover:underline dark:text-blue-400 cursor-pointer">
+                <ChevronLeft className="h-3.5 w-3.5" />
+                {tr('All processing progress', 'Tất cả tiến trình xử lý')}
+              </button>}
+              <DocumentProcessingProgress enabled={isActivityOpen} documentId={progressDocumentId} />
+            </div>
+          ) : activityTab === 'issues' ? (
           <div className="divide-y divide-slate-200 dark:divide-zinc-800">
             {[
               { tone: 'error', title: 'Không trích xuất được nội dung', file: 'Mẫu hợp đồng dịch vụ.docx', detail: 'Lỗi định dạng tệp', date: '03/09/2026 15:18' },
