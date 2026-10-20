@@ -122,8 +122,8 @@ export const MeetingRoomPage: React.FC = () => {
         </select>
       </div>}
 
-      <div className="mt-5 grid min-h-0 gap-5 xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]">
-      {value.status !== 'Live' || !connection ? (
+      <div className={`mt-5 grid min-h-0 gap-5 ${value.status === 'Ended' ? '' : 'xl:grid-cols-[minmax(0,1fr)_minmax(320px,380px)]'}`}>
+      {value.status !== 'Ended' && (value.status !== 'Live' || !connection ? (
         <section className="flex min-h-[480px] flex-col items-center justify-center rounded-xl bg-[#f4f8ff] px-6 py-12 text-center dark:bg-[#111b2c]">
           <span className="flex h-[104px] w-[104px] items-center justify-center rounded-full bg-[#e5efff] text-[#1769ee] dark:bg-[#18335f] dark:text-blue-400">
             <Video size={43} strokeWidth={1.7} aria-hidden="true" />
@@ -131,14 +131,12 @@ export const MeetingRoomPage: React.FC = () => {
           <h2 className="mt-6 text-[27px] font-bold leading-tight">
             {isExpired ? tr('Meeting overdue', 'Cuộc họp đã quá hạn')
               : value.status === 'Scheduled' ? (isHost ? tr('Meeting room ready', 'Phòng họp sẵn sàng') : tr('Waiting for the host', 'Đang chờ chủ phòng'))
-              : value.status === 'Ending' ? tr('Closing the meeting room', 'Đang đóng phòng họp')
-                : value.status === 'Ended' ? tr('Meeting ended', 'Cuộc họp đã kết thúc') : tr('Meeting started', 'Phòng họp đã bắt đầu')}
+              : value.status === 'Ending' ? tr('Closing the meeting room', 'Đang đóng phòng họp') : tr('Meeting started', 'Phòng họp đã bắt đầu')}
           </h2>
           <p className="mt-3 text-lg text-[#60738e] dark:text-slate-400">
             {isExpired ? (isHost ? tr('Update the schedule to open the room.', 'Cập nhật thời gian dự kiến để mở phòng họp.') : tr('The host must update the schedule before opening the room.', 'Chủ phòng cần cập nhật thời gian trước khi mở phòng họp.'))
               : value.status === 'Scheduled' ? (isHost ? tr('Start the meeting to open the room.', 'Bắt đầu để mở phòng họp.') : tr('The meeting will start when the host opens the room.', 'Cuộc họp sẽ bắt đầu khi chủ phòng mở phòng.'))
-              : value.status === 'Ending' ? tr('Please wait a moment.', 'Vui lòng chờ trong giây lát.')
-                : value.status === 'Ended' ? tr('You can return to the meeting list.', 'Bạn có thể quay lại danh sách cuộc họp.') : tr('Allow browser access to your camera and microphone when joining.', 'Cho phép trình duyệt dùng camera và micro khi tham gia.')}
+              : value.status === 'Ending' ? tr('Please wait a moment.', 'Vui lòng chờ trong giây lát.') : tr('Allow browser access to your camera and microphone when joining.', 'Cho phép trình duyệt dùng camera và micro khi tham gia.')}
           </p>
           {isExpired && isHost && (
             <button type="button" onClick={() => setIsEditOpen(true)}
@@ -167,10 +165,14 @@ export const MeetingRoomPage: React.FC = () => {
             <VideoConference />
           </LiveKitRoom>
         </div>
-      )}
+      ))}
       <div className="min-h-0 xl:h-[75vh] xl:max-h-[900px]">
-        <TranscriptPanel segments={segments} participants={value.participants} language={language}
-          unavailable={value.status === 'Live' && !!connection && !workerAvailable} />
+        {value.status === 'Ended' && transcript.isLoading ? (
+          <p className="p-4 text-sm text-[#60738e]">{tr('Loading transcript...', 'Đang tải bản phiên âm...')}</p>
+        ) : value.status === 'Ended' && transcript.isError ? (
+          <p role="alert" className="p-4 text-sm text-rose-700 dark:text-rose-300">{tr('Could not load transcript.', 'Không tải được bản phiên âm.')} <button type="button" onClick={() => void transcript.refetch()} className="font-semibold underline">{tr('Retry', 'Thử lại')}</button></p>
+        ) : <TranscriptPanel segments={segments} participants={value.participants} language={language}
+          unavailable={value.status === 'Live' && !!connection && !workerAvailable} />}
       </div>
       </div>
       {isEditOpen && <MeetingModal meetingId={meetingId} isOpen={true} onClose={() => setIsEditOpen(false)} />}

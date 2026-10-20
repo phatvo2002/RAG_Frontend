@@ -1,7 +1,7 @@
 import React, { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { useNavigate } from '@tanstack/react-router';
-import { CalendarDays, ChevronLeft, ChevronRight, Clock3, Filter, List, Plus, Search, Users, Video, X } from 'lucide-react';
+import { CalendarDays, ChevronLeft, ChevronRight, Clock3, FileText, Filter, List, Plus, Search, Users, Video, X } from 'lucide-react';
 import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
 import { meetingKeys, meetingsApi, useMeetingsQuery, type OnlineMeeting } from '@/api/meetings.api';
@@ -206,6 +206,7 @@ export const MeetingsPage: React.FC = () => {
             </div>
             <div className="flex flex-wrap gap-2 border-t border-[#e7edf6] p-3 dark:border-zinc-800">
               {canOpenRoom && <button type="button" onClick={() => navigate({ to: '/meetings/$meetingId', params: { meetingId: selectedMeeting.id } })} className="flex items-center gap-1.5 rounded bg-[#0759ee] px-3 py-2 text-xs font-semibold text-white hover:bg-[#126bff]"><Video size={15} />{selectedMeeting.status === 'Live' ? tr('Join meeting', 'Tham gia cuộc họp') : tr('Open meeting room', 'Mở phòng họp')}</button>}
+              {selectedMeeting.status === 'Ended' && <button type="button" onClick={() => navigate({ to: '/meetings/$meetingId', params: { meetingId: selectedMeeting.id } })} className="flex items-center gap-1.5 rounded bg-[#0759ee] px-3 py-2 text-xs font-semibold text-white hover:bg-[#126bff]"><FileText size={15} />{tr('View transcript', 'Xem bản phiên âm')}</button>}
               {canEdit && <button type="button" onClick={() => setEditingMeetingId(selectedMeeting.id)} className="rounded border border-[#c9d9f2] px-3 py-2 text-xs font-semibold text-[#1762f4] hover:bg-[#f0f6ff] dark:border-blue-800 dark:text-blue-300 dark:hover:bg-[#152b49]">{isScheduledMeetingExpired(selectedMeeting, now) ? tr('Update schedule', 'Cập nhật thời gian') : tr('Edit', 'Chỉnh sửa')}</button>}
             </div>
           </>}
