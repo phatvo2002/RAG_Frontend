@@ -40,6 +40,8 @@ import {
   ChevronLeft,
   Trash2,
   Activity,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 
 interface FolderTreeNode extends FolderItem {
@@ -79,6 +81,7 @@ export const DataRepoPage: React.FC = () => {
   const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
   const [selectedFolder, setSelectedFolder] = useState('all');
   const [repositoryView, setRepositoryView] = useState<'folders' | 'documents'>('folders');
+  const [isFolderTreeVisible, setIsFolderTreeVisible] = useState(false);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [deptFilter, setDeptFilter] = useState('all');
@@ -372,10 +375,15 @@ export const DataRepoPage: React.FC = () => {
         {/* ==================================================================== */}
         {/* 1. LEFT COLUMN: Cây Thư Mục (Folder Tree) 240px */}
         {/* ==================================================================== */}
-        <aside className="hidden w-52 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-3.5 dark:border-zinc-800 dark:bg-zinc-950 lg:flex 2xl:w-56 2xl:p-4">
+        <aside id="document-folder-tree" aria-label={tr('Folder tree', 'Cây thư mục')}
+          className={`${isFolderTreeVisible ? 'flex' : 'hidden'} absolute inset-y-0 left-0 z-20 w-52 shrink-0 flex-col overflow-y-auto border-r border-slate-200 bg-white p-3.5 shadow-lg dark:border-zinc-800 dark:bg-zinc-950 lg:relative lg:inset-auto lg:z-auto lg:shadow-none 2xl:w-56 2xl:p-4`}>
           <div className="mb-3 flex items-center justify-between">
             <span className="text-xs font-bold text-slate-800 dark:text-zinc-200">{tr('Folder tree', 'Cây thư mục')}</span>
             <div className="flex items-center gap-1">
+              <button type="button" onClick={() => setIsFolderTreeVisible(false)} className="btn btn-ghost btn-xs btn-square lg:hidden"
+                aria-label={tr('Hide folder tree', 'Ẩn cây thư mục')} title={tr('Hide folder tree', 'Ẩn cây thư mục')}>
+                <PanelLeftClose className="h-3.5 w-3.5" />
+              </button>
               <button type="button" onClick={() => setIsFolderModalOpen(true)} className="btn btn-ghost btn-xs btn-square" title={tr('Create folder', 'Tạo folder')}><Plus className="h-3.5 w-3.5" /></button>
               <button type="button" onClick={() => refetchFolders()} className="btn btn-ghost btn-xs btn-square" title={tr('Refresh', 'Làm mới')}><RefreshCw className={`h-3.5 w-3.5 ${isFoldersLoading ? 'animate-spin' : ''}`} /></button>
             </div>
@@ -431,7 +439,14 @@ export const DataRepoPage: React.FC = () => {
         <main className="flex-1 overflow-y-auto p-4 md:p-5 space-y-3.5 min-w-0">
 
           {/* Repository views matching 02/03-knowledge-repository.png */}
-          <div className="flex items-center gap-6 border-b border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+          <div className="flex items-center gap-3 border-b border-slate-200 dark:border-zinc-800 text-xs font-semibold text-slate-500 dark:text-zinc-400">
+            <button type="button" onClick={() => setIsFolderTreeVisible((visible) => !visible)}
+              className="inline-flex h-8 w-8 shrink-0 items-center justify-center rounded-md border border-slate-200 text-slate-500 hover:bg-slate-50 hover:text-blue-600 dark:border-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-900 dark:hover:text-blue-400"
+              aria-controls="document-folder-tree" aria-expanded={isFolderTreeVisible}
+              aria-label={isFolderTreeVisible ? tr('Hide folder tree', 'Ẩn cây thư mục') : tr('Show folder tree', 'Hiện cây thư mục')}
+              title={isFolderTreeVisible ? tr('Hide folder tree', 'Ẩn cây thư mục') : tr('Show folder tree', 'Hiện cây thư mục')}>
+              {isFolderTreeVisible ? <PanelLeftClose className="h-4 w-4" /> : <PanelLeftOpen className="h-4 w-4" />}
+            </button>
             <button
               type="button"
               onClick={() => {
@@ -712,7 +727,7 @@ export const DataRepoPage: React.FC = () => {
                     <CustomTable.HeaderCell className="px-3 py-3">{tr('UPDATED ⇣', 'CẬP NHẬT ⇣')}</CustomTable.HeaderCell>
                     <CustomTable.HeaderCell className="px-3 py-3">{tr('INDEX', 'CHỈ MỤC')}</CustomTable.HeaderCell>
                     <CustomTable.HeaderCell className="px-3 py-3">{tr('ACCESS', 'QUYỀN TRUY CẬP')}</CustomTable.HeaderCell>
-                    <CustomTable.HeaderCell className="w-10 px-4 py-3 text-right"></CustomTable.HeaderCell>
+                    <CustomTable.HeaderCell className="px-4 py-3 text-right">{tr('ACTION', 'THAO TÁC')}</CustomTable.HeaderCell>
                   </CustomTable.Row>
                 </CustomTable.Head>
                 <CustomTable.Body className="divide-y divide-slate-100 dark:divide-zinc-800/80">
@@ -773,16 +788,27 @@ export const DataRepoPage: React.FC = () => {
                         </CustomTable.Cell>
                         <CustomTable.Cell className="px-3 py-3 text-slate-400 dark:text-zinc-500">—</CustomTable.Cell>
                         <CustomTable.Cell className="px-4 py-3 text-right">
-                          <button
-                            type="button"
-                            onClick={() => setDocumentToDelete(doc)}
-                            disabled={deleteDocumentMutation.isPending}
-                            aria-label={tr(`Delete document ${documentName}`, `Xóa tài liệu ${documentName}`)}
-                            title={tr('Delete document', 'Xóa tài liệu')}
-                            className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded cursor-pointer disabled:opacity-50"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              onClick={() => setDetailDocument(doc)}
+                              aria-label={tr(`View details for ${documentName}`, `Xem chi tiết ${documentName}`)}
+                              title={tr('View details', 'Xem chi tiết')}
+                              className="rounded p-1 text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer"
+                            >
+                              <Eye className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDocumentToDelete(doc)}
+                              disabled={deleteDocumentMutation.isPending}
+                              aria-label={tr(`Delete document ${documentName}`, `Xóa tài liệu ${documentName}`)}
+                              title={tr('Delete document', 'Xóa tài liệu')}
+                              className="p-1 text-slate-400 hover:text-rose-600 dark:hover:text-rose-400 rounded cursor-pointer disabled:opacity-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
                         </CustomTable.Cell>
                       </CustomTable.Row>
                     );

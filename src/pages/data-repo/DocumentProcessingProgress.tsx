@@ -1,16 +1,37 @@
-import React from 'react';
-import { useQuery } from '@tanstack/react-query';
+import React, { useState } from 'react';
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { documentsApi, documentsQueryKeys } from '@/api/documents.api';
 import type { DocumentProgressItem } from '@/api/documents.api';
 import { useApp } from '@/context/AppContext';
+import { ConfirmModal } from '@/components/disclosure';
 
 const isActive = (item: DocumentProgressItem) =>
-  item.processingStatus !== 'FAILED' && item.failureCode !== 'REINDEX_FAILED' &&
+  item.processingStatus !== 'FAILED' && item.processingStatus !== 'STOPPED' && item.failureCode !== 'REINDEX_FAILED' &&
   (item.processingStatus !== 'READY' || item.reindexing || item.indexStatus === 'BUILDING');
 
 export const DocumentProcessingProgress: React.FC<{ enabled: boolean; documentId?: string | null }> = ({ enabled, documentId }) => {
-  const { language } = useApp();
+  const { language, showToast } = useApp();
   const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
+  const queryClient = useQueryClient();
+  const [stopTarget, setStopTarget] = useState<DocumentProgressItem | null>(null);
+  const stopMutation = useMutation({
+    mutationFn: documentsApi.stop,
+    onSuccess: async () => {
+      setStopTarget(null);
+      showToast(tr('Stop requested.', 'Đã yêu cầu dừng xử lý.'), 'success');
+      await queryClient.invalidateQueries({ queryKey: documentsQueryKeys.progress() });
+    },
+    onError: (error) => showToast(error instanceof Error ? error.message : tr('Could not stop processing.', 'Không thể dừng xử lý.'), 'error'),
+  });
+  const restartMutation = useMutation({
+    mutationFn: documentsApi.restart,
+    onSuccess: async () => {
+      showToast(tr('Processing restarted.', 'Đã bắt đầu xử lý lại.'), 'success');
+      await queryClient.invalidateQueries({ queryKey: documentsQueryKeys.progress() });
+      await queryClient.invalidateQueries({ queryKey: documentsQueryKeys.lists() });
+    },
+    onError: (error) => showToast(error instanceof Error ? error.message : tr('Could not restart processing.', 'Không thể xử lý lại.'), 'error'),
+  });
   const { data: items = [], isLoading, isError, refetch } = useQuery({
     queryKey: documentsQueryKeys.progress(),
     queryFn: documentsApi.getProgress,
@@ -51,6 +72,10 @@ export const DocumentProcessingProgress: React.FC<{ enabled: boolean; documentId
       const failed = item.processingStatus === 'FAILED' || item.failureCode === 'REINDEX_FAILED';
       const stage = item.failureCode === 'REINDEX_FAILED'
         ? tr('Reindexing failed', 'Lập lại chỉ mục thất bại')
+        : item.processingStatus === 'STOPPING'
+          ? tr('Stopping...', 'Đang dừng...')
+          : item.processingStatus === 'STOPPED'
+            ? tr('Stopped', 'Đã dừng')
         : item.waitingForQuota
         ? tr('Waiting for embedding quota', 'Đang chờ hạn mức embedding')
         : item.reindexing
@@ -94,7 +119,24 @@ export const DocumentProcessingProgress: React.FC<{ enabled: boolean; documentId
           </div>}
         {failed && item.failureCode &&
           <p className="mt-2 text-[var(--nexora-danger)]">{item.failureCode}</p>}
+        {(['QUEUED', 'EXTRACTING', 'CHUNKING', 'INDEXING'].includes(item.processingStatus) && !item.reindexing) &&
+          <button type="button" onClick={() => setStopTarget(item)} disabled={stopMutation.isPending}
+            className="mt-3 rounded-md border border-[var(--nexora-danger)] px-3 py-1.5 text-sm text-[var(--nexora-danger)] disabled:opacity-50">
+            {tr('Stop', 'Dừng')}
+          </button>}
+        {item.processingStatus === 'STOPPED' &&
+          <button type="button" onClick={() => restartMutation.mutate(item.documentId)} disabled={restartMutation.isPending}
+            className="mt-3 rounded-md border border-[var(--nexora-accent)] px-3 py-1.5 text-sm text-[var(--nexora-accent)] disabled:opacity-50">
+            {tr('Process again', 'Xử lý lại')}
+          </button>}
       </div>;
     })}
+    <ConfirmModal isOpen={Boolean(stopTarget)} onClose={() => setStopTarget(null)}
+      onConfirm={() => { if (stopTarget) stopMutation.mutate(stopTarget.documentId); }}
+      isLoading={stopMutation.isPending}
+      title={tr('Stop processing', 'Dừng xử lý')}
+      message={stopTarget ? tr(`Stop processing "${stopTarget.fileName}"? The original file will be kept.`,
+        `Dừng xử lý "${stopTarget.fileName}"? File gốc sẽ được giữ lại.`) : ''}
+      confirmText={tr('Stop processing', 'Dừng xử lý')} />
   </div>;
 };

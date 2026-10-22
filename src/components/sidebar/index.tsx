@@ -66,10 +66,10 @@ export const Sidebar: React.FC = () => {
 
   // Quản lý trạng thái đóng/mở của từng nhóm menu
   const [openGroups, setOpenGroups] = useState<Record<string, boolean>>({
-    operations: true,
-    collaboration: true,
-    catalog: true,
-    admin: true,
+    operations: false,
+    collaboration: false,
+    catalog: false,
+    admin: false,
   });
 
   const toggleGroup = (groupId: string) => {
@@ -478,7 +478,7 @@ export const Sidebar: React.FC = () => {
         )}
 
         {visibleGroups.map((group) => {
-          const isOpen = openGroups[group.id] ?? true;
+          const isOpen = openGroups[group.id] ?? false;
           const GroupIcon = group.icon;
 
           return (

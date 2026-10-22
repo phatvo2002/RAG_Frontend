@@ -1,11 +1,9 @@
 import React, { useEffect } from 'react';
 import { useRoomContext } from '@livekit/components-react';
 import { RoomEvent } from 'livekit-client';
-import type { MeetingTranscriptSegment, MeetingUserOption } from '@/api/meetings.api';
-
-export interface TranscriptEvent extends MeetingTranscriptSegment {
-  type: 'partial' | 'final';
-}
+import type { MeetingUserOption } from '@/api/meetings.api';
+import type { TranscriptEvent } from './transcriptEvents';
+export type { TranscriptEvent } from './transcriptEvents';
 
 const TOPIC = 'nexora.meeting.transcript.v1';
 

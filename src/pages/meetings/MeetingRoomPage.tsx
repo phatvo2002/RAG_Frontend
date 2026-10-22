@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from '@tanstack/react-router';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { LiveKitRoom, VideoConference } from '@livekit/components-react';
+import { LiveKitRoom } from '@livekit/components-react';
 import { ArrowLeft, Video } from 'lucide-react';
 import '@livekit/components-styles';
 import { meetingKeys, meetingsApi, useMeetingQuery, type MeetingJoinToken } from '@/api/meetings.api';
@@ -9,6 +9,8 @@ import { useApp } from '@/context/AppContext';
 import { MeetingModal } from './MeetingModal';
 import { isScheduledMeetingExpired, useMeetingClock } from './meetingAvailability';
 import { TranscriptPanel, TranscriptStreamListener, type TranscriptEvent } from './TranscriptPanel';
+import { activeCaptions, mergeTranscriptEvent } from './transcriptEvents';
+import { MeetingVideoConference } from './MeetingVideoConference';
 
 export const MeetingRoomPage: React.FC = () => {
   const { meetingId } = useParams({ from: '/meetings/$meetingId' });
@@ -24,6 +26,8 @@ export const MeetingRoomPage: React.FC = () => {
   const [sourceLanguage, setSourceLanguage] = useState<'' | 'vi' | 'en'>('');
   const [liveSegments, setLiveSegments] = useState<Record<string, TranscriptEvent>>({});
   const [workerAvailable, setWorkerAvailable] = useState(false);
+  const [captionsEnabled, setCaptionsEnabled] = useState(true);
+  const [captionNow, setCaptionNow] = useState(Date.now());
   const value = meeting.data;
   const transcript = useQuery({
     queryKey: meetingKeys.transcript(meetingId),
@@ -33,11 +37,18 @@ export const MeetingRoomPage: React.FC = () => {
   });
   useEffect(() => { if (value) setSourceLanguage(value.mySourceLanguage ?? ''); }, [value?.mySourceLanguage]);
   const onTranscriptEvent = useCallback((event: TranscriptEvent) => {
-    setLiveSegments(current => current[event.segmentId]?.type === 'final' && event.type === 'partial'
-      ? current : { ...current, [event.segmentId]: event });
+    setLiveSegments(current => ({ ...current, [event.segmentId]: mergeTranscriptEvent(current[event.segmentId], event, Date.now()) }));
     if (event.type === 'final') void queryClient.invalidateQueries({ queryKey: meetingKeys.transcript(meetingId) });
   }, [meetingId, queryClient]);
   const onWorkerAvailability = useCallback((available: boolean) => setWorkerAvailable(available), []);
+  useEffect(() => {
+    if (!connection) return;
+    const timer = window.setInterval(() => setCaptionNow(Date.now()), 1000);
+    return () => window.clearInterval(timer);
+  }, [connection]);
+  const captions = useMemo(() => captionsEnabled && workerAvailable
+    ? activeCaptions(Object.values(liveSegments), captionNow) : new Map(),
+  [captionsEnabled, workerAvailable, liveSegments, captionNow]);
   const segments = useMemo(() => {
     const merged = { ...liveSegments };
     for (const item of transcript.data ?? []) merged[item.segmentId] = { ...item, type: 'final' };
@@ -162,7 +173,8 @@ export const MeetingRoomPage: React.FC = () => {
             onDisconnected={() => { setConnection(null); setWorkerAvailable(false); void meeting.refetch(); void transcript.refetch(); }}
             onError={error => showToast(error.message, 'error')}>
             <TranscriptStreamListener meetingId={meetingId} onEvent={onTranscriptEvent} onAvailability={onWorkerAvailability} />
-            <VideoConference />
+            <MeetingVideoConference captions={captions} captionsEnabled={captionsEnabled}
+              onToggleCaptions={() => setCaptionsEnabled(value => !value)} participants={value.participants} language={language} />
           </LiveKitRoom>
         </div>
       ))}

@@ -147,6 +147,12 @@ export const documentsApi = {
       method: 'DELETE',
     });
   },
+  async stop(documentId: string): Promise<void> {
+    await apiClient(`/api/documents/${encodeURIComponent(documentId)}/stop`, { method: 'POST' });
+  },
+  async restart(documentId: string): Promise<void> {
+    await apiClient(`/api/documents/${encodeURIComponent(documentId)}/restart`, { method: 'POST' });
+  },
 };
 
 export const documentsQueryKeys = {
