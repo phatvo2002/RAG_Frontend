@@ -37,3 +37,11 @@ test('all documents requests every folder; folder view remains scoped', async ()
   await module.exports.documentsApi.getDocuments({ folderId });
   assert.equal(new URL(requestedUrl, 'http://localhost').searchParams.get('folderId'), folderId);
 });
+
+test('chunk viewer requests a paged document-specific read endpoint', async () => {
+  await module.exports.documentsApi.getChunks('0b9ad55c-aab8-408a-8597-0ba79d4d4e2f', 3);
+  const url = new URL(requestedUrl, 'http://localhost');
+  assert.equal(url.pathname, '/api/documents/0b9ad55c-aab8-408a-8597-0ba79d4d4e2f/chunks');
+  assert.equal(url.searchParams.get('page'), '3');
+  assert.equal(url.searchParams.get('pageSize'), '25');
+});

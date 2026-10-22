@@ -40,6 +40,29 @@ export interface DocumentProgressItem {
   failureCode?: string | null;
   createdAt: string;
   readyAt?: string | null;
+  chunkingProgress?: {
+    phase: 'ANALYZING' | 'BUILDING' | 'SAVING';
+    completed: number;
+    total: number;
+  } | null;
+}
+
+export interface DocumentChunkItem {
+  chunkId: string;
+  ordinal: number;
+  pageNo?: number | null;
+  charStart?: number | null;
+  charEnd?: number | null;
+  languageCode?: string | null;
+  text: string;
+}
+
+export interface DocumentChunksPage {
+  items: DocumentChunkItem[];
+  page: number;
+  pageSize: number;
+  totalCount: number;
+  totalPages: number;
 }
 
 export interface DocumentListParams {
@@ -66,6 +89,14 @@ const unwrapData = <T>(response: T | ApiResponse<T>): T => {
 };
 
 export const documentsApi = {
+  async getChunks(documentId: string, page = 1): Promise<DocumentChunksPage> {
+    const query = new URLSearchParams({ page: String(page), pageSize: '25' });
+    const response = await apiClient<ApiResponse<DocumentChunksPage> | DocumentChunksPage>(
+      `/api/documents/${encodeURIComponent(documentId)}/chunks?${query.toString()}`,
+      { method: 'GET' },
+    );
+    return unwrapData(response);
+  },
   async getProgress(): Promise<DocumentProgressItem[]> {
     const response = await apiClient<ApiResponse<DocumentProgressItem[]> | DocumentProgressItem[]>('/api/documents/progress', {
       method: 'GET',
@@ -123,7 +154,17 @@ export const documentsQueryKeys = {
   progress: () => [...documentsQueryKeys.all, 'progress'] as const,
   lists: () => [...documentsQueryKeys.all, 'list'] as const,
   list: (params: DocumentListParams) => [...documentsQueryKeys.lists(), params] as const,
+  chunks: (documentId: string, page: number) => [...documentsQueryKeys.all, 'chunks', documentId, page] as const,
 };
+
+export function useDocumentChunksQuery(documentId: string, page: number, enabled = true) {
+  return useQuery({
+    queryKey: documentsQueryKeys.chunks(documentId, page),
+    queryFn: () => documentsApi.getChunks(documentId, page),
+    enabled: enabled && Boolean(documentId),
+    staleTime: 30_000,
+  });
+}
 
 export function useDocumentsQuery(params: DocumentListParams, enabled = true) {
   return useQuery({

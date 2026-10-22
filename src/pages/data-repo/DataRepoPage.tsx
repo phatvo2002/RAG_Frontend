@@ -5,6 +5,8 @@ import { UploadModal } from './UploadModal';
 import { DocumentProcessingProgress } from './DocumentProcessingProgress';
 import { FolderModal } from './FolderModal';
 import { FolderDetailPanel } from './FolderDetailPanel';
+import { DocumentDetailPanel } from './DocumentDetailPanel';
+import { DocumentChunksModal } from './DocumentChunksModal';
 import { useDepartmentsQuery } from '@/api/departments.api';
 import { FolderItem, useDocumentFoldersQuery } from '@/api/document-folders.api';
 import { DocumentListItem, DocumentUploadResponse, useDeleteDocumentMutation, useDocumentsQuery } from '@/api/documents.api';
@@ -88,6 +90,8 @@ export const DataRepoPage: React.FC = () => {
   const [activityTab, setActivityTab] = useState<'issues' | 'recent' | 'progress'>('issues');
   const [progressDocumentId, setProgressDocumentId] = useState<string | null>(null);
   const [detailFolderId, setDetailFolderId] = useState<string | null>(null);
+  const [detailDocument, setDetailDocument] = useState<DocumentListItem | null>(null);
+  const [isChunksOpen, setIsChunksOpen] = useState(false);
   const [collapsedFolderIds, setCollapsedFolderIds] = useState<Set<string>>(() => new Set());
   const [folderDepartmentFilter, setFolderDepartmentFilter] = useState('all');
   const [selectedDocIds, setSelectedDocIds] = useState<string[]>([]);
@@ -738,12 +742,13 @@ export const DataRepoPage: React.FC = () => {
                         <CustomTable.Cell className="px-3 py-3 font-semibold text-slate-900 dark:text-zinc-100">
                           <div className="flex items-center gap-2.5">
                             {getDocTypeBadge(extension)}
-                            <span
-                              onClick={() => showToast(tr(`View document ${documentName}`, `Xem tài liệu ${documentName}`), 'info')}
-                              className="hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors truncate max-w-[220px]"
+                            <button
+                              type="button"
+                              onClick={() => setDetailDocument(doc)}
+                              className="max-w-[220px] truncate text-left hover:text-blue-600 dark:hover:text-blue-400 cursor-pointer transition-colors"
                             >
                               {documentName}
-                            </span>
+                            </button>
                           </div>
                         </CustomTable.Cell>
                         <CustomTable.Cell className="px-3 py-3 text-slate-600 dark:text-zinc-400">{doc.folderName}</CustomTable.Cell>
@@ -1106,6 +1111,19 @@ export const DataRepoPage: React.FC = () => {
             setRepositoryView('folders');
           }}
         />
+      )}
+
+      {detailDocument && !isChunksOpen && (
+        <DocumentDetailPanel
+          document={detailDocument}
+          departmentName={departments.find((department) => department.id === detailDocument.departmentId)?.name || '—'}
+          onClose={() => setDetailDocument(null)}
+          onViewChunks={() => setIsChunksOpen(true)}
+        />
+      )}
+
+      {detailDocument && isChunksOpen && (
+        <DocumentChunksModal document={detailDocument} onClose={() => setIsChunksOpen(false)} />
       )}
 
       <UploadModal

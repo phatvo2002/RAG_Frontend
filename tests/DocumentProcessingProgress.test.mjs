@@ -57,6 +57,24 @@ test('shows quota wait and indexed count during processing', () => {
   assert.match(html, /width:20%/);
 });
 
+test('shows actual sentence progress, then indeterminate assembly and chunk writing', () => {
+  const analyzing = { ...base, processingStatus: 'CHUNKING', chunkingProgress: { phase: 'ANALYZING', completed: 3, total: 12 } };
+  const html = render([analyzing]);
+  assert.match(html, /3\/12 sentences embedded/);
+  assert.match(html, /aria-valuenow="25"/);
+  assert.match(html, /width:25%/);
+
+  const building = { ...analyzing, chunkingProgress: { phase: 'BUILDING', completed: 0, total: 0 } };
+  const buildingHtml = render([building]);
+  assert.match(buildingHtml, /Finding chunk boundaries/);
+  assert.match(buildingHtml, /role="progressbar"/);
+  assert.doesNotMatch(buildingHtml, /aria-valuenow=/);
+
+  const writing = { ...analyzing, chunkingProgress: { phase: 'SAVING', completed: 2, total: 4 } };
+  assert.match(render([writing]), /Writing chunks: 2\/4/);
+  assert.match(render([writing]), /aria-valuenow="50"/);
+});
+
 test('shows OpenAI reindexing and stops polling at completion or failure', () => {
   const reindexing = { ...base, provider: 'OpenAI', processingStatus: 'READY', totalChunks: 10, indexedChunks: 4, reindexing: true, indexStatus: 'BUILDING' };
   assert.match(render([reindexing]), /Reindexing with OpenAI/);

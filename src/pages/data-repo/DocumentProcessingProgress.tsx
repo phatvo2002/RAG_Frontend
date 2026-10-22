@@ -32,9 +32,21 @@ export const DocumentProcessingProgress: React.FC<{ enabled: boolean; documentId
 
   return <div className="space-y-3" aria-live="polite">
     {visibleItems.map((item) => {
-      const percentage = item.totalChunks > 0
-        ? Math.min(100, Math.max(0, Math.round(item.indexedChunks / item.totalChunks * 100)))
+      const chunking = item.processingStatus === 'CHUNKING' ? item.chunkingProgress : null;
+      const chunkingPercentage = chunking && chunking.phase !== 'BUILDING' && chunking.total > 0
+        ? Math.min(100, Math.max(0, Math.round(chunking.completed / chunking.total * 100)))
         : null;
+      const percentage = item.processingStatus === 'CHUNKING' ? chunkingPercentage : item.totalChunks > 0
+        ? Math.min(100, Math.max(0, Math.round(item.indexedChunks / item.totalChunks * 100))) : null;
+      const chunkingDetail = chunking?.phase === 'ANALYZING'
+        ? tr(`Semantic analysis: ${chunking.completed}/${chunking.total} sentences embedded`,
+            `Phân tích ngữ nghĩa: đã tạo embedding ${chunking.completed}/${chunking.total} câu`)
+        : chunking?.phase === 'BUILDING'
+          ? tr('Finding chunk boundaries', 'Đang xác định ranh giới chunk')
+          : chunking?.phase === 'SAVING'
+            ? tr(`Writing chunks: ${chunking.completed}/${chunking.total}`,
+                `Đang ghi chunk: ${chunking.completed}/${chunking.total}`)
+            : tr('Preparing chunk analysis', 'Đang chuẩn bị phân tích chunk');
       const complete = item.processingStatus === 'READY' && !item.reindexing && item.indexStatus === 'ACTIVE';
       const failed = item.processingStatus === 'FAILED' || item.failureCode === 'REINDEX_FAILED';
       const stage = item.failureCode === 'REINDEX_FAILED'
@@ -68,13 +80,18 @@ export const DocumentProcessingProgress: React.FC<{ enabled: boolean; documentId
         </div>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[var(--nexora-ink-muted)]">
           <span className={failed ? 'font-medium text-[var(--nexora-danger)]' : complete ? 'font-medium text-[var(--nexora-success)]' : 'font-medium text-[var(--nexora-ink)]'}>{stage}</span>
-          {item.totalChunks > 0 && <span className="tabular-nums">{item.indexedChunks}/{item.totalChunks} chunk</span>}
+          {item.totalChunks > 0 && item.processingStatus !== 'CHUNKING' && <span className="tabular-nums">{item.indexedChunks}/{item.totalChunks} chunk</span>}
         </div>
-        {percentage !== null && <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--nexora-accent-soft)]"
-          role="progressbar" aria-label={`${item.fileName}: ${stage}`} aria-valuemin={0} aria-valuemax={100} aria-valuenow={percentage}>
-          <div className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${failed ? 'bg-[var(--nexora-danger)]' : complete ? 'bg-[var(--nexora-success)]' : 'bg-[var(--nexora-accent)]'}`}
-            style={{ width: `${percentage}%` }} />
-        </div>}
+        {item.processingStatus === 'CHUNKING' &&
+          <p className="mt-1 text-[var(--nexora-ink-muted)]">{chunkingDetail}</p>}
+        {(percentage !== null || item.processingStatus === 'CHUNKING') &&
+          <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-[var(--nexora-accent-soft)]"
+            role="progressbar" aria-label={`${item.fileName}: ${item.processingStatus === 'CHUNKING' ? chunkingDetail : stage}`}
+            aria-valuemin={percentage === null ? undefined : 0} aria-valuemax={percentage === null ? undefined : 100}
+            aria-valuenow={percentage === null ? undefined : percentage}>
+            <div className={`h-full rounded-full transition-[width] duration-300 motion-reduce:transition-none ${percentage === null ? 'w-1/3 animate-pulse bg-[var(--nexora-accent)]' : failed ? 'bg-[var(--nexora-danger)]' : complete ? 'bg-[var(--nexora-success)]' : 'bg-[var(--nexora-accent)]'}`}
+              style={percentage === null ? undefined : { width: `${percentage}%` }} />
+          </div>}
         {failed && item.failureCode &&
           <p className="mt-2 text-[var(--nexora-danger)]">{item.failureCode}</p>}
       </div>;
