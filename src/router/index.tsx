@@ -31,6 +31,7 @@ import {
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 import { OrganizationsPage } from '@/pages/catalog/organizations';
+import { SystemPromptsPage } from '@/pages/catalog/system-prompts';
 
 // Root Route wrapping AppProvider and AppLayout
 const rootRoute = createRootRoute({
@@ -154,6 +155,16 @@ const organizationsRoute = createRoute({
   ),
 });
 
+const systemPromptsRoute = createRoute({
+  getParentRoute: () => rootRoute,
+  path: '/catalog/system-prompts',
+  component: () => (
+    <PermissionGuard module="SYSTEM_PROMPT.READ" isImplemented={true}>
+      <SystemPromptsPage />
+    </PermissionGuard>
+  ),
+});
+
 // ============================================================================
 // ADMIN ROUTES (Được bảo vệ bằng PermissionGuard theo từng phân hệ)
 // ============================================================================
@@ -246,6 +257,7 @@ const routeTree = rootRoute.addChildren([
   calendarRoute,
   reportsRoute,
   organizationsRoute,
+  systemPromptsRoute,
   adminRoute,
   adminUsersRoute,
   adminDepartmentsRoute,

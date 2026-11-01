@@ -7,7 +7,6 @@ import { Sparkles, Database, Save } from 'lucide-react';
 export const ConfigPage: React.FC = () => {
   const { showToast } = useApp();
   const { t } = useTranslation(['admin', 'common']);
-  const [model, setModel] = useState('gemini-2.0-flash');
   const [temperature, setTemperature] = useState(0.7);
   const [maxTokens, setMaxTokens] = useState(2048);
 
@@ -46,15 +45,8 @@ export const ConfigPage: React.FC = () => {
             <div className="space-y-3.5">
               <div>
                 <label className="block font-medium text-slate-700 dark:text-zinc-300 mb-1">{t('config.defaultModel', { defaultValue: 'Default AI Model' })}</label>
-                <select
-                  value={model}
-                  onChange={(e) => setModel(e.target.value)}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 rounded text-xs font-medium text-slate-800 dark:text-zinc-100 focus:outline-none focus:border-blue-600"
-                >
-                  <option value="gemini-2.0-flash">Google Gemini 2.0 Flash (Recommended - Fast & Accurate)</option>
-                  <option value="gemini-1.5-pro">Google Gemini 1.5 Pro (Deep Reasoning)</option>
-                  <option value="gpt-4o">OpenAI GPT-4o</option>
-                </select>
+                <p className="w-full rounded border border-slate-200 bg-slate-50 px-3 py-2 font-medium text-slate-800 dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-100">Ollama · qwen3.5:4b</p>
+                <p className="mt-1 text-[11px] text-slate-500">{t('config.modelServerManaged', { defaultValue: 'The chat model is configured on the server.' })}</p>
               </div>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">

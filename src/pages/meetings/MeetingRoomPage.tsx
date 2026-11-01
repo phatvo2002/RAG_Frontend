@@ -8,8 +8,8 @@ import { meetingKeys, meetingsApi, useMeetingQuery, type MeetingJoinToken } from
 import { useApp } from '@/context/AppContext';
 import { MeetingModal } from './MeetingModal';
 import { isScheduledMeetingExpired, useMeetingClock } from './meetingAvailability';
-import { TranscriptPanel, TranscriptStreamListener, type TranscriptEvent } from './TranscriptPanel';
-import { activeCaptions, mergeTranscriptEvent } from './transcriptEvents';
+import { TranscriptPanel, TranscriptStreamListener, type MeetingStreamEvent, type TranscriptEvent } from './TranscriptPanel';
+import { activeCaptions, mergeTranscriptEvent, type TranslationEvent } from './transcriptEvents';
 import { MeetingVideoConference } from './MeetingVideoConference';
 
 export const MeetingRoomPage: React.FC = () => {
@@ -24,7 +24,9 @@ export const MeetingRoomPage: React.FC = () => {
   const [isEditOpen, setIsEditOpen] = useState(false);
   const [busy, setBusy] = useState(false);
   const [sourceLanguage, setSourceLanguage] = useState<'' | 'vi' | 'en'>('');
+  const [targetLanguage, setTargetLanguage] = useState<'vi' | 'en'>(language === 'vi' ? 'vi' : 'en');
   const [liveSegments, setLiveSegments] = useState<Record<string, TranscriptEvent>>({});
+  const [translations, setTranslations] = useState<Record<string, TranslationEvent>>({});
   const [workerAvailable, setWorkerAvailable] = useState(false);
   const [captionsEnabled, setCaptionsEnabled] = useState(true);
   const [captionNow, setCaptionNow] = useState(Date.now());
@@ -36,7 +38,13 @@ export const MeetingRoomPage: React.FC = () => {
     refetchInterval: value?.status === 'Live' ? 5000 : false,
   });
   useEffect(() => { if (value) setSourceLanguage(value.mySourceLanguage ?? ''); }, [value?.mySourceLanguage]);
-  const onTranscriptEvent = useCallback((event: TranscriptEvent) => {
+  useEffect(() => { setTargetLanguage(value?.myTargetLanguage ?? (language === 'vi' ? 'vi' : 'en')); },
+    [value?.myTargetLanguage, language]);
+  const onTranscriptEvent = useCallback((event: MeetingStreamEvent) => {
+    if (event.type === 'translation') {
+      setTranslations(current => ({ ...current, [event.segmentId]: { ...event, receivedAt: Date.now() } }));
+      return;
+    }
     setLiveSegments(current => ({ ...current, [event.segmentId]: mergeTranscriptEvent(current[event.segmentId], event, Date.now()) }));
     if (event.type === 'final') void queryClient.invalidateQueries({ queryKey: meetingKeys.transcript(meetingId) });
   }, [meetingId, queryClient]);
@@ -47,11 +55,13 @@ export const MeetingRoomPage: React.FC = () => {
     return () => window.clearInterval(timer);
   }, [connection]);
   const captions = useMemo(() => captionsEnabled && workerAvailable
-    ? activeCaptions(Object.values(liveSegments), captionNow) : new Map(),
-  [captionsEnabled, workerAvailable, liveSegments, captionNow]);
+    ? activeCaptions(Object.values(liveSegments), captionNow, targetLanguage, translations) : new Map(),
+  [captionsEnabled, workerAvailable, liveSegments, captionNow, targetLanguage, translations]);
   const segments = useMemo(() => {
     const merged = { ...liveSegments };
-    for (const item of transcript.data ?? []) merged[item.segmentId] = { ...item, type: 'final' };
+    for (const item of transcript.data ?? []) merged[item.segmentId] = {
+      ...item, type: 'final', receivedAt: merged[item.segmentId]?.receivedAt,
+    };
     return Object.values(merged).sort((a, b) => a.startedAt.localeCompare(b.startedAt) || a.segmentId.localeCompare(b.segmentId));
   }, [liveSegments, transcript.data]);
   const isHost = value?.organizerUserId === currentUser.id;
@@ -69,8 +79,10 @@ export const MeetingRoomPage: React.FC = () => {
       await action();
       await queryClient.invalidateQueries({ queryKey: meetingKeys.detail(meetingId) });
       await queryClient.invalidateQueries({ queryKey: meetingKeys.list });
+      return true;
     } catch (error) {
       showToast(error instanceof Error ? error.message : tr('Action failed.', 'Thao tác không thành công.'), 'error');
+      return false;
     } finally {
       setBusy(false);
     }
@@ -120,7 +132,7 @@ export const MeetingRoomPage: React.FC = () => {
         )}
       </header>
 
-      {value.status !== 'Ended' && <div className="mt-4 flex items-center gap-3">
+      {value.status !== 'Ended' && <div className="mt-4 flex flex-wrap items-center gap-3">
         <label htmlFor="meeting-source-language" className="text-sm font-medium">{tr('Your spoken language', 'Ngôn ngữ bạn nói')}</label>
         <select id="meeting-source-language" value={sourceLanguage} disabled={busy || value.status === 'Ending'}
           onChange={event => {
@@ -129,6 +141,18 @@ export const MeetingRoomPage: React.FC = () => {
             void run(() => meetingsApi.setSourceLanguage(meetingId, selected));
           }} className="rounded border border-[#dce5f3] bg-white px-3 py-2 text-sm dark:border-[#223149] dark:bg-[#111b2c]">
           <option value="" disabled>{tr('Choose language', 'Chọn ngôn ngữ')}</option>
+          <option value="vi">Tiếng Việt</option><option value="en">English</option>
+        </select>
+        <label htmlFor="meeting-target-language" className="text-sm font-medium">{tr('Your caption language', 'Ngôn ngữ phụ đề của bạn')}</label>
+        <select id="meeting-target-language" value={targetLanguage} disabled={busy || value.status === 'Ending'}
+          onChange={event => {
+            const selected = event.target.value as 'vi' | 'en';
+            const previous = targetLanguage;
+            setTargetLanguage(selected);
+            void run(() => meetingsApi.setTargetLanguage(meetingId, selected)).then(saved => {
+              if (!saved) setTargetLanguage(previous);
+            });
+          }} className="rounded border border-[#dce5f3] bg-white px-3 py-2 text-sm dark:border-[#223149] dark:bg-[#111b2c]">
           <option value="vi">Tiếng Việt</option><option value="en">English</option>
         </select>
       </div>}
@@ -183,7 +207,8 @@ export const MeetingRoomPage: React.FC = () => {
           <p className="p-4 text-sm text-[#60738e]">{tr('Loading transcript...', 'Đang tải bản phiên âm...')}</p>
         ) : value.status === 'Ended' && transcript.isError ? (
           <p role="alert" className="p-4 text-sm text-rose-700 dark:text-rose-300">{tr('Could not load transcript.', 'Không tải được bản phiên âm.')} <button type="button" onClick={() => void transcript.refetch()} className="font-semibold underline">{tr('Retry', 'Thử lại')}</button></p>
-        ) : <TranscriptPanel segments={segments} participants={value.participants} language={language}
+        ) : <TranscriptPanel segments={segments} translations={translations} targetLanguage={targetLanguage}
+          participants={value.participants} language={language}
           unavailable={value.status === 'Live' && !!connection && !workerAvailable} />}
       </div>
       </div>

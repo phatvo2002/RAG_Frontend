@@ -2,6 +2,16 @@ import { API_BASE_URL } from '@/constants';
 import { apiClient, refreshAccessToken, tokenStorage } from './client';
 
 export interface ChatModel { id: string; name: string; provider: string; model: string }
+export interface ChatRuntimeConfiguration {
+  defaultModel: string;
+  models: ChatModel[];
+  configurationError?: string | null;
+  contextWindowTokens: number;
+  maxOutputTokens: number;
+  estimatedRetrievedContextTokens: number;
+  estimatedSystemPromptTokens: number;
+  maxQuestionCharacters: number;
+}
 export interface ChatConversation { id: string; title: string; updatedAt: string }
 export interface ChatSource { documentId: string; chunkId: string; fileName: string; score: number; pageNo?: number | null; charStart?: number | null; charEnd?: number | null }
 export interface ChatMessage {
@@ -55,7 +65,7 @@ async function streamTurn(body: object, onEvent: (event: ChatEvent) => void, sig
 }
 
 export const chatApi = {
-  models: () => apiClient<{ defaultModel: string; models: ChatModel[]; configurationError?: string | null }>('/api/chat/models'),
+  models: () => apiClient<ChatRuntimeConfiguration>('/api/chat/models'),
   conversations: (skip = 0) => apiClient<ChatConversation[]>(`/api/chat/conversations?skip=${skip}`),
   deleteConversation: (id: string) => apiClient(`/api/chat/conversations/${id}`, { method: 'DELETE' }),
   messages: (id: string, beforeSequenceNo?: number) => apiClient<ChatMessage[]>(`/api/chat/conversations/${id}/messages${beforeSequenceNo ? `?beforeSequenceNo=${beforeSequenceNo}` : ''}`),

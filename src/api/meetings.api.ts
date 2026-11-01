@@ -25,6 +25,7 @@ export interface MeetingDetail extends OnlineMeeting {
   rowVersion: number;
   participants: MeetingUserOption[];
   mySourceLanguage: 'vi' | 'en' | null;
+  myTargetLanguage: 'vi' | 'en' | null;
 }
 
 export interface MeetingTranscriptSegment {
@@ -98,6 +99,11 @@ export const meetingsApi = {
   },
   async setSourceLanguage(id: string, language: 'vi' | 'en'): Promise<string> {
     return data(await apiClient<ApiResponse<string> | string>(`/api/meetings/${encodeURIComponent(id)}/my-source-language`, {
+      method: 'PUT', body: JSON.stringify({ language }),
+    }));
+  },
+  async setTargetLanguage(id: string, language: 'vi' | 'en'): Promise<string> {
+    return data(await apiClient<ApiResponse<string> | string>(`/api/meetings/${encodeURIComponent(id)}/my-target-language`, {
       method: 'PUT', body: JSON.stringify({ language }),
     }));
   },

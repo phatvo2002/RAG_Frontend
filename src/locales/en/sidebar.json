@@ -15,6 +15,7 @@
     "calendar": "Calendar",
     "adminOverview": "Overview",
     "organizations": "Organizations",
+    "systemPrompts": "System Prompt",
     "adminUsers": "Users",
     "adminDepartments": "Departments",
     "adminRoles": "Roles & Permissions",

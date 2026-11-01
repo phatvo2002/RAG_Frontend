@@ -2,7 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useNavigate } from '@tanstack/react-router';
 import { FileText, FolderOpen, LayoutDashboard, LoaderCircle, Menu, MessageCircle, Mic, Paperclip, Plus, Search, Send, ShieldCheck, Trash2, X } from 'lucide-react';
 import { chatApi } from '@/api/chat.api';
-import type { ChatConversation, ChatMessage, ChatSource } from '@/api/chat.api';
+import type { ChatConversation, ChatMessage, ChatRuntimeConfiguration, ChatSource } from '@/api/chat.api';
 import { ConfirmModal } from '@/components/disclosure';
 import { useApp } from '@/context/AppContext';
 import { LanguageSwitcher } from '@/components/languageSwitcher';
@@ -17,23 +17,38 @@ type ChatComposerProps = {
   loading: boolean;
   sending: boolean;
   modelsAvailable: boolean;
+  contextEstimateTokens: number;
+  contextWindowTokens: number;
+  maxOutputTokens: number;
+  maxQuestionCharacters: number;
   language: 'en' | 'vi';
 };
 
 type DeleteTarget = { kind: 'conversation'; value: ChatConversation } | { kind: 'message'; value: ChatMessage };
 
-const ChatComposer: React.FC<ChatComposerProps> = ({ input, onInputChange, onSend, loading, sending, modelsAvailable, language }) => {
+const ChatComposer: React.FC<ChatComposerProps> = ({ input, onInputChange, onSend, loading, sending, modelsAvailable, contextEstimateTokens, contextWindowTokens, maxOutputTokens, maxQuestionCharacters, language }) => {
   const tr = (en: string, vi: string) => language === 'vi' ? vi : en;
+  const contextPercent = contextWindowTokens > 0 ? Math.min(100, (contextEstimateTokens / contextWindowTokens) * 100) : 0;
+  const contextOver = contextEstimateTokens > contextWindowTokens;
+  const contextNear = contextPercent >= 80;
 
   return <div className="w-full">
     <div className="flex items-end gap-1.5 rounded-md border border-[#dce5f2] bg-white p-1.5 shadow-[0_1px_3px_rgba(16,36,86,0.05)] focus-within:border-[#8eb3ff] focus-within:ring-2 focus-within:ring-[#e8f0ff]">
       <button type="button" disabled title={tr('Attaching documents is not supported yet', 'Đính kèm tài liệu chưa được hỗ trợ')} aria-label={tr('Attaching documents is not supported yet', 'Đính kèm tài liệu chưa được hỗ trợ')} className="rounded-md p-2 text-[#637797] opacity-60"><Paperclip size={18} /></button>
       <button type="button" disabled title={tr('Voice input is not supported yet', 'Nhập bằng giọng nói chưa được hỗ trợ')} aria-label={tr('Voice input is not supported yet', 'Nhập bằng giọng nói chưa được hỗ trợ')} className="rounded-md p-2 text-[#637797] opacity-60"><Mic size={18} /></button>
       <span aria-hidden="true" className="my-2 h-6 w-px shrink-0 bg-[#e1e8f3]" />
-      <textarea value={input} onChange={event => onInputChange(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); onSend(); } }} disabled={loading || sending || !modelsAvailable} maxLength={2000} rows={1} placeholder={loading ? tr('Loading AI assistant...', 'Đang tải trợ lý AI...') : modelsAvailable ? tr('Ask about your internal data...', 'Hỏi về dữ liệu nội bộ của bạn...') : tr('No AI model configured', 'Chưa cấu hình mô hình AI')} aria-label={tr('Message content', 'Nội dung tin nhắn')} className="max-h-32 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-sm text-[#243653] outline-none placeholder:text-[#8191ac] disabled:opacity-60" />
+      <textarea value={input} onChange={event => onInputChange(event.target.value)} onKeyDown={event => { if (event.key === 'Enter' && !event.shiftKey) { event.preventDefault(); onSend(); } }} disabled={loading || sending || !modelsAvailable} maxLength={maxQuestionCharacters} rows={1} placeholder={loading ? tr('Loading AI assistant...', 'Đang tải trợ lý AI...') : modelsAvailable ? tr('Ask about your internal data...', 'Hỏi về dữ liệu nội bộ của bạn...') : tr('No AI model configured', 'Chưa cấu hình mô hình AI')} aria-label={tr('Message content', 'Nội dung tin nhắn')} className="max-h-32 min-h-10 min-w-0 flex-1 resize-none bg-transparent px-1 py-2.5 text-sm text-[#243653] outline-none placeholder:text-[#8191ac] disabled:opacity-60" />
       <button type="button" onClick={onSend} disabled={loading || sending || !input.trim() || !modelsAvailable} className="chat-action flex h-10 items-center gap-2 rounded-md bg-[#0759ee] px-3.5 text-sm font-semibold text-white hover:bg-[#126bff] disabled:opacity-50"><Send size={17} />{tr('Send', 'Gửi')}</button>
     </div>
-    <p className="mt-3 flex items-start gap-1.5 text-[11px] leading-relaxed text-[#7d8eaa]"><ShieldCheck size={14} className="mt-0.5 shrink-0 text-emerald-600" />{tr('NEXORA AI uses internal documents you can access. Conversation history is stored in the system.', 'NEXORA AI sử dụng tài liệu nội bộ bạn được phép truy cập. Lịch sử hội thoại được lưu trong hệ thống.')}</p>
+    <div className="mt-2 flex flex-wrap items-center justify-between gap-x-3 gap-y-1 text-[11px] text-[#7183a1]" aria-live="polite">
+      <span className={input.length >= maxQuestionCharacters ? 'font-semibold text-amber-700' : ''}>{tr('Question', 'Câu hỏi')}: {input.length.toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US')}/{maxQuestionCharacters.toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US')} {tr('characters', 'ký tự')}</span>
+      <span className={contextOver ? 'font-semibold text-rose-700' : contextNear ? 'font-semibold text-amber-700' : ''}>{tr('Estimated context', 'Context ước tính')}: {contextEstimateTokens.toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US')}/{contextWindowTokens.toLocaleString(language === 'vi' ? 'vi-VN' : 'en-US')} {tr('tokens', 'token')}</span>
+    </div>
+    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-[#e8eef8]" role="progressbar" aria-label={tr('Estimated context window usage', 'Mức sử dụng context ước tính')} aria-valuemin={0} aria-valuemax={contextWindowTokens} aria-valuenow={Math.min(contextEstimateTokens, contextWindowTokens)}>
+      <div className={`h-full rounded-full transition-[width] ${contextOver ? 'bg-rose-500' : contextNear ? 'bg-amber-500' : 'bg-[#397cf6]'}`} style={{ width: `${contextPercent}%` }} />
+    </div>
+    {(contextNear || input.length >= maxQuestionCharacters) && <p className={`mt-1 text-[11px] ${contextOver ? 'text-rose-700' : 'text-amber-700'}`}>{contextOver ? tr('This prompt may exceed the available context. Shorten the question or start a new conversation.', 'Prompt có thể vượt context còn trống. Hãy rút ngắn câu hỏi hoặc bắt đầu hội thoại mới.') : contextNear ? tr('Context use is close to the model limit; the estimate includes history and a document allowance.', 'Context gần chạm giới hạn; ước tính đã tính lịch sử và phần dự phòng cho tài liệu.') : tr('You have reached the question character limit.', 'Bạn đã đạt giới hạn ký tự câu hỏi.')}</p>}
+    <p className="mt-2 flex items-start gap-1.5 text-[11px] leading-relaxed text-[#7d8eaa]"><ShieldCheck size={14} className="mt-0.5 shrink-0 text-emerald-600" />{tr(`Question limit is ${maxQuestionCharacters.toLocaleString()} characters. Context is an estimate including history, a document allowance, and up to ${maxOutputTokens.toLocaleString()} output tokens.`, `Giới hạn câu hỏi là ${maxQuestionCharacters.toLocaleString()} ký tự. Context là ước tính gồm lịch sử, phần dự phòng tài liệu và tối đa ${maxOutputTokens.toLocaleString()} token đầu ra.`)}</p>
   </div>;
 };
 
@@ -45,6 +60,7 @@ export const ChatPage: React.FC = () => {
   const [activeId, setActiveId] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [modelsAvailable, setModelsAvailable] = useState(false);
+  const [chatConfiguration, setChatConfiguration] = useState<ChatRuntimeConfiguration | null>(null);
   const [input, setInput] = useState('');
   const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
@@ -69,6 +85,7 @@ export const ChatPage: React.FC = () => {
     let cancelled = false;
     chatApi.models().then(async available => {
       if (cancelled) return;
+      setChatConfiguration(available);
       setModelsAvailable(available.models.length > 0);
       if (available.configurationError) setError(available.configurationError);
       const history = await chatApi.conversations();
@@ -259,7 +276,18 @@ export const ChatPage: React.FC = () => {
   const showWelcome = activeId === null && messages.length === 0 && !sending;
   const greeting = now.getHours() < 12 ? tr('Good morning', 'Chào buổi sáng') : now.getHours() < 18 ? tr('Good afternoon', 'Chào buổi chiều') : tr('Good evening', 'Chào buổi tối');
   const welcomeDate = `${new Intl.DateTimeFormat(locale, { hour: 'numeric', minute: '2-digit' }).format(now)} · ${new Intl.DateTimeFormat(locale, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' }).format(now)}`;
-  const composer = <ChatComposer input={input} onInputChange={setInput} onSend={() => void send()} loading={loading} sending={sending || isDeleting} modelsAvailable={modelsAvailable} language={language} />;
+  const maxQuestionCharacters = chatConfiguration?.maxQuestionCharacters ?? 2000;
+  const estimateTokens = (characters: number) => Math.ceil(characters / 3);
+  const promptHistory = [...messages].reverse().filter(message => message.status !== 'FAILED' && message.status !== 'PENDING').slice(0, 6);
+  let historyCharacters = 0;
+  for (const message of promptHistory) {
+    if (historyCharacters + message.content.length > 4000) break;
+    historyCharacters += message.content.length;
+  }
+  const contextEstimateTokens = chatConfiguration
+    ? chatConfiguration.estimatedSystemPromptTokens + estimateTokens(historyCharacters) + estimateTokens(input.trim().length) + chatConfiguration.estimatedRetrievedContextTokens + chatConfiguration.maxOutputTokens
+    : 0;
+  const composer = <ChatComposer input={input} onInputChange={setInput} onSend={() => void send()} loading={loading} sending={sending || isDeleting} modelsAvailable={modelsAvailable} contextEstimateTokens={contextEstimateTokens} contextWindowTokens={chatConfiguration?.contextWindowTokens ?? 0} maxOutputTokens={chatConfiguration?.maxOutputTokens ?? 0} maxQuestionCharacters={maxQuestionCharacters} language={language} />;
   const showSource = (index: number, messageId?: string) => {
     if (messageId) setFocusedMessageId(messageId);
     setSelectedSourceIndex(index);
@@ -343,7 +371,7 @@ export const ChatPage: React.FC = () => {
                 <h2 className="chat-welcome-title text-[clamp(2rem,4vw,3rem)] font-bold leading-tight tracking-tight text-[#102456]">{greeting}, {userName}.</h2>
                 <p className="chat-welcome-subtitle mb-7 mt-1 text-[clamp(1rem,2vw,1.35rem)] text-[#66799c]">{tr('How can I help you with your work today?', 'Tôi có thể giúp gì cho công việc của bạn hôm nay?')}</p>
                 <div className="chat-welcome-composer">{composer}</div>
-                {error && <div role="alert" className="mt-5 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}{!modelsAvailable && <button type="button" onClick={() => navigate({ to: '/account' })} className="ml-2 font-semibold text-[#1762f4] underline">{tr('Set up API key', 'Thiết lập khóa API')}</button>}</div>}
+                {error && <div role="alert" className="mt-5 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
               </div>
             </div> : <>
             <div className="min-h-0 flex-1 overflow-y-auto px-4 py-5 sm:px-6 lg:px-7">
@@ -370,7 +398,7 @@ export const ChatPage: React.FC = () => {
                 })}
 
                 {sending && <article className="chat-message-enter flex items-start gap-4 py-5"><span aria-hidden="true" className="flex h-9 w-9 shrink-0 items-center justify-center rounded-md bg-[#1762f4] text-lg font-bold text-white">N</span><div className="min-w-0 flex-1"><strong className="text-[13px] text-[#1762f4]">NEXORA AI</strong>{streamText ? <div className="mt-3"><ChatAnswerContent content={streamText} sources={streamSources} onSource={index => showSource(index)} /></div> : <p className="mt-3 flex items-center gap-2 text-sm text-[#7587a5]"><span className="chat-thinking-dots" aria-hidden="true"><i /><i /><i /></span>{tr('Finding documents and generating a response...', 'Đang tìm tài liệu và tạo câu trả lời...')}</p>}</div></article>}
-                {error && <div role="alert" className="my-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}{!modelsAvailable && <button type="button" onClick={() => navigate({ to: '/account' })} className="ml-2 font-semibold text-[#1762f4] underline">{tr('Set up API key', 'Thiết lập khóa API')}</button>}</div>}
+                {error && <div role="alert" className="my-4 rounded-md border border-rose-200 bg-rose-50 px-4 py-3 text-sm text-rose-700">{error}</div>}
                 <div ref={endRef} />
               </div>
             </div>

@@ -6,11 +6,11 @@ import {
 import { isEqualTrackRef, isTrackReference } from '@livekit/components-core';
 import { RoomEvent, Track } from 'livekit-client';
 import type { MeetingUserOption } from '@/api/meetings.api';
-import type { TranscriptEvent } from './transcriptEvents';
+import type { DisplayTranscriptEvent } from './transcriptEvents';
 import { CaptionedParticipantTile } from './CaptionedParticipantTile';
 
 export const MeetingVideoConference: React.FC<{
-  captions: Map<string, TranscriptEvent>;
+  captions: Map<string, DisplayTranscriptEvent>;
   captionsEnabled: boolean;
   onToggleCaptions: () => void;
   participants: MeetingUserOption[];

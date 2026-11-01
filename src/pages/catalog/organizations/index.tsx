@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
-import { Building2, Pencil, RefreshCw } from 'lucide-react';
+import { Pencil, RefreshCw } from 'lucide-react';
 import { Modal } from '@/components/disclosure';
+import { Column, CustomTable, TableRowActions } from '@/components/customTable';
+import { Header } from '@/components/header';
 import { useApp } from '@/context/AppContext';
 import { useUserPermissions } from '@/hooks/useUserPermissions';
-import { useCurrentOrganizationQuery, useUpdateOrganizationMutation } from '@/api/organizations.api';
+import { Organization, useCurrentOrganizationQuery, useUpdateOrganizationMutation } from '@/api/organizations.api';
 
 export const OrganizationsPage: React.FC = () => {
   const { showToast, language } = useApp();
@@ -15,8 +17,16 @@ export const OrganizationsPage: React.FC = () => {
   const [name, setName] = useState('');
   const [dataResidency, setDataResidency] = useState('');
   const [formError, setFormError] = useState('');
+  const [page, setPage] = useState(1);
+  const [pageSize, setPageSize] = useState(10);
   const canUpdate = hasModuleAccess('ORGANIZATION.UPDATE');
-
+  const columns: Column<Organization>[] = [
+    { accessor: 'name', header: tr('COMPANY NAME', 'TÊN CÔNG TY'), render: (item) => <span className="font-semibold text-slate-900 dark:text-zinc-100">{item.name}</span> },
+    { accessor: 'slug', header: tr('ORGANIZATION CODE', 'MÃ TỔ CHỨC') },
+    { accessor: 'status', header: tr('STATUS', 'TRẠNG THÁI'), render: (item) => <span className="inline-flex items-center gap-1.5"><span className={`h-1.5 w-1.5 rounded-full ${item.status.toUpperCase() === 'ACTIVE' ? 'bg-emerald-500' : 'bg-slate-400'}`} />{item.status}</span> },
+    { accessor: 'dataResidency', header: tr('DATA RESIDENCY', 'NƠI LƯU TRỮ DỮ LIỆU'), render: (item) => item.dataResidency || tr('Not set', 'Chưa thiết lập') },
+    { id: 'action', header: tr('ACTION', 'THAO TÁC'), align: 'right', sortable: false, className: 'nexora-table-action-cell', render: () => canUpdate ? <TableRowActions items={[{ label: tr('Edit', 'Chỉnh sửa'), icon: <Pencil className="h-4 w-4" />, onClick: () => setIsEditing(true) }]} /> : null },
+  ];
   useEffect(() => {
     if (isEditing && organization) {
       setName(organization.name);
@@ -47,50 +57,39 @@ export const OrganizationsPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-full bg-slate-50 dark:bg-[#0b1220] p-4 sm:p-6 lg:p-8 text-slate-900 dark:text-zinc-100">
-      <div className="mx-auto max-w-5xl space-y-6">
+    <div className="nexora-page flex h-full flex-1 flex-col overflow-hidden bg-slate-50/50 text-slate-900 dark:bg-black dark:text-zinc-100">
+      <Header />
+      <main className="min-w-0 flex-1 space-y-4 overflow-y-auto p-4 md:p-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
-            <p className="text-xs font-medium text-blue-600 dark:text-blue-400">{tr('Catalog / Organization', 'Danh mục / Tổ chức')}</p>
-            <h1 className="mt-1 text-2xl font-bold">{tr('Company information', 'Thông tin công ty')}</h1>
-            <p className="mt-1 text-sm text-slate-500 dark:text-zinc-400">{tr('Current organization details', 'Thông tin của tổ chức hiện tại')}</p>
+            <h1 className="text-xl font-bold tracking-tight">{tr('Organization', 'Tổ chức')}</h1>
+            <p className="mt-1 text-xs text-slate-500 dark:text-zinc-400">{tr('Current organization details', 'Thông tin của tổ chức hiện tại')}</p>
           </div>
           <div className="flex gap-2">
             <button type="button" onClick={() => refetch()} disabled={isFetching} className="btn btn-sm btn-outline gap-2">
               <RefreshCw className="h-4 w-4" /> {tr('Refresh', 'Tải lại')}
             </button>
-            {organization && canUpdate && (
-              <button type="button" onClick={() => setIsEditing(true)} className="btn btn-sm btn-primary gap-2">
-                <Pencil className="h-4 w-4" /> {tr('Edit', 'Chỉnh sửa')}
-              </button>
-            )}
           </div>
         </div>
 
-        {isLoading ? (
-          <div className="rounded-xl border border-slate-200 bg-white p-8 text-sm dark:border-zinc-800 dark:bg-zinc-900">{tr('Loading company information...', 'Đang tải thông tin công ty...')}</div>
-        ) : isError ? (
+        <div className="pt-0.5 text-xs font-semibold">
+          <strong>{organization ? 1 : 0}</strong> <span className="font-normal text-slate-500 dark:text-zinc-400">{tr('organization', 'tổ chức')}</span>
+        </div>
+
+        {isError ? (
           <div role="alert" className="rounded-xl border border-rose-200 bg-rose-50 p-6 text-sm text-rose-700 dark:border-rose-900 dark:bg-rose-950/40 dark:text-rose-300">
             {error instanceof Error ? error.message : tr('Could not load company information.', 'Không thể tải thông tin công ty.')}
           </div>
-        ) : organization ? (
-          <section className="rounded-xl border border-slate-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
-            <div className="mb-6 flex items-center gap-3">
-              <div className="rounded-lg bg-blue-50 p-3 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400"><Building2 className="h-6 w-6" /></div>
-              <div>
-                <h2 className="text-lg font-semibold">{organization.name}</h2>
-                <p className="text-xs text-slate-500 dark:text-zinc-400">{organization.slug}</p>
-              </div>
-            </div>
-            <dl className="grid gap-5 text-sm sm:grid-cols-2">
-              <div><dt className="text-slate-500 dark:text-zinc-400">{tr('Company name', 'Tên công ty')}</dt><dd className="mt-1 font-medium">{organization.name}</dd></div>
-              <div><dt className="text-slate-500 dark:text-zinc-400">{tr('Organization code', 'Mã tổ chức')}</dt><dd className="mt-1 font-medium">{organization.slug}</dd></div>
-              <div><dt className="text-slate-500 dark:text-zinc-400">{tr('Status', 'Trạng thái')}</dt><dd className="mt-1 font-medium">{organization.status}</dd></div>
-              <div><dt className="text-slate-500 dark:text-zinc-400">{tr('Data residency', 'Nơi lưu trữ dữ liệu')}</dt><dd className="mt-1 font-medium">{organization.dataResidency || tr('Not set', 'Chưa thiết lập')}</dd></div>
-            </dl>
-          </section>
-        ) : null}
-      </div>
+        ) : <CustomTable<Organization>
+          columns={columns}
+          data={organization ? [organization] : []}
+          keyExtractor={(item) => item.organizationId}
+          isLoading={isLoading}
+          emptyText={tr('No organization found.', 'Không tìm thấy tổ chức.')}
+          className="bg-white dark:bg-zinc-900"
+          pagination={{ currentPage: page, totalPages: 1, pageSize, totalItems: organization ? 1 : 0, onPageChange: setPage, onPageSizeChange: (size) => { setPageSize(size); setPage(1); }, pageSizeOptions: [10, 20, 50] }}
+        />}
+      </main>
 
       <Modal isOpen={isEditing && canUpdate} onClose={() => setIsEditing(false)} title={tr('Update company information', 'Cập nhật thông tin công ty')} maxWidth="lg">
         <form onSubmit={save} className="space-y-4 text-sm">

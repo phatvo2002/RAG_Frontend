@@ -2,11 +2,11 @@ import React from 'react';
 import { ParticipantTile, useMaybeTrackRefContext, type TrackReferenceOrPlaceholder } from '@livekit/components-react';
 import { Track } from 'livekit-client';
 import type { MeetingUserOption } from '@/api/meetings.api';
-import { captionForTile, normalizeParticipantId, type TranscriptEvent } from './transcriptEvents';
+import { captionForTile, normalizeParticipantId, type DisplayTranscriptEvent } from './transcriptEvents';
 
 export const CaptionedParticipantTile: React.FC<{
   trackRef?: TrackReferenceOrPlaceholder;
-  captions: Map<string, TranscriptEvent>;
+  captions: Map<string, DisplayTranscriptEvent>;
   participants: MeetingUserOption[];
   language: string;
 }> = ({ trackRef, captions, participants, language }) => {
@@ -23,8 +23,10 @@ export const CaptionedParticipantTile: React.FC<{
     {caption && <div className="pointer-events-none absolute inset-x-2 bottom-10 z-10 flex justify-center sm:inset-x-4" aria-live="polite">
       <div className="max-w-full rounded bg-black/80 px-2 py-1 text-center text-sm leading-snug text-white shadow-lg sm:text-base">
         <span className="break-words" style={{ display: '-webkit-box', WebkitBoxOrient: 'vertical', WebkitLineClamp: 2, overflow: 'hidden' }}>
-          <strong>{name}: </strong>{caption.text}
+          <strong>{name}: </strong>{caption.displayText}
         </span>
+        {caption.translated && <span className="block truncate text-xs text-white/70">{caption.text}</span>}
+        {caption.translating && <span className="block text-xs text-white/70">{language === 'vi' ? 'Đang dịch...' : 'Translating...'}</span>}
       </div>
     </div>}
   </div>;

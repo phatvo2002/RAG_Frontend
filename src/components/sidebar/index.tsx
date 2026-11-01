@@ -26,6 +26,7 @@ import {
   CalendarClock,
   Sparkles,
   User as UserIcon,
+  TerminalSquare,
 } from 'lucide-react';
 
 interface MenuItem {
@@ -190,6 +191,14 @@ export const Sidebar: React.FC = () => {
           path: '/catalog/organizations',
           icon: Building2,
           module: 'ORGANIZATION.READ',
+          isImplemented: true,
+        },
+        {
+          id: 'system-prompts',
+          label: t('items.systemPrompts'),
+          path: '/catalog/system-prompts',
+          icon: TerminalSquare,
+          module: 'SYSTEM_PROMPT.READ',
           isImplemented: true,
         },
       ],

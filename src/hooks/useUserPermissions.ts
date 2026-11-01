@@ -32,6 +32,7 @@ const MODULE_ALIASES: Record<string, string[]> = {
   CONFIG: ['config', 'configuration', 'system'],
   SYSTEM: ['config', 'configuration', 'system'],
   ORGANIZATION: ['organization', 'organizations'],
+  SYSTEM_PROMPT: ['system_prompt', 'system-prompts'],
 };
 
 const normalizeCode = (value: unknown): string =>
@@ -149,6 +150,8 @@ export function useUserPermissions(): UserPermissionsResult {
         return hasModuleAccess(['report', 'reports', 'rep']);
       case '/catalog/organizations':
         return hasModuleAccess('ORGANIZATION.READ');
+      case '/catalog/system-prompts':
+        return hasModuleAccess('SYSTEM_PROMPT.READ');
       case '/admin':
         return hasModuleAccess(ADMIN_MODULES);
       case '/admin/users':
